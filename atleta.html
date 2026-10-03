@@ -422,9 +422,20 @@
       if (current===level.value){ btn.style.background = level.color; btn.style.borderColor = level.color; }
       btn.onclick = async ()=>{
         const newVal = current===level.value ? null : level.value;
-        await saveCheck(key, newVal);
-        overlay.remove();
-        renderApp();
+        try{
+          await saveCheck(key, newVal);
+          overlay.remove();
+          renderApp();
+        }catch(e){
+          let errMsg = document.getElementById('ratingErrMsg');
+          if (!errMsg){
+            errMsg = document.createElement('div');
+            errMsg.id = 'ratingErrMsg';
+            errMsg.style.cssText = 'color:var(--red);font-size:13px;margin-top:10px;';
+            box.appendChild(errMsg);
+          }
+          errMsg.textContent = 'No se ha podido guardar: ' + (e.message || e.code);
+        }
       };
       icons.appendChild(btn);
     });
