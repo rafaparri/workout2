@@ -163,12 +163,15 @@
       else { statusText = 'Sin datos todavía'; statusColor = 'var(--muted-2)'; }
       const row = document.createElement('div');
       row.className = 'row';
+      row.style.cursor = 'pointer';
       row.innerHTML = `
         <div class="avatar">${initials}</div>
         <div class="rinfo">
           <div class="rname">${a.name || a.email}</div>
           <div class="rstatus" style="color:${statusColor};"><span class="dot" style="background:${statusColor};"></span>${statusText}</div>
-        </div>`;
+        </div>
+        <span style="color:var(--muted-2);font-size:16px;">›</span>`;
+      row.onclick = ()=>{ window.location.href = 'ficha-atleta.html?athlete=' + doc.id; };
       listEl.appendChild(row);
     });
   }
