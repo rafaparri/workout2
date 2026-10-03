@@ -84,6 +84,7 @@
 
   const params = new URLSearchParams(window.location.search);
   const inviteIdFromLink = params.get('invite');
+  let signedInUser = null; // referencia directa, por si auth.currentUser no está listo a tiempo
 
   async function finishSignIn(email){
     try{
@@ -98,6 +99,7 @@
   }
 
   async function afterSignIn(user, isNewFromLink){
+    signedInUser = user;
     const ref = db.collection('users').doc(user.uid);
     let snap = await ref.get();
     if (!snap.exists){
@@ -145,8 +147,10 @@
     const pass = document.getElementById('newPass').value;
     if (!pass || pass.length < 6){ msg.textContent = 'Mínimo 6 caracteres.'; msg.className = 'msg err'; return; }
     try{
-      await auth.currentUser.updatePassword(pass);
-      const snap = await db.collection('users').doc(auth.currentUser.uid).get();
+      const u = signedInUser || auth.currentUser;
+      if (!u){ msg.textContent = 'Se perdió la sesión, vuelve a abrir el enlace de invitación.'; msg.className = 'msg err'; return; }
+      await u.updatePassword(pass);
+      const snap = await db.collection('users').doc(u.uid).get();
       const prof = snap.data();
       document.getElementById('welcomeName').textContent = '¡Hola, ' + (prof.name || '') + '!';
       show('homeView');
