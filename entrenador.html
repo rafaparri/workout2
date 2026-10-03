@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>WorkOut 2.0 · Entrenador</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#f4f1ea; --surface:#ffffff; --surface-2:#eceae2; --surface-3:#d9d6cb;
+    --chalk:#20242e; --muted:#5a5e68; --muted-2:#8892a0;
+    --yellow-deep:#c99a2e; --ok:#2f7dc4; --red:#c14a3a; --warn:#c99a2e;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--chalk); font-family:'Inter',system-ui,sans-serif; }
+  .wrap{ max-width:480px; margin:0 auto; padding:24px 18px 60px; }
+  h1{ font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; text-transform:uppercase; margin:0 0 4px; }
+  .sub{ color:var(--muted); font-size:14px; margin:0 0 20px; }
+  .card{ background:var(--surface); border:1px solid var(--surface-3); border-radius:14px; padding:20px; margin-bottom:16px; }
+  label{ display:block; font-family:'Oswald',sans-serif; font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.02em; margin-bottom:6px; color:var(--muted); }
+  input{ width:100%; background:var(--surface-2); border:1px solid var(--surface-3); border-radius:10px; color:var(--chalk); font-size:15px; padding:12px; margin-bottom:14px; }
+  button{ width:100%; background:var(--chalk); color:#fff; border:none; border-radius:10px; font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; padding:14px; cursor:pointer; }
+  button.secondary{ background:var(--surface-2); color:var(--chalk); border:1px solid var(--surface-3); }
+  .msg{ font-size:13px; margin-top:10px; }
+  .msg.err{ color:var(--red); } .msg.ok{ color:var(--ok); }
+  .hidden{ display:none; }
+  .row{ display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--surface-3); }
+  .row:last-child{ border-bottom:none; }
+  .avatar{ width:38px; height:38px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-family:'Oswald',sans-serif; font-weight:700; font-size:13px; color:var(--muted); flex-shrink:0; }
+  .rinfo{ flex:1; min-width:0; }
+  .rname{ font-size:14.5px; font-weight:600; }
+  .rstatus{ font-size:12px; margin-top:2px; display:flex; align-items:center; gap:5px; }
+  .dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .empty{ text-align:center; color:var(--muted-2); font-size:14px; padding:20px 0; }
+  .topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+  .signout{ background:none; border:none; color:var(--muted-2); font-size:12.5px; width:auto; padding:4px; text-decoration:underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="loginView">
+    <h1>WorkOut 2.0</h1>
+    <p class="sub">Acceso de entrenador</p>
+    <div class="card">
+      <label>Correo electrónico</label>
+      <input type="email" id="loginEmail" placeholder="tu@club.com" autocomplete="username">
+      <label>Contraseña</label>
+      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+      <button id="loginBtn">Entrar</button>
+      <div id="loginMsg" class="msg"></div>
+    </div>
+  </div>
+
+  <div id="dashView" class="hidden">
+    <div class="topbar">
+      <div>
+        <h1 id="clubName">Mi club</h1>
+        <p class="sub" id="clubSub" style="margin:0;"></p>
+      </div>
+      <button class="signout" id="signoutBtn">Salir</button>
+    </div>
+
+    <div class="card">
+      <label>Invitar nuevo atleta</label>
+      <input type="email" id="inviteEmail" placeholder="correo del atleta">
+      <input type="text" id="inviteName" placeholder="nombre del atleta">
+      <button id="inviteBtn">Enviar invitación</button>
+      <div id="inviteMsg" class="msg"></div>
+    </div>
+
+    <div class="card" id="athletesCard">
+      <label>Mis atletas</label>
+      <div id="athletesList"><div class="empty">Cargando…</div></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="firebase-init.js"></script>
+<script>
+  const loginView = document.getElementById('loginView');
+  const dashView = document.getElementById('dashView');
+  const loginMsg = document.getElementById('loginMsg');
+
+  document.getElementById('loginBtn').onclick = async ()=>{
+    loginMsg.textContent = '';
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    if (!email || !pass){ loginMsg.textContent = 'Rellena correo y contraseña.'; loginMsg.className='msg err'; return; }
+    try{
+      await auth.signInWithEmailAndPassword(email, pass);
+    }catch(e){
+      loginMsg.textContent = 'No se ha podido entrar: ' + (e.message || e.code);
+      loginMsg.className = 'msg err';
+    }
+  };
+
+  document.getElementById('signoutBtn').onclick = ()=> auth.signOut();
+
+  let currentClubId = null;
+
+  auth.onAuthStateChanged(async (user)=>{
+    if (!user){
+      loginView.classList.remove('hidden');
+      dashView.classList.add('hidden');
+      return;
+    }
+    try{
+      const profSnap = await db.collection('users').doc(user.uid).get();
+      const prof = profSnap.exists ? profSnap.data() : null;
+      if (!prof || prof.role !== 'coach'){
+        loginMsg.textContent = 'Esta cuenta no tiene acceso de entrenador.';
+        loginMsg.className = 'msg err';
+        await auth.signOut();
+        return;
+      }
+      currentClubId = prof.clubId;
+      loginView.classList.add('hidden');
+      dashView.classList.remove('hidden');
+      loadClub();
+      loadAthletes();
+    }catch(e){
+      loginMsg.textContent = 'Error al cargar tu perfil: ' + e.message;
+      loginMsg.className = 'msg err';
+    }
+  });
+
+  async function loadClub(){
+    const snap = await db.collection('clubs').doc(currentClubId).get();
+    const club = snap.exists ? snap.data() : {};
+    document.getElementById('clubName').textContent = club.name || 'Mi club';
+    document.getElementById('clubSub').textContent = club.blocked ? 'Club bloqueado' : 'Panel del entrenador';
+  }
+
+  async function loadAthletes(){
+    const listEl = document.getElementById('athletesList');
+    const snap = await db.collection('users').where('clubId','==',currentClubId).where('role','==','athlete').get();
+    if (snap.empty){
+      listEl.innerHTML = '<div class="empty">Todavía no has invitado a ningún atleta.</div>';
+      return;
+    }
+    listEl.innerHTML = '';
+    snap.forEach(doc=>{
+      const a = doc.data();
+      const initials = (a.name||a.email||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+      let statusText, statusColor;
+      if (a.blocked){ statusText = 'Acceso bloqueado'; statusColor = 'var(--red)'; }
+      else if (a.needsReview){ statusText = 'Subido · sin revisar'; statusColor = 'var(--warn)'; }
+      else if (a.lastUploadAt){ statusText = 'Revisado'; statusColor = 'var(--ok)'; }
+      else { statusText = 'Sin datos todavía'; statusColor = 'var(--muted-2)'; }
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = `
+        <div class="avatar">${initials}</div>
+        <div class="rinfo">
+          <div class="rname">${a.name || a.email}</div>
+          <div class="rstatus" style="color:${statusColor};"><span class="dot" style="background:${statusColor};"></span>${statusText}</div>
+        </div>`;
+      listEl.appendChild(row);
+    });
+  }
+
+  document.getElementById('inviteBtn').onclick = async ()=>{
+    const msg = document.getElementById('inviteMsg');
+    msg.textContent = '';
+    const email = document.getElementById('inviteEmail').value.trim().toLowerCase();
+    const name = document.getElementById('inviteName').value.trim();
+    if (!email || !name){ msg.textContent = 'Pon correo y nombre del atleta.'; msg.className='msg err'; return; }
+    try{
+      const inviteId = email.replace(/[^a-z0-9]/g,'_');
+      await db.collection('invites').doc(inviteId).set({
+        email, name, clubId: currentClubId, role: 'athlete', createdAt: Date.now()
+      });
+      const actionCodeSettings = {
+        url: window.location.origin + window.location.pathname.replace('entrenador.html','atleta.html') + '?invite=' + inviteId,
+        handleCodeInApp: true
+      };
+      await auth.sendSignInLinkToEmail(email, actionCodeSettings);
+      msg.textContent = 'Invitación enviada a ' + email + '.';
+      msg.className = 'msg ok';
+      document.getElementById('inviteEmail').value = '';
+      document.getElementById('inviteName').value = '';
+      loadAthletes();
+    }catch(e){
+      msg.textContent = 'No se ha podido invitar: ' + (e.message || e.code);
+      msg.className = 'msg err';
+    }
+  };
+</script>
+</body>
+</html>
