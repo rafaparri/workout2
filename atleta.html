@@ -146,16 +146,24 @@
     const msg = document.getElementById('passMsg');
     const pass = document.getElementById('newPass').value;
     if (!pass || pass.length < 6){ msg.textContent = 'Mínimo 6 caracteres.'; msg.className = 'msg err'; return; }
+    const u = signedInUser || auth.currentUser;
+    if (!u){ msg.textContent = 'Se perdió la sesión, vuelve a abrir el enlace de invitación.'; msg.className = 'msg err'; return; }
+
     try{
-      const u = signedInUser || auth.currentUser;
-      if (!u){ msg.textContent = 'Se perdió la sesión, vuelve a abrir el enlace de invitación.'; msg.className = 'msg err'; return; }
       await u.updatePassword(pass);
+    }catch(e){
+      msg.textContent = '[Paso 1: contraseña] ' + (e.message || e.code);
+      msg.className = 'msg err';
+      return;
+    }
+
+    try{
       const snap = await db.collection('users').doc(u.uid).get();
       const prof = snap.data();
       document.getElementById('welcomeName').textContent = '¡Hola, ' + (prof.name || '') + '!';
       show('homeView');
     }catch(e){
-      msg.textContent = 'No se pudo guardar: ' + (e.message || e.code);
+      msg.textContent = '[Paso 2: leer perfil] uid=' + u.uid + ' — ' + (e.message || e.code);
       msg.className = 'msg err';
     }
   };
