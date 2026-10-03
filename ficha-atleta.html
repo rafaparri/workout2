@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>WorkOut 2.0 · Ficha del atleta</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#f4f1ea; --surface:#ffffff; --surface-2:#eceae2; --surface-3:#d9d6cb;
+    --chalk:#20242e; --muted:#5a5e68; --muted-2:#8892a0;
+    --yellow-deep:#c99a2e; --ok:#2f7dc4; --red:#c14a3a; --warn:#c99a2e;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--chalk); font-family:'Inter',system-ui,sans-serif; }
+  .wrap{ max-width:480px; margin:0 auto; padding:24px 18px 60px; }
+  .back{ font-size:13px; color:var(--muted-2); text-decoration:none; display:inline-block; margin-bottom:10px; }
+  h1{ font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; text-transform:uppercase; margin:0 0 4px; }
+  .sub{ color:var(--muted); font-size:14px; margin:0 0 20px; }
+  .card{ background:var(--surface); border:1px solid var(--surface-3); border-radius:14px; padding:20px; margin-bottom:16px; }
+  label{ display:block; font-family:'Oswald',sans-serif; font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.02em; margin-bottom:6px; color:var(--muted); }
+  button{ width:100%; background:var(--chalk); color:#fff; border:none; border-radius:10px; font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; padding:14px; cursor:pointer; margin-top:6px; }
+  button.secondary{ background:var(--surface-2); color:var(--chalk); border:1px solid var(--surface-3); }
+  button.danger{ background:var(--red); }
+  button.ok{ background:var(--ok); }
+  .msg{ font-size:13px; margin-top:10px; }
+  .msg.err{ color:var(--red); } .msg.ok{ color:var(--ok); }
+  .row2{ display:flex; gap:10px; }
+  .statusLine{ display:flex; align-items:center; gap:8px; font-size:14px; margin-bottom:4px; }
+  .dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .planRow{ display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--surface-3); font-size:14px; }
+  .planRow:last-child{ border-bottom:none; }
+  .empty{ text-align:center; color:var(--muted-2); font-size:14px; padding:16px 0; }
+  input[type=file]{ margin-bottom:10px; }
+  .hidden{ display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="entrenador.html">← Volver a mis atletas</a>
+
+  <div id="loadingMsg" class="sub">Cargando…</div>
+
+  <div id="content" class="hidden">
+    <h1 id="athleteName">Atleta</h1>
+    <p class="sub" id="athleteEmail"></p>
+
+    <div class="card">
+      <div class="statusLine"><span class="dot" id="statusDot"></span><span id="statusText">—</span></div>
+      <div class="row2">
+        <button class="secondary" id="reviewBtn">✓ Marcar como revisado</button>
+      </div>
+      <button class="danger hidden" id="blockBtn">🔒 Bloquear acceso</button>
+      <button class="ok hidden" id="unblockBtn">🔓 Desbloquear acceso</button>
+    </div>
+
+    <div class="card">
+      <label>Subir programación (Excel)</label>
+      <input type="file" id="fileInput" accept=".xlsx,.xls">
+      <button id="uploadBtn">Subir y leer</button>
+      <div id="uploadMsg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <label>Semanas subidas</label>
+      <div id="plansList"><div class="empty">Cargando…</div></div>
+    </div>
+  </div>
+</div>
+
+<script src="firebase-init.js"></script>
+<script>
+const DICT = {
+  1:"Arrancada", 2:"Arr. encima de la rodilla", 3:"Arr. debajo de la rodilla",
+  4:"Arr. de la mitad del muslo", 5:"Arr. de tres posiciones", 6:"Arr. de tacos altos",
+  7:"Arr. de tacos bajos", 8:"Arr. sin desplazamiento", 9:"Arr. lenta",
+  10:"Dos tiempos", 11:"Cargada de dos tiempos", 12:"Cargada col. encima de la rodilla",
+  13:"Cargada col. debajo de la rodilla", 14:"Cargada de mitad del muslo",
+  15:"Cargada de tres posiciones", 16:"Cargada de tacos altos", 17:"Cargada de tacos bajos",
+  18:"Jerk", 19:"Jerk detrás", 20:"Arrancada de fuerza",
+  21:"Arr. de fuerza enc. de la rodilla", 22:"Arr. de fuerza deb. de la rodilla",
+  23:"Arr. de fuerza de tacos bajos", 24:"Arr. de fuerza de tacos altos",
+  25:"Arr. de fuerza sin flexión", 26:"Arr. de fuerza pies juntos",
+  27:"Arr. de fuerza sin impulso", 28:"Arr. de fuerza sin desplazamiento",
+  29:"Push jerk", 30:"Push jerk detrás", 31:"Push press", 32:"Push press detrás",
+  33:"Cargada de fuerza", 34:"Cargada de fza. deb. de la rodilla",
+  35:"Cargada de fza. enc. de la rodilla", 36:"Cargada de fza. tacos bajos",
+  37:"Cargada fza. tacos altos", 38:"Cargada de fuerza + jerk",
+  39:"Cargada de fuerza + push jerk", 40:"Tirón de arrancada técnico",
+  41:"Tirón de arrancada colgante", 42:"Tirón de arrancada lento",
+  43:"Tirón de arrancada tacos altos", 44:"Tirón de arrancada tacos bajos",
+  45:"Tirón de arrancada final", 46:"Tirón de arr. tacos final",
+  47:"Tirón de dos tiempos lento", 48:"Tirón de dos tiempos técnico",
+  49:"Tirón de dos tiempos colgante", 50:"Sentadilla detrás", 51:"Sentadilla delante",
+  52:"Sentadilla delante + jerk", 53:"Sentadilla de arrancada", 54:"Piernas en split delante",
+  55:"Piernas en split detrás", 56:"Media sentadilla por detrás", 57:"Media sentadilla por delante"
+};
+
+const DAY_ORDER = ['L','M','X','J','V','S','D'];
+
+const REST_WORDS = ['REST','DESCANSO'];
+
+
+const DAY_NAMES = { L:'Lunes', M:'Martes', X:'Miércoles', J:'Jueves', V:'Viernes', S:'Sábado', D:'Domingo' };
+
+function norm(v){ if (v === null || v === undefined) return ''; return String(v).trim(); }
+
+function parseCodeCell(codeCell){
+  const raw = String(codeCell).trim();
+  if (!raw) return null;
+
+  if (/^\d/.test(raw)){
+    // Formato "51 - SENTADILLA DELANTE" o "29 (aclaración) + 18 - PUSH JERK + JERK":
+    // lo que va tras el primer " - " es solo el nombre, se descarta (el
+    // nombre se saca del diccionario a partir del código).
+    const dashIdx = raw.search(/\s-\s/);
+    const codePart = dashIdx >= 0 ? raw.slice(0, dashIdx).trim() : raw;
+    const segments = codePart.split('+').map(s=>s.trim()).filter(Boolean);
+    if (!segments.length) return null;
+    const parts = [];
+    for (const seg of segments){
+      const m = seg.match(/^(\d+)\s*(.*)$/);
+      if (!m) return null; // algún trozo no empieza por un número -> no es un código
+      parts.push({ code: parseInt(m[1],10), modifier: m[2].trim() || null });
+    }
+    return parts;
+  }
+
+  const trailing = raw.match(/^(.+?)\s*\((\d+)\)\s*$/);
+  if (trailing){
+    const label = trailing[1].trim();
+    const code = parseInt(trailing[2], 10);
+    const officialName = DICT[code];
+    let modifier = null;
+    if (officialName){
+      const upperLabel = label.toUpperCase();
+      const upperOfficial = officialName.toUpperCase();
+      if (upperLabel === upperOfficial){
+        modifier = null;
+      } else if (upperLabel.startsWith(upperOfficial)){
+        modifier = label.slice(officialName.length).trim() || null;
+      } else if (upperLabel.endsWith(upperOfficial)){
+        modifier = label.slice(0, label.length - officialName.length).trim() || null;
+      } else {
+        modifier = label; // el nombre de la celda no coincide con el oficial: se guarda como aclaración
+      }
+    } else {
+      modifier = null;
+    }
+    return [{ code, modifier, rawLabel: label }];
+  }
+
+  return null;
+}
+
+function buildComboName(parts){
+  return parts.map(p=>{
+    const base = DICT[p.code] || p.rawLabel || ('Código ' + p.code);
+    return p.modifier ? (base + ' ' + p.modifier.toUpperCase()) : base;
+  }).join(' + ');
+}
+
+function parseRepsCell(v){
+  if (v === null || v === undefined) return { total:null, parts:null, raw:null, restSeconds:null };
+  const raw = String(v).trim();
+  if (!raw) return { total:null, parts:null, raw:null, restSeconds:null };
+  if (/^\d+([.,]\d+)?$/.test(raw)){
+    return { total: Number(raw.replace(',','.')), parts: null, raw:null, restSeconds:null };
+  }
+  if (raw.includes('+')){
+    const bits = raw.split('+').map(s=>s.trim());
+    const nums = bits.map(b=> /^\d+([.,]\d+)?$/.test(b) ? Number(b.replace(',','.')) : null);
+    if (!nums.some(n=>n===null)){
+      return { total: nums.reduce((a,b)=>a+b,0), parts: nums, raw:null, restSeconds:null };
+    }
+  }
+  const restMatch = raw.match(/^(\d+)\s+(\d+)\s*"\s*$/);
+  if (restMatch){
+    return { total: parseInt(restMatch[1],10), parts:null, raw, restSeconds: parseInt(restMatch[2],10) };
+  }
+  const firstNum = raw.match(/\d+/);
+  return { total: firstNum ? parseInt(firstNum[0],10) : null, parts:null, raw, restSeconds:null };
+}
+
+function parseRows(rows){
+  let headerRowIdx = -1, codeColIdx = -1;
+  for (let r=0; r<rows.length; r++){
+    const row = rows[r] || [];
+    for (let c=0; c<row.length; c++){
+      const val = norm(row[c]).toUpperCase();
+      if (/^C[OÓ]DIGO\b/.test(val)){ headerRowIdx = r; codeColIdx = c; break; }
+    }
+    if (headerRowIdx !== -1) break;
+  }
+  if (headerRowIdx === -1) return { ok:false, error:'no-header', rows };
+
+  const header = rows[headerRowIdx] || [];
+  let toColIdx = -1;
+  for (let c=codeColIdx+1; c<header.length; c++){
+    const up = norm(header[c]).toUpperCase();
+    if (up === 'TO' || up.startsWith('TO ') || up.startsWith('TO\t')){ toColIdx = c; break; }
+  }
+  if (toColIdx === -1) toColIdx = header.length;
+
+  const dayColIdx = 0;
+  const refColIdx = codeColIdx + 1;
+  const groupStart = refColIdx + 1;
+  const numGroups = Math.max(0, Math.floor((toColIdx - groupStart) / 3));
+
+  let athlete = null, week = null, jornada = null;
+  const skipWords = ['PLAN','SEMANA','KG','MAXIMOS','MÁXIMOS','OBJETIVOS','COMPETICION','COMPETICIÓN','HISTORICO','HISTÓRICO','MEJORA','CODIGO','CÓDIGO','REF','ENTRENAMIENTO'];
+  for (let r=0; r<headerRowIdx; r++){
+    const row = rows[r] || [];
+    // Algunas plantillas tienen una tabla de "MÁXIMOS" con dos filas,
+    // Histórico/Semana, comparando la marca de esta semana con la marca de
+    // siempre — esa "Semana" NO es el número de semana del plan, es un peso.
+    // Se descarta si la fila de arriba dice "Histórico".
+    const prevRow = rows[r-1] || [];
+    const prevRowIsHistorico = prevRow.some(v=>{
+      const u = norm(v).toUpperCase();
+      return u.includes('HISTÓRICO') || u.includes('HISTORICO');
+    });
+    for (let c=0; c<row.length; c++){
+      const val = norm(row[c]);
+      const up = val.toUpperCase();
+      if (up === 'SEMANA' && !prevRowIsHistorico){
+        for (let cc=c+1; cc<row.length; cc++){
+          if (row[cc] !== null && norm(row[cc]) !== ''){
+            const n = Number(row[cc]);
+            // un número de semana real de una temporada es un valor pequeño;
+            // si no lo es (p.ej. viene de una celda de peso), se descarta
+            if (!isNaN(n) && n>=1 && n<=60) week = n;
+            break;
+          }
+        }
+      }
+      if (up.includes('JORNADA') || up.includes('ANDALUZ') || up.includes('LIGA') || up.includes('CAMPEONATO')){
+        if (!jornada || val.length > jornada.length) jornada = val;
+      }
+    }
+  }
+  for (let r=0; r<headerRowIdx; r++){
+    const row = rows[r] || [];
+    for (let c=0; c<row.length; c++){
+      const val = norm(row[c]);
+      if (val && val === val.toUpperCase() && /^[A-ZÁÉÍÓÚÑ]{3,}$/.test(val) && !skipWords.includes(val) && !val.includes('JORNADA') && !val.includes('ANDALUZ')){
+        athlete = val; break;
+      }
+    }
+    if (athlete) break;
+  }
+
+  const days = {};
+  let currentDay = null;
+
+  for (let r=headerRowIdx+1; r<rows.length; r++){
+    const row = rows[r] || [];
+    const dayCell = norm(row[dayColIdx]).toUpperCase();
+    if (dayCell && DAY_ORDER.includes(dayCell)){
+      currentDay = dayCell;
+      if (!days[currentDay]) days[currentDay] = [];
+    }
+    if (!currentDay) continue;
+
+    const codeCellRaw = row[codeColIdx];
+    const codeCell = norm(codeCellRaw);
+    if (!codeCell) continue;
+
+    const parts = parseCodeCell(codeCell);
+    const entry = { sets: [] };
+
+    if (parts){
+      entry.type = 'exercise';
+      entry.code = parts[0].code;
+      entry.parts = (parts.length > 1 || parts[0].modifier) ? parts : null;
+      entry.name = buildComboName(parts);
+    } else {
+      entry.type = REST_WORDS.includes(codeCell.toUpperCase()) ? 'rest' : 'note';
+      entry.label = codeCell;
+    }
+
+    if (entry.type === 'exercise'){
+      const groupToSetIdx = {};
+      for (let g=0; g<numGroups; g++){
+        const kgIdx = groupStart + g*3;
+        const kg = row[kgIdx], s = row[kgIdx+1], rr = row[kgIdx+2];
+        const kgStr = norm(kg);
+        if (kgStr === '') continue;
+        const repsInfo = parseRepsCell(rr);
+        const seriesVal = (s!==null&&s!==undefined&&s!=='' && !isNaN(Number(s)))? Number(s): null;
+        const setObj = !isNaN(Number(kg))
+          ? { kg: Number(kg), series: seriesVal, reps: repsInfo.total, repsParts: repsInfo.parts, repsRaw: repsInfo.raw, restSeconds: repsInfo.restSeconds }
+          : { kg: null, kgRaw: kgStr, optional: true, series: seriesVal, reps: repsInfo.total, repsParts: repsInfo.parts, repsRaw: repsInfo.raw, restSeconds: repsInfo.restSeconds };
+        groupToSetIdx[g] = entry.sets.length;
+        entry.sets.push(setObj);
+      }
+      if (entry.sets.length === 0) continue;
+
+      // Fila de continuación: sin día ni código, pero con pesos en alguna
+      // de las mismas columnas — es el remate en clúster de esa serie
+      // (p.ej. una repe extra a menos peso tras un descanso corto), no un
+      // ejercicio suelto sin nombre.
+      const nextRow = rows[r+1] || [];
+      const nextDayCell = norm(nextRow[dayColIdx]);
+      const nextCodeCell = norm(nextRow[codeColIdx]);
+      if (!nextDayCell && !nextCodeCell){
+        let merged = false;
+        for (let g=0; g<numGroups; g++){
+          if (groupToSetIdx[g] === undefined) continue;
+          const kgIdx = groupStart + g*3;
+          const kg = nextRow[kgIdx], s = nextRow[kgIdx+1], rr = nextRow[kgIdx+2];
+          const kgStr = norm(kg);
+          if (kgStr === '') continue;
+          const repsInfo = parseRepsCell(rr);
+          const seriesVal = (s!==null&&s!==undefined&&s!=='' && !isNaN(Number(s)))? Number(s): null;
+          const clusterObj = !isNaN(Number(kg))
+            ? { kg: Number(kg), series: seriesVal, reps: repsInfo.total, repsParts: repsInfo.parts, repsRaw: repsInfo.raw, restSeconds: repsInfo.restSeconds }
+            : { kg: null, kgRaw: kgStr, optional: true, series: seriesVal, reps: repsInfo.total, repsParts: repsInfo.parts, repsRaw: repsInfo.raw, restSeconds: repsInfo.restSeconds };
+          entry.sets[groupToSetIdx[g]].cluster = clusterObj;
+          merged = true;
+        }
+        if (merged) r++;
+      }
+    }
+
+    days[currentDay].push(entry);
+  }
+
+  const anyData = Object.keys(days).length > 0;
+  if (!anyData) return { ok:false, error:'no-days', rows };
+
+  return { ok:true, meta:{ athlete, week, jornada }, days };
+}
+
+function parseWorkbook(workbook){
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header:1, raw:true, defval:null });
+  return parseRows(rows);
+}
+function planId(meta){
+  return 'w' + (meta.week ?? 'x') + '_' + (meta.jornada ? meta.jornada.replace(/\s+/g,'').slice(0,20) : 'plan') + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+  const params = new URLSearchParams(window.location.search);
+  const athleteUid = params.get('athlete');
+  let currentClubId = null;
+
+  if (!athleteUid){
+    document.getElementById('loadingMsg').textContent = 'Falta el atleta en la dirección.';
+  }
+
+  auth.onAuthStateChanged(async (user)=>{
+    if (!user){ window.location.href = 'entrenador.html'; return; }
+    try{
+      const coachSnap = await db.collection('users').doc(user.uid).get();
+      const coach = coachSnap.exists ? coachSnap.data() : null;
+      if (!coach || coach.role !== 'coach'){ window.location.href = 'entrenador.html'; return; }
+      currentClubId = coach.clubId;
+
+      const athSnap = await db.collection('users').doc(athleteUid).get();
+      if (!athSnap.exists || athSnap.data().clubId !== currentClubId || athSnap.data().role !== 'athlete'){
+        document.getElementById('loadingMsg').textContent = 'Este atleta no pertenece a tu club.';
+        return;
+      }
+      renderAthlete(athSnap.data());
+      loadPlans();
+    }catch(e){
+      document.getElementById('loadingMsg').textContent = 'Error: ' + (e.message || e.code);
+    }
+  });
+
+  function renderAthlete(a){
+    document.getElementById('loadingMsg').classList.add('hidden');
+    document.getElementById('content').classList.remove('hidden');
+    document.getElementById('athleteName').textContent = a.name || a.email;
+    document.getElementById('athleteEmail').textContent = a.email || '';
+
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusText');
+    if (a.blocked){ dot.style.background='var(--red)'; txt.textContent='Acceso bloqueado'; }
+    else if (a.needsReview){ dot.style.background='var(--warn)'; txt.textContent='Subido · sin revisar'; }
+    else if (a.lastUploadAt){ dot.style.background='var(--ok)'; txt.textContent='Revisado'; }
+    else { dot.style.background='var(--muted-2)'; txt.textContent='Sin datos todavía'; }
+
+    document.getElementById('blockBtn').classList.toggle('hidden', !!a.blocked);
+    document.getElementById('unblockBtn').classList.toggle('hidden', !a.blocked);
+  }
+
+  document.getElementById('reviewBtn').onclick = async ()=>{
+    await db.collection('users').doc(athleteUid).update({ needsReview: false });
+    const snap = await db.collection('users').doc(athleteUid).get();
+    renderAthlete(snap.data());
+  };
+  document.getElementById('blockBtn').onclick = async ()=>{
+    await db.collection('users').doc(athleteUid).update({ blocked: true });
+    const snap = await db.collection('users').doc(athleteUid).get();
+    renderAthlete(snap.data());
+  };
+  document.getElementById('unblockBtn').onclick = async ()=>{
+    await db.collection('users').doc(athleteUid).update({ blocked: false });
+    const snap = await db.collection('users').doc(athleteUid).get();
+    renderAthlete(snap.data());
+  };
+
+  document.getElementById('uploadBtn').onclick = async ()=>{
+    const msg = document.getElementById('uploadMsg');
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput.files[0];
+    if (!file){ msg.textContent = 'Elige primero un archivo.'; msg.className = 'msg err'; return; }
+    msg.textContent = 'Leyendo…'; msg.className = 'msg';
+    try{
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type:'array' });
+      const result = parseWorkbook(wb);
+      if (!result.ok){
+        msg.textContent = 'No se ha podido leer el archivo (' + result.error + ').';
+        msg.className = 'msg err';
+        return;
+      }
+      const meta = result.meta || {};
+      const weekFromName = (file.name || '').match(/semana[\s_-]*n?[ºo°]?\s*(\d{1,3})/i);
+      if (weekFromName){ const n = parseInt(weekFromName[1],10); if (!isNaN(n)) meta.week = n; }
+
+      const id = planId(meta);
+      const plan = { id, meta, days: result.days, uploadedAt: Date.now() };
+      await db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid)
+        .collection('plans').doc(id).set(plan);
+      await db.collection('users').doc(athleteUid).update({ needsReview: true, lastUploadAt: Date.now() });
+
+      msg.textContent = 'Subido correctamente.';
+      msg.className = 'msg ok';
+      fileInput.value = '';
+      const snap = await db.collection('users').doc(athleteUid).get();
+      renderAthlete(snap.data());
+      loadPlans();
+    }catch(e){
+      msg.textContent = 'Error al subir: ' + (e.message || e.code);
+      msg.className = 'msg err';
+    }
+  };
+
+  async function loadPlans(){
+    const listEl = document.getElementById('plansList');
+    const snap = await db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid)
+      .collection('plans').orderBy('uploadedAt','desc').get();
+    if (snap.empty){
+      listEl.innerHTML = '<div class="empty">Todavía no se ha subido ninguna semana.</div>';
+      return;
+    }
+    listEl.innerHTML = '';
+    snap.forEach(doc=>{
+      const p = doc.data();
+      const label = (p.meta && p.meta.week!=null) ? ('Semana ' + p.meta.week) : (p.id);
+      const date = new Date(p.uploadedAt).toLocaleDateString('es-ES');
+      const row = document.createElement('div');
+      row.className = 'planRow';
+      row.innerHTML = '<span>' + label + '</span><span style="color:var(--muted-2);font-size:12.5px;">' + date + '</span>';
+      listEl.appendChild(row);
+    });
+  }
+</script>
+</body>
+</html>
