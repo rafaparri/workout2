@@ -129,10 +129,20 @@
   });
 
   async function loadClub(){
-    const snap = await db.collection('clubs').doc(currentClubId).get();
-    const club = snap.exists ? snap.data() : {};
-    document.getElementById('clubName').textContent = club.name || 'Mi club';
-    document.getElementById('clubSub').textContent = club.blocked ? 'Club bloqueado' : 'Panel del entrenador';
+    try{
+      const snap = await db.collection('clubs').doc(currentClubId).get();
+      if (!snap.exists){
+        document.getElementById('clubName').textContent = 'Club no encontrado';
+        document.getElementById('clubSub').textContent = 'clubId: ' + currentClubId;
+        return;
+      }
+      const club = snap.data();
+      document.getElementById('clubName').textContent = club.name || 'Mi club';
+      document.getElementById('clubSub').textContent = club.blocked ? 'Club bloqueado' : 'Panel del entrenador';
+    }catch(e){
+      document.getElementById('clubName').textContent = 'Error al cargar el club';
+      document.getElementById('clubSub').textContent = (e.message || e.code || String(e));
+    }
   }
 
   async function loadAthletes(){
