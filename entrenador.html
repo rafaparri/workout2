@@ -152,17 +152,14 @@
       // Diagnóstico: listamos TODOS los atletas que existen (sin filtrar
       // por club) para ver si hay alguno cuyo clubId no coincide carácter
       // a carácter con el del entrenador.
-      let diag = 'Buscando clubId="' + currentClubId + '" (códigos: ' + currentClubId.split('').map(c=>c.charCodeAt(0)).join(',') + ')<br>';
+      let diag = 'Buscando clubId="' + currentClubId + '"<br><br><b>Volcado completo de la colección users (sin filtros):</b><br>';
       try{
-        const allAthletes = await db.collection('users').where('role','==','athlete').get();
-        if (allAthletes.empty){
-          diag += 'No existe NINGÚN usuario con role=athlete en toda la base de datos.';
+        const allUsers = await db.collection('users').get();
+        if (allUsers.empty){
+          diag += '(la colección users está completamente vacía — ni siquiera tu propio perfil de entrenador aparece)';
         } else {
-          diag += 'Atletas existentes (de cualquier club):<br>';
-          allAthletes.forEach(d=>{
-            const a = d.data();
-            const cid = a.clubId || '(sin clubId)';
-            diag += '- ' + (a.name||a.email) + ' — clubId="' + cid + '" (códigos: ' + cid.split('').map(c=>c.charCodeAt(0)).join(',') + ')<br>';
+          allUsers.forEach(d=>{
+            diag += '· doc id: ' + d.id + ' → ' + JSON.stringify(d.data()) + '<br>';
           });
         }
       }catch(e){
