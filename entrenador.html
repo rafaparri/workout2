@@ -117,7 +117,7 @@
         await auth.signOut();
         return;
       }
-      currentClubId = prof.clubId;
+      currentClubId = (prof.clubId || '').trim();
       loginView.classList.add('hidden');
       dashView.classList.remove('hidden');
       loadClub();
@@ -133,7 +133,7 @@
       const snap = await db.collection('clubs').doc(currentClubId).get();
       if (!snap.exists){
         document.getElementById('clubName').textContent = 'Club no encontrado';
-        document.getElementById('clubSub').textContent = 'clubId: ' + currentClubId;
+        document.getElementById('clubSub').textContent = 'clubId leído: [' + currentClubId + '] (longitud: ' + (currentClubId ? currentClubId.length : 'null') + ')';
         return;
       }
       const club = snap.data();
