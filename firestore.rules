@@ -79,6 +79,12 @@ service cloud.firestore {
       allow read: if isSuperadmin() || isCoachOfClub(clubId) || isAthleteInClub(clubId, athleteId);
       allow write: if isSuperadmin() || isCoachOfClub(clubId);
     }
+    // Programación semanal de cada atleta: el entrenador sube/edita cada
+    // plan (lo lee del Excel); el atleta solo puede leerlo, nunca tocarlo.
+    match /clubs/{clubId}/athletes/{athleteId}/plans/{planId} {
+      allow read: if isSuperadmin() || isCoachOfClub(clubId) || isAthleteInClub(clubId, athleteId);
+      allow write: if isSuperadmin() || isCoachOfClub(clubId);
+    }
     match /clubs/{clubId}/athletes/{athleteId}/progress/{docId} {
       allow read: if isSuperadmin() || isCoachOfClub(clubId) || isAthleteInClub(clubId, athleteId);
       allow write: if isSuperadmin() || isCoachOfClub(clubId) || isAthleteInClub(clubId, athleteId);
