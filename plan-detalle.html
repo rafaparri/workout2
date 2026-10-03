@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>WorkOut 2.0 · Detalle del plan</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#f4f1ea; --surface:#ffffff; --surface-2:#eceae2; --surface-3:#d9d6cb;
+    --chalk:#20242e; --muted:#5a5e68; --muted-2:#8892a0; --yellow-deep:#c99a2e; --ok:#2f7dc4; --red:#c14a3a;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--chalk); font-family:'Inter',system-ui,sans-serif; }
+  .wrap{ max-width:560px; margin:0 auto; padding:24px 18px 80px; }
+  .back{
+    font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; color:var(--chalk);
+    text-decoration:none; display:flex; align-items:center; gap:8px;
+    background:var(--surface); border:1px solid var(--surface-3); border-radius:10px;
+    padding:12px 16px; margin-bottom:18px;
+  }
+  h1{ font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; text-transform:uppercase; margin:0 0 4px; }
+  .sub{ color:var(--muted); font-size:14px; margin:0 0 20px; }
+  .dayCard{ background:var(--surface); border:1px solid var(--surface-3); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .dayName{ font-family:'Oswald',sans-serif; font-weight:700; font-size:16px; text-transform:uppercase; margin-bottom:10px; color:var(--yellow-deep); }
+  .exName{ font-family:'Oswald',sans-serif; font-weight:700; font-size:14.5px; margin:10px 0 6px; }
+  .setRow{ display:flex; gap:8px; align-items:center; margin-bottom:6px; }
+  .setRow input{ background:var(--surface-2); border:1px solid var(--surface-3); border-radius:8px; color:var(--chalk); font-family:'IBM Plex Mono',monospace; font-size:14px; padding:8px; text-align:center; }
+  .setRow input.kg{ width:66px; }
+  .setRow input.series{ width:46px; }
+  .setRow input.reps{ width:60px; }
+  .setRow .x{ color:var(--muted-2); font-size:13px; }
+  .restCard{ background:var(--surface); border:1px solid var(--surface-3); border-radius:14px; padding:16px; text-align:center; color:var(--muted); font-family:'Oswald',sans-serif; text-transform:uppercase; margin-bottom:14px; }
+  .saveBar{ position:fixed; left:0; right:0; bottom:0; background:var(--surface); border-top:1px solid var(--surface-3); padding:14px 18px; display:flex; justify-content:center; }
+  .saveBar button{ width:100%; max-width:520px; background:var(--chalk); color:#fff; border:none; border-radius:10px; font-family:'Oswald',sans-serif; font-weight:700; font-size:16px; padding:15px; cursor:pointer; }
+  .msg{ font-size:13px; margin-top:8px; text-align:center; }
+  .msg.ok{ color:var(--ok); } .msg.err{ color:var(--red); }
+  .hidden{ display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" id="backLink" href="ficha-atleta.html">← Volver a la ficha del atleta</a>
+  <div id="loadingMsg" class="sub">Cargando…</div>
+  <div id="content" class="hidden">
+    <h1 id="planTitle">Plan</h1>
+    <p class="sub">Toca cualquier número para corregirlo.</p>
+    <div id="daysWrap"></div>
+  </div>
+</div>
+
+<div class="saveBar">
+  <div style="width:100%;max-width:520px;">
+    <button id="saveBtn">Guardar cambios</button>
+    <div id="saveMsg" class="msg"></div>
+  </div>
+</div>
+
+<script src="firebase-init.js"></script>
+<script>
+  const DAY_NAMES = { L:'Lunes', M:'Martes', X:'Miércoles', J:'Jueves', V:'Viernes', S:'Sábado', D:'Domingo' };
+  const DAY_ORDER = ['L','M','X','J','V','S','D'];
+
+  const params = new URLSearchParams(window.location.search);
+  const athleteUid = params.get('athlete');
+  const planIdParam = params.get('plan');
+  document.getElementById('backLink').href = 'ficha-atleta.html?athlete=' + athleteUid;
+
+  let currentClubId = null;
+  let planData = null;
+
+  auth.onAuthStateChanged(async (user)=>{
+    if (!user){ window.location.href = 'entrenador.html'; return; }
+    try{
+      const coachSnap = await db.collection('users').doc(user.uid).get();
+      const coach = coachSnap.exists ? coachSnap.data() : null;
+      if (!coach || coach.role !== 'coach'){ window.location.href = 'entrenador.html'; return; }
+      currentClubId = coach.clubId;
+
+      const planSnap = await db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid)
+        .collection('plans').doc(planIdParam).get();
+      if (!planSnap.exists){
+        document.getElementById('loadingMsg').textContent = 'No se ha encontrado este plan.';
+        return;
+      }
+      planData = planSnap.data();
+      render();
+    }catch(e){
+      document.getElementById('loadingMsg').textContent = 'Error: ' + (e.message || e.code);
+    }
+  });
+
+  function render(){
+    document.getElementById('loadingMsg').classList.add('hidden');
+    document.getElementById('content').classList.remove('hidden');
+    const label = (planData.meta && planData.meta.week!=null) ? ('Semana ' + planData.meta.week) : planIdParam;
+    document.getElementById('planTitle').textContent = label;
+
+    const wrap = document.getElementById('daysWrap');
+    wrap.innerHTML = '';
+    DAY_ORDER.forEach(day=>{
+      const entries = (planData.days && planData.days[day]) || [];
+      if (!entries.length) return;
+      const card = document.createElement('div');
+      const hasExercises = entries.some(e=>e.type==='exercise');
+      if (!hasExercises){
+        card.className = 'restCard';
+        card.textContent = DAY_NAMES[day] + ' — Descanso';
+        wrap.appendChild(card);
+        return;
+      }
+      card.className = 'dayCard';
+      const h = document.createElement('div');
+      h.className = 'dayName';
+      h.textContent = DAY_NAMES[day];
+      card.appendChild(h);
+
+      entries.forEach((entry, exIdx)=>{
+        if (entry.type !== 'exercise') return;
+        const exName = document.createElement('div');
+        exName.className = 'exName';
+        exName.textContent = entry.name || ('Código ' + entry.code);
+        card.appendChild(exName);
+
+        entry.sets.forEach((s, si)=>{
+          const row = document.createElement('div');
+          row.className = 'setRow';
+          const repsVal = s.repsParts ? s.repsParts.join('+') : (s.repsRaw || (s.reps ?? ''));
+          row.innerHTML = `
+            <input class="kg" type="text" value="${s.kg ?? (s.kgRaw||'')}" data-day="${day}" data-ex="${exIdx}" data-set="${si}" data-field="kg">
+            <span class="x">kg ×</span>
+            <input class="series" type="text" value="${s.series ?? ''}" data-day="${day}" data-ex="${exIdx}" data-set="${si}" data-field="series">
+            <span class="x">×</span>
+            <input class="reps" type="text" value="${repsVal}" data-day="${day}" data-ex="${exIdx}" data-set="${si}" data-field="reps">
+            <span class="x">reps</span>`;
+          card.appendChild(row);
+        });
+      });
+      wrap.appendChild(card);
+    });
+  }
+
+  document.getElementById('saveBtn').onclick = async ()=>{
+    const msg = document.getElementById('saveMsg');
+    // Aplica cada input directamente sobre planData.days antes de guardar.
+    document.querySelectorAll('[data-field]').forEach(inp=>{
+      const day = inp.dataset.day, exIdx = parseInt(inp.dataset.ex,10), si = parseInt(inp.dataset.set,10), field = inp.dataset.field;
+      const set = planData.days[day][exIdx].sets[si];
+      const val = inp.value.trim();
+      if (field === 'kg'){
+        const n = Number(val.replace(',','.'));
+        if (!isNaN(n) && val !== ''){ set.kg = n; delete set.kgRaw; delete set.optional; }
+        else { set.kg = null; set.kgRaw = val; set.optional = true; }
+      } else if (field === 'series'){
+        const n = parseInt(val,10);
+        set.series = isNaN(n) ? null : n;
+      } else if (field === 'reps'){
+        if (val.includes('+')){
+          const parts = val.split('+').map(x=>Number(x.trim())).filter(x=>!isNaN(x));
+          set.repsParts = parts.length ? parts : null;
+          set.reps = parts.length ? parts.reduce((a,b)=>a+b,0) : null;
+          set.repsRaw = null;
+        } else {
+          const n = Number(val.replace(',','.'));
+          if (!isNaN(n) && val !== ''){ set.reps = n; set.repsParts = null; set.repsRaw = null; }
+          else { set.reps = null; set.repsParts = null; set.repsRaw = val || null; }
+        }
+      }
+    });
+    try{
+      await db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid)
+        .collection('plans').doc(planIdParam).set(planData);
+      msg.textContent = 'Guardado.';
+      msg.className = 'msg ok';
+    }catch(e){
+      msg.textContent = 'Error al guardar: ' + (e.message || e.code);
+      msg.className = 'msg err';
+    }
+  };
+</script>
+</body>
+</html>
