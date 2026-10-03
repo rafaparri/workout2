@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>WorkOut 2.0 · Atleta</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#f4f1ea; --surface:#ffffff; --surface-2:#eceae2; --surface-3:#d9d6cb;
+    --chalk:#20242e; --muted:#5a5e68; --muted-2:#8892a0;
+    --yellow-deep:#c99a2e; --ok:#2f7dc4; --red:#c14a3a;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--chalk); font-family:'Inter',system-ui,sans-serif; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .card{ width:100%; max-width:420px; background:var(--surface); border:1px solid var(--surface-3); border-radius:18px; padding:32px 26px; }
+  h1{ font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; text-transform:uppercase; margin:0 0 6px; text-align:center; }
+  p.sub{ color:var(--muted); font-size:14.5px; margin:0 0 22px; text-align:center; }
+  label{ display:block; font-family:'Oswald',sans-serif; font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.02em; margin-bottom:6px; color:var(--muted); }
+  input{ width:100%; background:var(--surface-2); border:1px solid var(--surface-3); border-radius:10px; color:var(--chalk); font-size:16px; padding:13px; margin-bottom:14px; }
+  button{ width:100%; background:var(--chalk); color:#fff; border:none; border-radius:10px; font-family:'Oswald',sans-serif; font-weight:700; font-size:16px; padding:15px; cursor:pointer; }
+  .msg{ font-size:13.5px; margin-top:10px; text-align:center; }
+  .msg.err{ color:var(--red); } .msg.ok{ color:var(--ok); }
+  .hidden{ display:none; }
+  .center{ text-align:center; }
+</style>
+</head>
+<body>
+
+<div class="card">
+
+  <div id="loadingView">
+    <h1>WorkOut 2.0</h1>
+    <p class="sub">Comprobando tu enlace…</p>
+  </div>
+
+  <div id="confirmEmailView" class="hidden">
+    <h1>Confirma tu correo</h1>
+    <p class="sub">Por seguridad, escribe el correo al que te llegó la invitación.</p>
+    <label>Correo electrónico</label>
+    <input type="email" id="confirmEmail" placeholder="tu@correo.com">
+    <button id="confirmBtn">Continuar</button>
+    <div id="confirmMsg" class="msg"></div>
+  </div>
+
+  <div id="setPasswordView" class="hidden">
+    <h1>¡Ya casi está!</h1>
+    <p class="sub">Elige una contraseña para entrar directamente la próxima vez, sin esperar otro enlace.</p>
+    <label>Nueva contraseña</label>
+    <input type="password" id="newPass" placeholder="mínimo 6 caracteres">
+    <button id="savePassBtn">Guardar y entrar</button>
+    <div id="passMsg" class="msg"></div>
+  </div>
+
+  <div id="loginView" class="hidden">
+    <h1>WorkOut 2.0</h1>
+    <p class="sub">Acceso de atleta</p>
+    <label>Correo electrónico</label>
+    <input type="email" id="loginEmail" autocomplete="username">
+    <label>Contraseña</label>
+    <input type="password" id="loginPass" autocomplete="current-password">
+    <button id="loginBtn">Entrar</button>
+    <div id="loginMsg" class="msg"></div>
+  </div>
+
+  <div id="blockedView" class="hidden center">
+    <h1>Acceso bloqueado</h1>
+    <p class="sub">Tu entrenador ha bloqueado tu acceso a la app. Contacta con él para más información.</p>
+  </div>
+
+  <div id="homeView" class="hidden center">
+    <h1 id="welcomeName">¡Hola!</h1>
+    <p class="sub">Tu perfil está listo. Aquí irá tu entreno (próximo paso de la construcción).</p>
+  </div>
+
+</div>
+
+<script src="firebase-init.js"></script>
+<script>
+  const views = ['loadingView','confirmEmailView','setPasswordView','loginView','blockedView','homeView'];
+  function show(id){ views.forEach(v=> document.getElementById(v).classList.toggle('hidden', v!==id)); }
+
+  const params = new URLSearchParams(window.location.search);
+  const inviteIdFromLink = params.get('invite');
+
+  async function finishSignIn(email){
+    try{
+      const result = await auth.signInWithEmailLink(email, window.location.href);
+      window.localStorage.removeItem('emailForSignIn');
+      await afterSignIn(result.user, true);
+    }catch(e){
+      document.getElementById('confirmMsg').textContent = 'No se ha podido validar el enlace: ' + (e.message || e.code);
+      document.getElementById('confirmMsg').className = 'msg err';
+      show('confirmEmailView');
+    }
+  }
+
+  async function afterSignIn(user, isNewFromLink){
+    const ref = db.collection('users').doc(user.uid);
+    let snap = await ref.get();
+    if (!snap.exists){
+      if (!inviteIdFromLink){
+        document.getElementById('confirmMsg').textContent = 'No se encuentra tu invitación. Pide a tu entrenador que te envíe el enlace de nuevo.';
+        document.getElementById('confirmMsg').className = 'msg err';
+        show('confirmEmailView');
+        return;
+      }
+      const inviteSnap = await db.collection('invites').doc(inviteIdFromLink).get();
+      if (!inviteSnap.exists){
+        document.getElementById('confirmMsg').textContent = 'Esa invitación ya no es válida.';
+        document.getElementById('confirmMsg').className = 'msg err';
+        show('confirmEmailView');
+        return;
+      }
+      const inv = inviteSnap.data();
+      await ref.set({
+        role: 'athlete',
+        clubId: inv.clubId,
+        name: inv.name || user.email,
+        email: user.email,
+        inviteId: inviteIdFromLink,
+        blocked: false,
+        needsReview: false,
+        createdAt: Date.now()
+      });
+      snap = await ref.get();
+    }
+    const prof = snap.data();
+    if (prof.blocked){ show('blockedView'); return; }
+    if (isNewFromLink){ show('setPasswordView'); return; }
+    document.getElementById('welcomeName').textContent = '¡Hola, ' + (prof.name || '') + '!';
+    show('homeView');
+  }
+
+  document.getElementById('confirmBtn').onclick = ()=>{
+    const email = document.getElementById('confirmEmail').value.trim();
+    if (!email){ return; }
+    finishSignIn(email);
+  };
+
+  document.getElementById('savePassBtn').onclick = async ()=>{
+    const msg = document.getElementById('passMsg');
+    const pass = document.getElementById('newPass').value;
+    if (!pass || pass.length < 6){ msg.textContent = 'Mínimo 6 caracteres.'; msg.className = 'msg err'; return; }
+    try{
+      await auth.currentUser.updatePassword(pass);
+      const snap = await db.collection('users').doc(auth.currentUser.uid).get();
+      const prof = snap.data();
+      document.getElementById('welcomeName').textContent = '¡Hola, ' + (prof.name || '') + '!';
+      show('homeView');
+    }catch(e){
+      msg.textContent = 'No se pudo guardar: ' + (e.message || e.code);
+      msg.className = 'msg err';
+    }
+  };
+
+  document.getElementById('loginBtn').onclick = async ()=>{
+    const msg = document.getElementById('loginMsg');
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    if (!email || !pass){ msg.textContent = 'Rellena correo y contraseña.'; msg.className = 'msg err'; return; }
+    try{
+      await auth.signInWithEmailAndPassword(email, pass);
+    }catch(e){
+      msg.textContent = 'No se ha podido entrar: ' + (e.message || e.code);
+      msg.className = 'msg err';
+    }
+  };
+
+  // Punto de entrada: ¿venimos de un enlace mágico, o es una visita normal?
+  if (auth.isSignInWithEmailLink(window.location.href)){
+    let email = window.localStorage.getItem('emailForSignIn');
+    if (email){
+      finishSignIn(email);
+    } else {
+      show('confirmEmailView');
+    }
+  } else {
+    auth.onAuthStateChanged(async (user)=>{
+      if (user) afterSignIn(user, false);
+      else show('loginView');
+    });
+  }
+</script>
+</body>
+</html>
