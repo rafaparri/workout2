@@ -149,23 +149,7 @@
     const listEl = document.getElementById('athletesList');
     const snap = await db.collection('users').where('clubId','==',currentClubId).where('role','==','athlete').get();
     if (snap.empty){
-      // Diagnóstico: listamos TODOS los atletas que existen (sin filtrar
-      // por club) para ver si hay alguno cuyo clubId no coincide carácter
-      // a carácter con el del entrenador.
-      let diag = 'Buscando clubId="' + currentClubId + '"<br><br><b>Volcado completo de la colección users (sin filtros):</b><br>';
-      try{
-        const allUsers = await db.collection('users').get();
-        if (allUsers.empty){
-          diag += '(la colección users está completamente vacía — ni siquiera tu propio perfil de entrenador aparece)';
-        } else {
-          allUsers.forEach(d=>{
-            diag += '· doc id: ' + d.id + ' → ' + JSON.stringify(d.data()) + '<br>';
-          });
-        }
-      }catch(e){
-        diag += 'Error al listar: ' + (e.message || e.code);
-      }
-      listEl.innerHTML = '<div class="empty" style="text-align:left;font-size:11.5px;line-height:1.6;">' + diag + '</div>';
+      listEl.innerHTML = '<div class="empty">Todavía no has invitado a ningún atleta.</div>';
       return;
     }
     listEl.innerHTML = '';
