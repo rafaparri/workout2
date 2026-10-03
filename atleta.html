@@ -25,6 +25,46 @@
   .msg.err{ color:var(--red); } .msg.ok{ color:var(--ok); }
   .hidden{ display:none; }
   .center{ text-align:center; }
+
+  /* -- app de entreno (homeView) -- */
+  .appWrap{ width:100%; max-width:560px; }
+  .appTop{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
+  .appGreeting{ font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; text-transform:uppercase; margin:0 0 4px; text-align:left; }
+  .breadcrumb{ font-size:13px; color:var(--muted); }
+  .breadcrumb a{ color:var(--muted); text-decoration:underline; cursor:pointer; }
+  .logoutBtn{ width:auto; background:none; color:var(--muted-2); border:none; font-family:'Inter',sans-serif; font-weight:600; font-size:12.5px; text-decoration:underline; padding:4px; }
+
+  .listCard{ background:var(--surface); border:1px solid var(--surface-3); border-radius:14px; padding:10px 16px; margin-bottom:16px; }
+  .listRow{ display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid var(--surface-3); cursor:pointer; font-size:16px; }
+  .listRow:last-child{ border-bottom:none; }
+  .listRow .chev{ color:var(--muted-2); font-size:18px; }
+  .emptyMsg{ text-align:center; color:var(--muted-2); font-size:15px; padding:20px 0; }
+
+  .dayGrid{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px; }
+  .dayPill{
+    width:58px; height:58px; border-radius:14px; display:flex; align-items:center; justify-content:center;
+    font-family:'Oswald',sans-serif; font-weight:700; font-size:16px; color:#fff; cursor:pointer;
+    background:var(--chalk); border:none;
+    box-shadow:0 3px 0 rgba(0,0,0,.25), 0 4px 8px rgba(0,0,0,.15);
+  }
+  .dayPill.rest{ background:var(--surface-2); color:var(--muted-2); box-shadow:none; border:2px dashed var(--surface-3); }
+
+  .exCard{ background:var(--surface); border:1px solid var(--surface-3); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .exName{ font-family:'Oswald',sans-serif; font-weight:700; font-size:16px; margin-bottom:10px; }
+  .chipsWrap{ display:flex; flex-wrap:wrap; gap:8px; }
+  .setChip{
+    background:var(--surface-2); border:2px solid var(--surface-3); border-radius:10px;
+    padding:10px 12px; font-family:'IBM Plex Mono',monospace; font-size:15px; cursor:pointer; color:var(--chalk);
+  }
+  .setChip b{ color:var(--yellow-deep); }
+
+  .ratingOverlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50; }
+  .ratingBox{ background:var(--surface); border-radius:16px; padding:24px; width:100%; max-width:380px; text-align:center; }
+  .ratingKg{ font-family:'Oswald',sans-serif; font-weight:700; font-size:44px; color:var(--yellow-deep); margin-bottom:4px; }
+  .ratingSetrep{ font-family:'IBM Plex Mono',monospace; font-size:18px; margin-bottom:20px; }
+  .ratingIcons{ display:flex; gap:8px; justify-content:center; margin-bottom:16px; }
+  .ratingIcons button{ flex:1; max-width:60px; font-size:26px; padding:14px 0; border-radius:12px; border:2px solid var(--surface-3); background:var(--surface-2); cursor:pointer; }
+  .ratingClose{ background:none; color:var(--muted-2); font-size:13px; text-decoration:underline; border:none; width:auto; padding:6px; }
 </style>
 </head>
 <body>
@@ -70,17 +110,26 @@
     <p class="sub">Tu entrenador ha bloqueado tu acceso a la app. Contacta con él para más información.</p>
   </div>
 
-  <div id="homeView" class="hidden center">
-    <h1 id="welcomeName">¡Hola!</h1>
-    <p class="sub">Tu perfil está listo. Aquí irá tu entreno (próximo paso de la construcción).</p>
-  </div>
+</div>
 
+<div id="homeView" class="hidden appWrap">
+  <div class="appTop">
+    <div>
+      <h2 id="welcomeName" class="appGreeting">¡Hola!</h2>
+      <div id="breadcrumb" class="breadcrumb"></div>
+    </div>
+    <button id="logoutBtn" class="logoutBtn">Salir</button>
+  </div>
+  <div id="appContent"></div>
 </div>
 
 <script src="firebase-init.js"></script>
 <script>
   const views = ['loadingView','confirmEmailView','setPasswordView','loginView','blockedView','homeView'];
-  function show(id){ views.forEach(v=> document.getElementById(v).classList.toggle('hidden', v!==id)); }
+  function show(id){
+    views.forEach(v=> document.getElementById(v).classList.toggle('hidden', v!==id));
+    document.querySelector('.card').classList.toggle('hidden', id==='homeView');
+  }
 
   const params = new URLSearchParams(window.location.search);
   const inviteIdFromLink = params.get('invite');
@@ -132,8 +181,11 @@
     const prof = snap.data();
     if (prof.blocked){ show('blockedView'); return; }
     if (isNewFromLink){ show('setPasswordView'); return; }
+    athleteProfile = prof;
+    currentClubId = prof.clubId;
     document.getElementById('welcomeName').textContent = '¡Hola, ' + (prof.name || '') + '!';
     show('homeView');
+    loadAthleteApp();
   }
 
   document.getElementById('confirmBtn').onclick = ()=>{
@@ -160,8 +212,11 @@
     try{
       const snap = await db.collection('users').doc(u.uid).get();
       const prof = snap.data();
+      athleteProfile = prof;
+      currentClubId = prof.clubId;
       document.getElementById('welcomeName').textContent = '¡Hola, ' + (prof.name || '') + '!';
       show('homeView');
+      loadAthleteApp();
     }catch(e){
       msg.textContent = '[Paso 2: leer perfil] uid=' + u.uid + ' — ' + (e.message || e.code);
       msg.className = 'msg err';
@@ -203,6 +258,176 @@
       if (user) afterSignIn(user, false);
       else show('loginView');
     });
+  }
+
+  /* ============== App de entreno (bloque 1) ============== */
+  const DAY_NAMES = { L:'Lunes', M:'Martes', X:'Miércoles', J:'Jueves', V:'Viernes', S:'Sábado', D:'Domingo' };
+  const DAY_ORDER = ['L','M','X','J','V','S','D'];
+  const SET_RATING_LEVELS = [
+    { value:1, icon:'😫', color:'#c14a3a' },
+    { value:2, icon:'😞', color:'#d9793f' },
+    { value:3, icon:'😐', color:'#c99a2e' },
+    { value:4, icon:'🙂', color:'#5a8fb0' },
+    { value:5, icon:'💪', color:'#2f7dc4' }
+  ];
+  function ratingInfo(v){ return SET_RATING_LEVELS.find(l=>l.value===v) || null; }
+  function checkKey(planId, day, exIdx, si){ return planId + '|' + day + '|' + exIdx + '|' + si; }
+
+  let athletePlans = [];
+  let athleteChecks = {};
+  let navState = { planId: null, day: null };
+
+  document.getElementById('logoutBtn').onclick = ()=> auth.signOut().then(()=> window.location.reload());
+
+  async function loadAthleteApp(){
+    const base = db.collection('clubs').doc(currentClubId).collection('athletes').doc(signedInUser.uid);
+    const plansSnap = await base.collection('plans').orderBy('uploadedAt','desc').get();
+    athletePlans = plansSnap.docs.map(d=>d.data());
+    const progSnap = await base.collection('progress').doc('main').get();
+    athleteChecks = (progSnap.exists && progSnap.data().checks) || {};
+    renderApp();
+  }
+
+  async function saveCheck(key, value){
+    if (value===null) delete athleteChecks[key]; else athleteChecks[key] = value;
+    const base = db.collection('clubs').doc(currentClubId).collection('athletes').doc(signedInUser.uid);
+    await base.collection('progress').doc('main').set({ checks: athleteChecks }, { merge:true });
+  }
+
+  function renderApp(){
+    const bc = document.getElementById('breadcrumb');
+    const content = document.getElementById('appContent');
+    content.innerHTML = '';
+
+    if (!navState.planId){
+      bc.innerHTML = '';
+      renderWeeksList(content);
+      return;
+    }
+    const plan = athletePlans.find(p=>p.id===navState.planId);
+    const weekLabel = (plan.meta && plan.meta.week!=null) ? ('Semana '+plan.meta.week) : plan.id;
+
+    if (!navState.day){
+      bc.innerHTML = '<a onclick="navState={planId:null,day:null};renderApp();">Semanas</a> › ' + weekLabel;
+      renderDaysList(content, plan);
+      return;
+    }
+    bc.innerHTML = '<a onclick="navState.day=null;renderApp();">' + weekLabel + '</a> › ' + DAY_NAMES[navState.day];
+    renderExercises(content, plan, navState.day);
+  }
+
+  function renderWeeksList(container){
+    const card = document.createElement('div');
+    card.className = 'listCard';
+    if (!athletePlans.length){
+      card.innerHTML = '<div class="emptyMsg">Tu entrenador todavía no te ha subido ninguna semana.</div>';
+    } else {
+      athletePlans.forEach(p=>{
+        const label = (p.meta && p.meta.week!=null) ? ('Semana ' + p.meta.week) : p.id;
+        const row = document.createElement('div');
+        row.className = 'listRow';
+        row.innerHTML = '<span>' + label + '</span><span class="chev">›</span>';
+        row.onclick = ()=>{ navState = { planId: p.id, day: null }; renderApp(); };
+        card.appendChild(row);
+      });
+    }
+    container.appendChild(card);
+  }
+
+  function renderDaysList(container, plan){
+    const grid = document.createElement('div');
+    grid.className = 'dayGrid';
+    DAY_ORDER.forEach(day=>{
+      const entries = (plan.days && plan.days[day]) || [];
+      if (!entries.length) return;
+      const hasExercises = entries.some(e=>e.type==='exercise');
+      const pill = document.createElement('button');
+      pill.className = 'dayPill' + (hasExercises ? '' : ' rest');
+      pill.textContent = day;
+      pill.onclick = ()=>{ navState.day = day; renderApp(); };
+      grid.appendChild(pill);
+    });
+    container.appendChild(grid);
+    if (!grid.children.length){
+      container.innerHTML = '<div class="listCard"><div class="emptyMsg">Esta semana está vacía.</div></div>';
+    }
+  }
+
+  function setDisplayText(s){
+    const kgTxt = (s.kg!==null && s.kg!==undefined) ? (s.kg+'kg') : (s.kgRaw||'?');
+    const repsTxt = s.repsParts ? s.repsParts.join('+') : (s.repsRaw || (s.reps ?? '?'));
+    return kgTxt + ' · ' + (s.series||'?') + '×' + repsTxt;
+  }
+
+  function renderExercises(container, plan, day){
+    const entries = (plan.days && plan.days[day]) || [];
+    const exEntries = entries.filter(e=>e.type==='exercise');
+    if (!exEntries.length){
+      container.innerHTML = '<div class="listCard"><div class="emptyMsg">Descanso.</div></div>';
+      return;
+    }
+    exEntries.forEach((entry)=>{
+      const exIdx = entries.indexOf(entry);
+      const card = document.createElement('div');
+      card.className = 'exCard';
+      const name = document.createElement('div');
+      name.className = 'exName';
+      name.textContent = entry.name || ('Código '+entry.code);
+      card.appendChild(name);
+
+      const chips = document.createElement('div');
+      chips.className = 'chipsWrap';
+      entry.sets.forEach((s, si)=>{
+        const key = checkKey(plan.id, day, exIdx, si);
+        const rating = athleteChecks[key] || null;
+        const rinfo = ratingInfo(rating);
+        const chip = document.createElement('div');
+        chip.className = 'setChip';
+        if (rinfo){ chip.style.borderColor = rinfo.color; }
+        const kgTxt = (s.kg!==null && s.kg!==undefined) ? (s.kg+'kg') : (s.kgRaw||'?');
+        const repsTxt = s.repsParts ? s.repsParts.join('+') : (s.repsRaw || (s.reps ?? '?'));
+        chip.innerHTML = '<b>'+kgTxt+'</b> · '+(s.series||'?')+'×'+repsTxt + (rinfo ? ' '+rinfo.icon : '');
+        chip.onclick = ()=> openRating(plan.id, day, exIdx, si, entry, s);
+        chips.appendChild(chip);
+      });
+      card.appendChild(chips);
+      container.appendChild(card);
+    });
+  }
+
+  function openRating(planId, day, exIdx, si, entry, s){
+    const overlay = document.createElement('div');
+    overlay.className = 'ratingOverlay';
+    overlay.onclick = (e)=>{ if (e.target===overlay) overlay.remove(); };
+    const box = document.createElement('div');
+    box.className = 'ratingBox';
+    const kgTxt = (s.kg!==null && s.kg!==undefined) ? (s.kg+'kg') : (s.kgRaw||'?');
+    const repsTxt = s.repsParts ? s.repsParts.join('+') : (s.repsRaw || (s.reps ?? '?'));
+    box.innerHTML = '<div class="ratingKg">'+kgTxt+'</div><div class="ratingSetrep">'+(s.series||'?')+' series × '+repsTxt+' reps</div>';
+    const icons = document.createElement('div');
+    icons.className = 'ratingIcons';
+    const key = checkKey(planId, day, exIdx, si);
+    const current = athleteChecks[key] || null;
+    SET_RATING_LEVELS.forEach(level=>{
+      const btn = document.createElement('button');
+      btn.textContent = level.icon;
+      if (current===level.value){ btn.style.background = level.color; btn.style.borderColor = level.color; }
+      btn.onclick = async ()=>{
+        const newVal = current===level.value ? null : level.value;
+        await saveCheck(key, newVal);
+        overlay.remove();
+        renderApp();
+      };
+      icons.appendChild(btn);
+    });
+    box.appendChild(icons);
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'ratingClose';
+    closeBtn.textContent = 'Cerrar sin marcar';
+    closeBtn.onclick = ()=> overlay.remove();
+    box.appendChild(closeBtn);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
   }
 </script>
 </body>
