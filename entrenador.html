@@ -132,20 +132,8 @@
     try{
       const snap = await db.collection('clubs').doc(currentClubId).get();
       if (!snap.exists){
-        // Diagnóstico a fondo: listamos TODOS los clubes que existen de
-        // verdad y comparamos carácter a carácter contra lo que busca la
-        // app, para detectar un carácter invisible o distinto a simple vista.
-        const allSnap = await db.collection('clubs').get();
-        const found = [];
-        allSnap.forEach(d=>{
-          const codes = d.id.split('').map(c=>c.charCodeAt(0)).join(',');
-          found.push(d.id + '  (códigos: ' + codes + ')');
-        });
-        const wantedCodes = currentClubId.split('').map(c=>c.charCodeAt(0)).join(',');
         document.getElementById('clubName').textContent = 'Club no encontrado';
-        document.getElementById('clubSub').innerHTML =
-          'Buscado: "' + currentClubId + '" (códigos: ' + wantedCodes + ')<br>' +
-          'Clubes que existen: ' + (found.length ? '<br>' + found.join('<br>') : '(ninguno)');
+        document.getElementById('clubSub').textContent = '';
         return;
       }
       const club = snap.data();
