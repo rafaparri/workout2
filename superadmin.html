@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>WorkOut 2.0 · Administrador</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+  :root{ --bg:#20242e; --surface:#2a2f3a; --surface-3:#3a4051; --chalk:#f4f1ea; --muted:#9aa0ad; --red:#c14a3a; }
+  *{box-sizing:border-box;}
+  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--chalk); font-family:'Inter',system-ui,sans-serif; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .card{ width:100%; max-width:380px; background:var(--surface); border:1px solid var(--surface-3); border-radius:16px; padding:32px 24px; }
+  h1{ font-family:'Oswald',sans-serif; font-weight:700; font-size:20px; text-transform:uppercase; margin:0 0 20px; text-align:center; }
+  label{ display:block; font-size:12px; text-transform:uppercase; letter-spacing:.02em; margin-bottom:6px; color:var(--muted); }
+  input{ width:100%; background:var(--bg); border:1px solid var(--surface-3); border-radius:10px; color:var(--chalk); font-size:15px; padding:12px; margin-bottom:14px; }
+  button{ width:100%; background:var(--chalk); color:var(--bg); border:none; border-radius:10px; font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; padding:14px; cursor:pointer; }
+  .msg{ font-size:13px; margin-top:10px; text-align:center; color:var(--red); }
+  .hidden{ display:none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div id="loginView">
+    <h1>Administrador</h1>
+    <label>Correo</label>
+    <input type="email" id="email">
+    <label>Contraseña</label>
+    <input type="password" id="pass">
+    <button id="loginBtn">Entrar</button>
+    <div id="msg" class="msg"></div>
+  </div>
+  <div id="okView" class="hidden">
+    <h1>Acceso confirmado</h1>
+    <p style="text-align:center;color:var(--muted);font-size:14px;">El panel completo (gestión de clubes, periodos de prueba, bloqueo general) es el siguiente paso de la construcción.</p>
+  </div>
+</div>
+<script src="firebase-init.js"></script>
+<script>
+  document.getElementById('loginBtn').onclick = async ()=>{
+    const msg = document.getElementById('msg');
+    msg.textContent = '';
+    try{
+      const cred = await auth.signInWithEmailAndPassword(
+        document.getElementById('email').value.trim(),
+        document.getElementById('pass').value
+      );
+      const snap = await db.collection('users').doc(cred.user.uid).get();
+      if (!snap.exists || snap.data().role !== 'superadmin'){
+        msg.textContent = 'Esta cuenta no tiene acceso de administrador.';
+        await auth.signOut();
+        return;
+      }
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('okView').classList.remove('hidden');
+    }catch(e){
+      msg.textContent = 'No se ha podido entrar: ' + (e.message || e.code);
+    }
+  };
+</script>
+</body>
+</html>
