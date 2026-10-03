@@ -299,7 +299,24 @@
   async function saveCheck(key, value){
     if (value===null) delete athleteChecks[key]; else athleteChecks[key] = value;
     const base = db.collection('clubs').doc(currentClubId).collection('athletes').doc(signedInUser.uid);
-    await base.collection('progress').doc('main').set({ checks: athleteChecks }, { merge:true });
+    try{
+      await base.collection('progress').doc('main').set({ checks: athleteChecks }, { merge:true });
+    }catch(e){
+      // Diagnóstico: releemos nuestro propio perfil tal cual lo ve Firestore
+      // ahora mismo, para comparar contra lo que la app tiene en memoria.
+      let diag = '';
+      try{
+        const freshSnap = await db.collection('users').doc(signedInUser.uid).get();
+        const fresh = freshSnap.exists ? freshSnap.data() : null;
+        diag = ' | uid=' + signedInUser.uid +
+          ' | currentClubId(app)="' + currentClubId + '" (códigos:' + currentClubId.split('').map(c=>c.charCodeAt(0)).join(',') + ')' +
+          ' | perfil.role="' + (fresh&&fresh.role) + '"' +
+          ' | perfil.clubId="' + (fresh&&fresh.clubId) + '" (códigos:' + ((fresh&&fresh.clubId)||'').split('').map(c=>c.charCodeAt(0)).join(',') + ')' +
+          ' | perfil.blocked=' + (fresh&&fresh.blocked);
+      }catch(e2){ diag = ' | (no se pudo releer el perfil: ' + (e2.message||e2.code) + ')'; }
+      e.message = (e.message||e.code) + diag;
+      throw e;
+    }
   }
 
   function renderApp(){
