@@ -110,6 +110,12 @@
     <p class="sub">Tu entrenador ha bloqueado tu acceso a la app. Contacta con él para más información.</p>
   </div>
 
+  <div id="wrongRoleView" class="hidden center">
+    <h1>Esta no es una cuenta de atleta</h1>
+    <p class="sub">Has entrado con una cuenta de entrenador. Esta pantalla es solo para atletas — entra en <a href="entrenador.html">entrenador.html</a> en su lugar, o vuelve a intentarlo aquí con tu correo de atleta.</p>
+    <button id="wrongRoleSignOutBtn">Salir de esta cuenta</button>
+  </div>
+
 </div>
 
 <div id="homeView" class="hidden appWrap">
@@ -125,7 +131,7 @@
 
 <script src="firebase-init.js"></script>
 <script>
-  const views = ['loadingView','confirmEmailView','setPasswordView','loginView','blockedView','homeView'];
+  const views = ['loadingView','confirmEmailView','setPasswordView','loginView','blockedView','wrongRoleView','homeView'];
   function show(id){
     views.forEach(v=> document.getElementById(v).classList.toggle('hidden', v!==id));
     document.querySelector('.card').classList.toggle('hidden', id==='homeView');
@@ -179,6 +185,7 @@
       snap = await ref.get();
     }
     const prof = snap.data();
+    if (prof.role !== 'athlete'){ show('wrongRoleView'); return; }
     if (prof.blocked){ show('blockedView'); return; }
     if (isNewFromLink){ show('setPasswordView'); return; }
     athleteProfile = prof;
@@ -278,6 +285,7 @@
   let navState = { planId: null, day: null };
 
   document.getElementById('logoutBtn').onclick = ()=> auth.signOut().then(()=> window.location.reload());
+  document.getElementById('wrongRoleSignOutBtn').onclick = ()=> auth.signOut().then(()=> window.location.reload());
 
   async function loadAthleteApp(){
     const base = db.collection('clubs').doc(currentClubId).collection('athletes').doc(signedInUser.uid);
