@@ -57,11 +57,9 @@ patch('  wrap.appendChild(dbgToggle);', '  if (!WO2_ATHLETE) wrap.appendChild(db
 # Tarjeta de ejercicio: sin papelera
 patch("  delBtn.onclick = (e)=>{ e.stopPropagation(); state.confirmDeleteExercise = entryKey; render(); };\n  top.appendChild(delBtn);",
       "  delBtn.onclick = (e)=>{ e.stopPropagation(); state.confirmDeleteExercise = entryKey; render(); };\n  if (!WO2_ATHLETE) top.appendChild(delBtn);")
-# Tarjetas grandes: sin "Editar", "Borrar" ni "+ Nuevo peso"
-patch('    secondaryRow.appendChild(editSetBtn);', '    if (!WO2_ATHLETE) secondaryRow.appendChild(editSetBtn);')
-patch('      secondaryRow.appendChild(delSetBtn);', '      if (!WO2_ATHLETE) secondaryRow.appendChild(delSetBtn);')
-patch('      btnRow.appendChild(addBtn); btnRow.appendChild(doneBtn);',
-      '      if (!WO2_ATHLETE) btnRow.appendChild(addBtn); btnRow.appendChild(doneBtn);')
+# Tarjetas grandes: "Editar", "Borrar" y "+ Nuevo peso" SÍ se mantienen.
+# El atleta apunta lo que realmente hizo; se guarda como su versión de la
+# semana (progress/plan_*), sin tocar la programación del entrenador.
 # Lista de semanas: sin "+ Nueva semana", renombrar ni borrar
 patch("  newBtn.onclick = ()=>{ state.showHistory=false; state.confirmDeleteId=null; state.activePlanId=null; state.error=null; render(); };\n  sheet.appendChild(newBtn);",
       "  newBtn.onclick = ()=>{ state.showHistory=false; state.confirmDeleteId=null; state.activePlanId=null; state.error=null; render(); };\n  if (!WO2_ATHLETE) sheet.appendChild(newBtn);")
@@ -83,7 +81,11 @@ ADAPTER = r'''
 // La programación (plans) la escribe el entrenador y aquí solo se lee.
 // Lo que hace el atleta (marcas, notas, series, fechas reales) va a
 // progress/main, y su perfil (objetivos, RM, medidas) a progress/profile.
-const WO2 = { uid:null, clubId:null, base:null, progressTimer:null, profileTimer:null };
+// Si el atleta cambia, borra o añade pesos, su versión de esa semana se
+// guarda aparte en progress/plan_<id>; la del entrenador no se toca.
+const WO2 = { uid:null, clubId:null, base:null, progressTimer:null, profileTimer:null,
+              coachDays:{}, pushedOverride:{} };
+function wo2OverrideDocId(planId){ return 'plan_' + String(planId).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,140); }
 
 function wo2SignOut(){
   try{ dismissRestTimer(); }catch(e){}
@@ -106,6 +108,21 @@ async function wo2PushProgressNow(){
       dayDates,
       updatedAt: Date.now()
     });
+    for (const p of state.plans){
+      const cur = JSON.stringify(p.days || {});
+      const coach = WO2.coachDays[p.id];
+      const pushed = WO2.pushedOverride[p.id] || null;
+      const ref = WO2.base.collection('progress').doc(wo2OverrideDocId(p.id));
+      if (coach !== undefined && cur !== coach){
+        if (pushed !== cur){
+          await ref.set({ planId: p.id, days: p.days, updatedAt: Date.now() });
+          WO2.pushedOverride[p.id] = cur;
+        }
+      } else if (pushed){
+        await ref.delete();
+        WO2.pushedOverride[p.id] = null;
+      }
+    }
   }catch(e){ wo2SaveError(e); }
 }
 function wo2ScheduleProfilePush(){
@@ -207,13 +224,14 @@ function wo2ShowBootError(msg){
       strip.innerHTML = '';
       strip.appendChild(renderBrandStrip(club.logoUrl, club.name));
 
-      const [plansSnap, mainSnap, profSnap] = await Promise.all([
+      const [plansSnap, progSnap] = await Promise.all([
         WO2.base.collection('plans').get(),
-        WO2.base.collection('progress').doc('main').get(),
-        WO2.base.collection('progress').doc('profile').get()
+        WO2.base.collection('progress').get()
       ]);
-      const main = mainSnap.exists ? mainSnap.data() : {};
-      const prof = profSnap.exists ? profSnap.data() : {};
+      const progDocs = {};
+      progSnap.docs.forEach(d=>{ progDocs[d.id] = d.data(); });
+      const main = progDocs['main'] || {};
+      const prof = progDocs['profile'] || {};
       const dayDates = main.dayDates || {};
       const plans = plansSnap.docs.map(d=>{
         const p = d.data();
@@ -223,6 +241,12 @@ function wo2ShowBootError(msg){
         if (!p.uploadedAt) p.uploadedAt = 0;
         p.needsReview = false; // la revisión de lo leído del Excel la hace el entrenador
         if (dayDates[p.id]) p.dayDates = dayDates[p.id];
+        WO2.coachDays[p.id] = JSON.stringify(p.days);
+        const ov = progDocs[wo2OverrideDocId(p.id)];
+        if (ov && ov.days){
+          p.days = ov.days;
+          WO2.pushedOverride[p.id] = JSON.stringify(ov.days);
+        }
         return p;
       });
 
