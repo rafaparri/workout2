@@ -65,6 +65,8 @@
     <input type="email" id="coachEmail">
     <label>Nombre del entrenador</label>
     <input type="text" id="coachName">
+    <label>URL del logo del club (opcional)</label>
+    <input type="url" id="clubLogoUrl" placeholder="https://... (enlace a una imagen)">
     <div class="row2">
       <div>
         <label>Días de prueba (vacío = sin límite)</label>
@@ -126,6 +128,7 @@
     const coachName = document.getElementById('coachName').value.trim();
     const trialDaysVal = document.getElementById('trialDays').value.trim();
     const maxAthletesVal = document.getElementById('maxAthletes').value.trim();
+    const logoUrl = document.getElementById('clubLogoUrl').value.trim() || null;
     if (!name || !coachEmail || !coachName){
       msg.textContent = 'Rellena nombre del club, correo y nombre del entrenador.';
       msg.className = 'msg err';
@@ -137,7 +140,7 @@
       const maxAthletes = maxAthletesVal ? parseInt(maxAthletesVal,10) : null;
 
       await db.collection('clubs').doc(clubId).set({
-        name, blocked: false, trialEndsAt, maxAthletes, createdAt: Date.now()
+        name, blocked: false, trialEndsAt, maxAthletes, logoUrl, createdAt: Date.now()
       });
 
       const inviteId = coachEmail.replace(/[^a-z0-9]/g,'_') + '_coach';
@@ -158,6 +161,7 @@
       document.getElementById('coachName').value = '';
       document.getElementById('trialDays').value = '';
       document.getElementById('maxAthletes').value = '';
+      document.getElementById('clubLogoUrl').value = '';
       loadClubs();
     }catch(e){
       msg.textContent = 'Error al crear el club: ' + (e.message || e.code);
@@ -183,13 +187,23 @@
       let maxTxt = (c.maxAthletes!=null) ? (c.maxAthletes + ' atletas máx.') : 'Sin límite de atletas';
       row.innerHTML = `
         <div class="clubName">${c.name}${c.blocked ? ' 🔒' : ''}</div>
-        <div class="clubMeta">${trialTxt} · ${maxTxt}</div>
-        <button class="${c.blocked ? 'ok' : 'danger'}" data-id="${doc.id}" data-blocked="${!!c.blocked}">
-          ${c.blocked ? 'Desbloquear club' : 'Bloquear club'}
-        </button>`;
-      row.querySelector('button').onclick = async (e)=>{
+        <div class="clubMeta">${trialTxt} · ${maxTxt} · ${c.logoUrl ? 'con logo propio' : 'sin logo propio'}</div>
+        <div class="row2">
+          <button class="${c.blocked ? 'ok' : 'danger'}" data-id="${doc.id}" data-blocked="${!!c.blocked}" data-action="block">
+            ${c.blocked ? 'Desbloquear' : 'Bloquear'}
+          </button>
+          <button data-id="${doc.id}" data-current="${c.logoUrl||''}" data-action="logo">Editar logo</button>
+        </div>`;
+      row.querySelector('[data-action="block"]').onclick = async (e)=>{
         const btn = e.target;
         await db.collection('clubs').doc(btn.dataset.id).update({ blocked: btn.dataset.blocked !== 'true' });
+        loadClubs();
+      };
+      row.querySelector('[data-action="logo"]').onclick = async (e)=>{
+        const btn = e.target;
+        const nuevo = window.prompt('URL del logo del club (déjalo vacío para quitarlo):', btn.dataset.current);
+        if (nuevo === null) return;
+        await db.collection('clubs').doc(btn.dataset.id).update({ logoUrl: nuevo.trim() || null });
         loadClubs();
       };
       listEl.appendChild(row);
