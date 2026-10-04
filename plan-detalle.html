@@ -38,6 +38,15 @@
   .msg{ font-size:13px; margin-top:8px; text-align:center; }
   .msg.ok{ color:var(--ok); } .msg.err{ color:var(--red); }
   .hidden{ display:none; }
+  .athBlock{ margin:4px 0 12px; padding:10px 12px; border-radius:10px; background:var(--surface-2); }
+  .athTitle{ font-family:'Oswald',sans-serif; font-weight:700; font-size:14px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .athSet{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 10px; border-radius:9px; margin-bottom:6px; background:var(--surface); border:2px solid var(--surface-3); font-family:'IBM Plex Mono',monospace; font-size:16px; }
+  .athSet.edited{ background:#fde9da; border-color:#e07b39; }
+  .athSet.added{ background:#dff3e5; border-color:#2e9a52; }
+  .athTag{ font-family:Inter,sans-serif; font-size:13.5px; font-weight:700; color:#fff; border-radius:7px; padding:3px 8px; }
+  .athSet.edited .athTag{ background:#e07b39; } .athSet.added .athTag{ background:#2e9a52; }
+  .athOrig{ font-size:14px; color:var(--muted); width:100%; }
+  .legend{ background:var(--surface); border:1px solid var(--surface-3); border-radius:12px; padding:12px 14px; margin-bottom:16px; font-size:15px; line-height:1.5; }
 </style>
 </head>
 <body>
@@ -47,6 +56,7 @@
   <div id="content" class="hidden">
     <h1 id="planTitle">Plan</h1>
     <p class="sub">Toca cualquier número para corregirlo.</p>
+    <div id="legend" class="legend hidden"></div>
     <div id="daysWrap"></div>
   </div>
 </div>
@@ -72,6 +82,13 @@
   function ratingInfo(v){ return SET_RATING_LEVELS.find(l=>l.value===v) || null; }
   function checkKey(planId, day, exIdx, si){ return planId + '|' + day + '|' + exIdx + '|' + si; }
   let athleteChecks = {};
+  let athleteChanges = {}; // "L|0": ejercicio tal como lo hizo el atleta
+  function overrideDocId(planId){ return 'plan_' + String(planId).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,140); }
+  function setText(s){
+    const kg = (s.kg ?? s.kgRaw ?? '?');
+    const reps = s.repsParts ? s.repsParts.join('+') : (s.repsRaw || (s.reps ?? '?'));
+    return kg + 'kg · ' + (s.series ?? '?') + '×' + reps;
+  }
 
   const params = new URLSearchParams(window.location.search);
   const athleteUid = params.get('athlete');
@@ -99,6 +116,12 @@
       const progSnap = await db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid)
         .collection('progress').doc('main').get();
       athleteChecks = (progSnap.exists && progSnap.data().checks) || {};
+      try{
+        const ovSnap = await db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid)
+          .collection('progress').doc(overrideDocId(planIdParam)).get();
+        const ov = ovSnap.exists ? ovSnap.data() : null;
+        athleteChanges = (ov && ov.changes) || {};
+      }catch(e){ athleteChanges = {}; }
 
       render();
     }catch(e){
@@ -111,6 +134,14 @@
     document.getElementById('content').classList.remove('hidden');
     const label = (planData.meta && planData.meta.week!=null) ? ('Semana ' + planData.meta.week) : planIdParam;
     document.getElementById('planTitle').textContent = label;
+    const legend = document.getElementById('legend');
+    if (Object.keys(athleteChanges).length){
+      legend.classList.remove('hidden');
+      legend.innerHTML = '<b>El atleta ha apuntado cambios en esta semana.</b><br>' +
+        '<span style="color:#e07b39;font-weight:700;">Naranja</span>: peso o repeticiones cambiados. ' +
+        '<span style="color:#2e9a52;font-weight:700;">Verde</span>: pesos añadidos.<br>' +
+        'Los números editables son tu programación; debajo de cada ejercicio cambiado se ve lo que hizo el atleta.';
+    } else { legend.classList.add('hidden'); }
 
     const wrap = document.getElementById('daysWrap');
     wrap.innerHTML = '';
@@ -142,7 +173,8 @@
           const row = document.createElement('div');
           row.className = 'setRow';
           const repsVal = s.repsParts ? s.repsParts.join('+') : (s.repsRaw || (s.reps ?? ''));
-          const rating = athleteChecks[checkKey(planIdParam, day, exIdx, si)] || null;
+          const athEntry = athleteChanges[day + '|' + exIdx];
+          const rating = athEntry ? null : (athleteChecks[checkKey(planIdParam, day, exIdx, si)] || null);
           const rinfo = ratingInfo(rating);
           const badge = rinfo
             ? '<span style="background:'+rinfo.color+';color:#fff;border-radius:8px;padding:6px 9px;font-size:16px;flex-shrink:0;">'+rinfo.icon+'</span>'
@@ -157,6 +189,26 @@
             ${badge}`;
           card.appendChild(row);
         });
+
+        const athEntry = athleteChanges[day + '|' + exIdx];
+        if (athEntry && athEntry.sets){
+          const blk = document.createElement('div');
+          blk.className = 'athBlock';
+          blk.innerHTML = '<div class="athTitle">Lo que hizo el atleta</div>';
+          athEntry.sets.forEach((s, si)=>{
+            const r = ratingInfo(athleteChecks[checkKey(planIdParam, day, exIdx, si)] || null);
+            const row = document.createElement('div');
+            row.className = 'athSet' + (s.added ? ' added' : (s.edited ? ' edited' : ''));
+            let html = '<span>' + setText(s) + '</span>';
+            if (r) html += '<span style="font-size:18px;">' + r.icon + '</span>';
+            if (s.added) html += '<span class="athTag">➕ Añadido</span>';
+            else if (s.edited) html += '<span class="athTag">✏️ Cambiado</span>';
+            if (s.edited && !s.added && s.original) html += '<span class="athOrig">Programado: ' + setText(s.original) + '</span>';
+            row.innerHTML = html;
+            blk.appendChild(row);
+          });
+          card.appendChild(blk);
+        }
       });
       wrap.appendChild(card);
     });
