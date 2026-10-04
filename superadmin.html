@@ -8,34 +8,83 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <style>
-  :root{ --bg:#20242e; --surface:#2a2f3a; --surface-3:#3a4051; --chalk:#f4f1ea; --muted:#9aa0ad; --red:#c14a3a; }
+  :root{ --bg:#20242e; --surface:#2a2f3a; --surface-2:#333948; --surface-3:#3a4051; --chalk:#f4f1ea; --muted:#9aa0ad; --red:#c14a3a; --ok:#2f7dc4; --warn:#c99a2e; }
   *{box-sizing:border-box;}
-  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--chalk); font-family:'Inter',system-ui,sans-serif; display:flex; align-items:center; justify-content:center; padding:24px; }
+  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--chalk); font-family:'Inter',system-ui,sans-serif; }
+  .loginWrap{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
   .card{ width:100%; max-width:380px; background:var(--surface); border:1px solid var(--surface-3); border-radius:16px; padding:32px 24px; }
+  .wrap{ max-width:560px; margin:0 auto; padding:24px 18px 60px; }
   h1{ font-family:'Oswald',sans-serif; font-weight:700; font-size:20px; text-transform:uppercase; margin:0 0 20px; text-align:center; }
+  h2{ font-family:'Oswald',sans-serif; font-weight:700; font-size:16px; text-transform:uppercase; margin:0 0 14px; color:var(--warn); letter-spacing:.02em; }
   label{ display:block; font-size:12px; text-transform:uppercase; letter-spacing:.02em; margin-bottom:6px; color:var(--muted); }
   input{ width:100%; background:var(--bg); border:1px solid var(--surface-3); border-radius:10px; color:var(--chalk); font-size:15px; padding:12px; margin-bottom:14px; }
   button{ width:100%; background:var(--chalk); color:var(--bg); border:none; border-radius:10px; font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; padding:14px; cursor:pointer; }
-  .msg{ font-size:13px; margin-top:10px; text-align:center; color:var(--red); }
+  button.danger{ background:var(--red); color:#fff; }
+  button.ok{ background:var(--ok); color:#fff; }
+  .msg{ font-size:13px; margin-top:10px; text-align:center; }
+  .msg.err{ color:var(--red); } .msg.ok{ color:#7fd0a0; }
   .hidden{ display:none; }
+  .topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+  .signout{ background:none; border:none; color:var(--muted); font-size:12.5px; width:auto; padding:4px; text-decoration:underline; }
+  .panelCard{ background:var(--surface); border:1px solid var(--surface-3); border-radius:14px; padding:20px; margin-bottom:18px; }
+  .row2{ display:flex; gap:10px; }
+  .row2 > *{ flex:1; }
+  .clubRow{ padding:14px 0; border-bottom:1px solid var(--surface-3); }
+  .clubRow:last-child{ border-bottom:none; }
+  .clubName{ font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; }
+  .clubMeta{ font-size:12.5px; color:var(--muted); margin:3px 0 10px; }
+  .clubMeta b{ color:var(--chalk); }
+  .empty{ text-align:center; color:var(--muted); font-size:14px; padding:16px 0; }
 </style>
 </head>
 <body>
-<div class="card">
-  <div id="loginView">
+
+<div class="loginWrap" id="loginWrap">
+  <div class="card">
     <h1>Administrador</h1>
     <label>Correo</label>
     <input type="email" id="email">
     <label>Contraseña</label>
     <input type="password" id="pass">
     <button id="loginBtn">Entrar</button>
-    <div id="msg" class="msg"></div>
-  </div>
-  <div id="okView" class="hidden">
-    <h1>Acceso confirmado</h1>
-    <p style="text-align:center;color:var(--muted);font-size:14px;">El panel completo (gestión de clubes, periodos de prueba, bloqueo general) es el siguiente paso de la construcción.</p>
+    <div id="msg" class="msg err"></div>
   </div>
 </div>
+
+<div class="wrap hidden" id="dashWrap">
+  <div class="topbar">
+    <h1 style="margin:0;">Panel de administrador</h1>
+    <button class="signout" id="signoutBtn">Salir</button>
+  </div>
+
+  <div class="panelCard">
+    <h2>Crear club nuevo</h2>
+    <label>Nombre del club</label>
+    <input type="text" id="clubName" placeholder="Ej. Halterejido">
+    <label>Correo del entrenador</label>
+    <input type="email" id="coachEmail">
+    <label>Nombre del entrenador</label>
+    <input type="text" id="coachName">
+    <div class="row2">
+      <div>
+        <label>Días de prueba (vacío = sin límite)</label>
+        <input type="number" id="trialDays" placeholder="Ej. 30">
+      </div>
+      <div>
+        <label>Máx. atletas (vacío = sin límite)</label>
+        <input type="number" id="maxAthletes" placeholder="Ej. 20">
+      </div>
+    </div>
+    <button id="createClubBtn">Crear club e invitar entrenador</button>
+    <div id="createMsg" class="msg"></div>
+  </div>
+
+  <div class="panelCard">
+    <h2>Clubes</h2>
+    <div id="clubsList"><div class="empty">Cargando…</div></div>
+  </div>
+</div>
+
 <script src="firebase-init.js"></script>
 <script>
   document.getElementById('loginBtn').onclick = async ()=>{
@@ -52,12 +101,100 @@
         await auth.signOut();
         return;
       }
-      document.getElementById('loginView').classList.add('hidden');
-      document.getElementById('okView').classList.remove('hidden');
+      document.getElementById('loginWrap').classList.add('hidden');
+      document.getElementById('dashWrap').classList.remove('hidden');
+      loadClubs();
     }catch(e){
       msg.textContent = 'No se ha podido entrar: ' + (e.message || e.code);
     }
   };
+
+  document.getElementById('signoutBtn').onclick = ()=> auth.signOut().then(()=> window.location.reload());
+
+  function slugify(name){
+    return name.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')
+      .slice(0,30) + '-' + Date.now().toString(36).slice(-4);
+  }
+
+  document.getElementById('createClubBtn').onclick = async ()=>{
+    const msg = document.getElementById('createMsg');
+    msg.textContent = ''; msg.className = 'msg';
+    const name = document.getElementById('clubName').value.trim();
+    const coachEmail = document.getElementById('coachEmail').value.trim().toLowerCase();
+    const coachName = document.getElementById('coachName').value.trim();
+    const trialDaysVal = document.getElementById('trialDays').value.trim();
+    const maxAthletesVal = document.getElementById('maxAthletes').value.trim();
+    if (!name || !coachEmail || !coachName){
+      msg.textContent = 'Rellena nombre del club, correo y nombre del entrenador.';
+      msg.className = 'msg err';
+      return;
+    }
+    try{
+      const clubId = slugify(name);
+      const trialEndsAt = trialDaysVal ? (Date.now() + parseInt(trialDaysVal,10)*86400000) : null;
+      const maxAthletes = maxAthletesVal ? parseInt(maxAthletesVal,10) : null;
+
+      await db.collection('clubs').doc(clubId).set({
+        name, blocked: false, trialEndsAt, maxAthletes, createdAt: Date.now()
+      });
+
+      const inviteId = coachEmail.replace(/[^a-z0-9]/g,'_') + '_coach';
+      await db.collection('invites').doc(inviteId).set({
+        email: coachEmail, name: coachName, clubId, role: 'coach', createdAt: Date.now()
+      });
+
+      const actionCodeSettings = {
+        url: window.location.origin + window.location.pathname.replace('superadmin.html','entrenador.html') + '?invite=' + inviteId,
+        handleCodeInApp: true
+      };
+      await auth.sendSignInLinkToEmail(coachEmail, actionCodeSettings);
+
+      msg.textContent = 'Club creado e invitación enviada a ' + coachEmail + '.';
+      msg.className = 'msg ok';
+      document.getElementById('clubName').value = '';
+      document.getElementById('coachEmail').value = '';
+      document.getElementById('coachName').value = '';
+      document.getElementById('trialDays').value = '';
+      document.getElementById('maxAthletes').value = '';
+      loadClubs();
+    }catch(e){
+      msg.textContent = 'Error al crear el club: ' + (e.message || e.code);
+      msg.className = 'msg err';
+    }
+  };
+
+  async function loadClubs(){
+    const listEl = document.getElementById('clubsList');
+    const snap = await db.collection('clubs').orderBy('createdAt','desc').get();
+    if (snap.empty){
+      listEl.innerHTML = '<div class="empty">Todavía no has creado ningún club.</div>';
+      return;
+    }
+    listEl.innerHTML = '';
+    snap.forEach(doc=>{
+      const c = doc.data();
+      const row = document.createElement('div');
+      row.className = 'clubRow';
+      let trialTxt = c.trialEndsAt
+        ? (c.trialEndsAt > Date.now() ? ('Prueba hasta ' + new Date(c.trialEndsAt).toLocaleDateString('es-ES')) : 'Prueba caducada')
+        : 'Sin límite de días';
+      let maxTxt = (c.maxAthletes!=null) ? (c.maxAthletes + ' atletas máx.') : 'Sin límite de atletas';
+      row.innerHTML = `
+        <div class="clubName">${c.name}${c.blocked ? ' 🔒' : ''}</div>
+        <div class="clubMeta">${trialTxt} · ${maxTxt}</div>
+        <button class="${c.blocked ? 'ok' : 'danger'}" data-id="${doc.id}" data-blocked="${!!c.blocked}">
+          ${c.blocked ? 'Desbloquear club' : 'Bloquear club'}
+        </button>`;
+      row.querySelector('button').onclick = async (e)=>{
+        const btn = e.target;
+        await db.collection('clubs').doc(btn.dataset.id).update({ blocked: btn.dataset.blocked !== 'true' });
+        loadClubs();
+      };
+      listEl.appendChild(row);
+    });
+  }
 </script>
 </body>
 </html>
