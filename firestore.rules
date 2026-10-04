@@ -6,88 +6,81 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function myProfile() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function isSuperadmin() {
-      return isSignedIn() && myProfile().role == 'superadmin';
-    }
-
-    function isCoachOfClub(clubId) {
+    // --- Permisos independientes por rol, en vez de un único campo "role"
+    // en el perfil. Así, la misma persona puede tener a la vez un permiso
+    // de entrenador y otro de atleta, sin que se pisen entre sí.
+    function hasCoachGrant(clubId) {
       return isSignedIn()
-        && myProfile().role == 'coach'
-        && myProfile().clubId == clubId;
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid)/roleGrants/coach)
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)/roleGrants/coach).data.clubId == clubId;
     }
-
-    function isAthleteInClub(clubId, athleteId) {
+    function hasSuperadminGrant() {
       return isSignedIn()
-        && request.auth.uid == athleteId
-        && myProfile().role == 'athlete'
-        && myProfile().clubId == clubId
-        && myProfile().blocked != true;
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid)/roleGrants/superadmin);
+    }
+    function hasAthleteGrant(clubId, athleteUid) {
+      return isSignedIn()
+        && request.auth.uid == athleteUid
+        && exists(/databases/$(database)/documents/users/$(athleteUid)/roleGrants/athlete)
+        && get(/databases/$(database)/documents/users/$(athleteUid)/roleGrants/athlete).data.clubId == clubId
+        && get(/databases/$(database)/documents/clubs/$(clubId)/athletes/$(athleteUid)).data.blocked != true;
     }
 
-    // Invitaciones: el entrenador crea una invitación con el correo del
-    // futuro atleta y el club al que pertenece. El propio atleta, una vez
-    // identificado con ese mismo correo (vía enlace mágico), puede LEER su
-    // invitación para saber a qué club pertenece y crear su perfil.
+    // --- Identidad básica de cada persona (nombre, correo). Sin rol aquí.
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || hasSuperadminGrant());
+      allow create, update: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // --- Permisos por rol de cada persona (subcolección de users/{uid}).
+    match /users/{uid}/roleGrants/{grantId} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || hasSuperadminGrant());
+      // "coach" y "superadmin" los concede siempre el superadmin (a mano
+      // por ahora, desde el panel de administrador más adelante).
+      // "athlete" se lo puede conceder el propio usuario a sí mismo, pero
+      // solo copiando el club exacto que diga una invitación válida de su
+      // entrenador — nunca inventándose otro club.
+      allow create: if hasSuperadminGrant() || (
+        grantId == 'athlete' && isSignedIn() && request.auth.uid == uid &&
+        exists(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)) &&
+        get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.email == request.auth.token.email &&
+        request.resource.data.clubId == get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.clubId
+      );
+      allow update, delete: if hasSuperadminGrant();
+    }
+
     match /invites/{inviteId} {
       allow read: if isSignedIn() && request.auth.token.email == resource.data.email;
-      allow create, update: if isSuperadmin() || (
-        isSignedIn() && myProfile().role == 'coach' &&
-        request.resource.data.clubId == myProfile().clubId &&
-        request.resource.data.role == 'athlete'
+      allow create, update: if hasSuperadminGrant() || (
+        isSignedIn() && hasCoachGrant(request.resource.data.clubId) && request.resource.data.role == 'athlete'
       );
-      allow delete: if isSuperadmin() || isCoachOfClub(resource.data.clubId);
+      allow delete: if hasSuperadminGrant() || hasCoachGrant(resource.data.clubId);
     }
 
-    // Perfil de cada usuario (atleta, entrenador o superadmin).
-    match /users/{uid} {
-      allow read: if isSignedIn() && (
-        request.auth.uid == uid ||
-        isSuperadmin() ||
-        (myProfile().role == 'coach' && resource.data.clubId == myProfile().clubId)
-      );
-      // El propio atleta puede crear (una sola vez) su perfil, pero SOLO
-      // copiando exactamente el club y el rol que le fijó la invitación de
-      // su entrenador — nunca puede inventarse un club o un rol distinto.
-      allow create: if isSignedIn() && request.auth.uid == uid && (
-        isSuperadmin() ||
-        (
-          request.resource.data.role == 'athlete' &&
-          exists(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)) &&
-          get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.email == request.auth.token.email &&
-          request.resource.data.clubId == get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.clubId
-        ) ||
-        (isSignedIn() && myProfile().role == 'coach' && request.resource.data.clubId == myProfile().clubId)
-      );
-      // Cambios posteriores (bloquear, cambiar de club, etc.) solo los hace
-      // el entrenador de ese club o el superadmin — nunca el propio usuario.
-      allow update, delete: if isSuperadmin() ||
-        (isSignedIn() && myProfile().role == 'coach' && resource.data.clubId == myProfile().clubId);
-    }
-
-    // Clubes: el superadmin los crea/bloquea; cada entrenador solo lee el suyo.
     match /clubs/{clubId} {
-      allow read: if isSuperadmin() || isCoachOfClub(clubId);
-      allow write: if isSuperadmin();
+      allow read: if hasSuperadminGrant() || hasCoachGrant(clubId);
+      allow write: if hasSuperadminGrant();
     }
 
-    // Datos de entrenamiento de cada atleta, organizados por club.
+    // --- Ficha de cada atleta dentro de un club: nombre, correo, si está
+    // bloqueado, si hay algo sin revisar. La lee/edita el entrenador del
+    // club; el propio atleta solo la lee. El atleta la CREA él mismo la
+    // primera vez, al autoregistrarse con una invitación válida.
     match /clubs/{clubId}/athletes/{athleteId} {
-      allow read: if isSuperadmin() || isCoachOfClub(clubId) || isAthleteInClub(clubId, athleteId);
-      allow write: if isSuperadmin() || isCoachOfClub(clubId);
+      allow read: if hasSuperadminGrant() || hasCoachGrant(clubId) || (isSignedIn() && request.auth.uid == athleteId);
+      allow write: if hasSuperadminGrant() || hasCoachGrant(clubId);
+      allow create: if isSignedIn() && request.auth.uid == athleteId &&
+        exists(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)) &&
+        get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.clubId == clubId;
     }
-    // Programación semanal de cada atleta: el entrenador sube/edita cada
-    // plan (lo lee del Excel); el atleta solo puede leerlo, nunca tocarlo.
+
     match /clubs/{clubId}/athletes/{athleteId}/plans/{planId} {
-      allow read: if isSuperadmin() || isCoachOfClub(clubId) || isAthleteInClub(clubId, athleteId);
-      allow write: if isSuperadmin() || isCoachOfClub(clubId);
+      allow read: if hasSuperadminGrant() || hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId);
+      allow write: if hasSuperadminGrant() || hasCoachGrant(clubId);
     }
     match /clubs/{clubId}/athletes/{athleteId}/progress/{docId} {
-      allow read: if isSuperadmin() || isCoachOfClub(clubId) || isAthleteInClub(clubId, athleteId);
-      allow write: if isSuperadmin() || isCoachOfClub(clubId) || isAthleteInClub(clubId, athleteId);
+      allow read: if hasSuperadminGrant() || hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId);
+      allow write: if hasSuperadminGrant() || hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId);
     }
 
     match /{document=**} {
