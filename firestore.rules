@@ -85,19 +85,27 @@ service cloud.firestore {
     // primera vez, al autoregistrarse con una invitación válida.
     match /clubs/{clubId}/athletes/{athleteId} {
       allow read: if hasSuperadminGrant() || hasCoachGrant(clubId) || (isSignedIn() && request.auth.uid == athleteId);
-      allow write: if hasSuperadminGrant() || hasCoachGrant(clubId);
+      allow write: if hasCoachGrant(clubId);
       allow create: if isSignedIn() && request.auth.uid == athleteId &&
         exists(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)) &&
         get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.clubId == clubId;
     }
 
+    // Programación y resultados: SOLO el entrenador del club y el propio
+    // atleta. El administrador no tiene acceso (son datos de cada entrenador).
     match /clubs/{clubId}/athletes/{athleteId}/plans/{planId} {
-      allow read: if hasSuperadminGrant() || hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId);
-      allow write: if hasSuperadminGrant() || hasCoachGrant(clubId);
+      allow read: if hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId);
+      allow write: if hasCoachGrant(clubId);
     }
     match /clubs/{clubId}/athletes/{athleteId}/progress/{docId} {
-      allow read: if hasSuperadminGrant() || hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId);
-      allow write: if hasSuperadminGrant() || hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId);
+      allow read: if hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId);
+      allow write: if hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId);
+    }
+    // Comentarios del entrenador en los informes: los escribe el entrenador,
+    // el atleta solo los lee.
+    match /clubs/{clubId}/athletes/{athleteId}/coachNotes/{docId} {
+      allow read: if hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId);
+      allow write: if hasCoachGrant(clubId);
     }
 
     match /{document=**} {
