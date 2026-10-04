@@ -410,6 +410,12 @@
   }
 
   function renderDaysList(container, plan){
+    const reportBtn = document.createElement('button');
+    reportBtn.className = 'reportBtn';
+    reportBtn.textContent = '📄 Informe semanal';
+    reportBtn.onclick = ()=> openWeekReport(plan);
+    container.appendChild(reportBtn);
+
     const grid = document.createElement('div');
     grid.className = 'dayGrid';
     DAY_ORDER.forEach(day=>{
@@ -685,6 +691,204 @@
       const shareBtn = document.createElement('button');
       shareBtn.textContent = '📤 Compartir';
       shareBtn.onclick = ()=> navigator.share({ title:'Informe de entreno', text: dayReportPlainText(data) }).catch(()=>{});
+      actions.appendChild(shareBtn);
+    }
+    box.appendChild(actions);
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'reportClose';
+    closeBtn.textContent = 'Cerrar';
+    closeBtn.onclick = ()=> overlay.remove();
+    box.appendChild(closeBtn);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+  }
+
+  /* ============== Informe semanal ============== */
+  function weekReportData(plan){
+    const perDay = [];
+    let totalSets=0, ratedSets=0, tonnageKg=0;
+    const watchCounts = {};
+    DAY_ORDER.forEach(day=>{
+      const entries = (plan.days && plan.days[day]) || [];
+      if (!entries.length) return;
+      const d = dayReportData(plan, day);
+      perDay.push(d);
+      totalSets += d.totalSets;
+      ratedSets += d.ratedSets;
+      tonnageKg += d.tonnageKg;
+      d.watchList.forEach(name=>{ watchCounts[name] = (watchCounts[name]||0) + 1; });
+    });
+
+    // Media de verdad recorriendo cada serie, no la media de las medias
+    // diarias (para no dar el mismo peso a un día con 2 series que a uno
+    // con 20).
+    const allRatingValues = [];
+    DAY_ORDER.forEach(day=>{
+      const entries = (plan.days && plan.days[day]) || [];
+      entries.filter(e=>e.type==='exercise').forEach(entry=>{
+        const exIdx = entries.indexOf(entry);
+        entry.sets.forEach((s,si)=>{
+          const r = athleteChecks[checkKey(plan.id, day, exIdx, si)];
+          if (r) allRatingValues.push(r);
+        });
+      });
+    });
+    const avgRating = allRatingValues.length ? (allRatingValues.reduce((a,b)=>a+b,0)/allRatingValues.length) : null;
+    const completion = totalSets ? Math.round(100*ratedSets/totalSets) : null;
+    const recurring = Object.keys(watchCounts).filter(name=>watchCounts[name]>=2);
+
+    let status;
+    if (recurring.length || (avgRating!==null && avgRating<2.5)) status = { icon:'⚠️', label:'A vigilar' };
+    else if (completion===100 && avgRating!==null && avgRating>=4) status = { icon:'✓', label:'Semana sólida' };
+    else status = { icon:'•', label:'Normal' };
+
+    return {
+      week: plan.meta && plan.meta.week!=null ? plan.meta.week : null,
+      perDay, totalSets, ratedSets, completion,
+      tonnageKg: Math.round(tonnageKg), avgRating, watchCounts, recurring, status
+    };
+  }
+
+  function weekReportPlainText(data){
+    const lines = [];
+    lines.push('INFORME SEMANAL' + (data.week!=null ? ' — Semana '+data.week : ''));
+    lines.push('Estado: ' + data.status.icon + ' ' + data.status.label);
+    lines.push('Series marcadas: ' + data.ratedSets + '/' + data.totalSets + (data.completion!=null?' ('+data.completion+'%)':''));
+    lines.push('Tonelaje total: ' + data.tonnageKg + 'kg');
+    if (data.avgRating!=null) lines.push('Valoración media: ' + data.avgRating.toFixed(1) + '/5');
+    if (data.recurring.length) lines.push('A vigilar varios días: ' + data.recurring.join(', '));
+    lines.push('');
+    data.perDay.forEach(d=>{
+      lines.push(d.status.icon + ' ' + d.dayName + ': ' + d.ratedSets+'/'+d.totalSets + ' · ' + d.tonnageKg+'kg' + (d.avgRating!=null?' · '+d.avgRating.toFixed(1)+'/5':''));
+    });
+    return lines.join('\n');
+  }
+
+  function generateWeekReportPDF(data){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'mm', format:'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const marginX = 18;
+    const contentW = pageW - marginX*2;
+
+    doc.setFillColor(32,36,46);
+    doc.rect(0,0,pageW,30,'F');
+    const markCx = marginX+7, markCy=15, markR=7;
+    doc.setFillColor(244,241,234); doc.circle(markCx,markCy,markR,'F');
+    doc.setDrawColor(201,154,46); doc.setLineWidth(0.6); doc.circle(markCx,markCy,markR,'S');
+    doc.setTextColor(201,154,46); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text('W2', markCx, markCy+1.3, {align:'center'});
+    const textX = marginX+20;
+    doc.setTextColor(201,154,46); doc.setFont('helvetica','bold'); doc.setFontSize(16);
+    doc.text('WORKOUT 2.0', textX, 14);
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(225,225,225);
+    doc.text('Informe semanal' + (data.week!=null?' · Semana '+data.week:''), textX, 22);
+
+    let y = 42;
+    function checkPageBreak(need){ if (y+need > pageH-16){ doc.addPage(); y=20; } }
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(30,30,30);
+    doc.text(data.status.label.toUpperCase(), marginX, y);
+    y += 12;
+
+    function stat(label, value){
+      doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(80,80,80);
+      doc.text(label, marginX, y);
+      doc.setFont('helvetica','bold'); doc.setTextColor(30,30,30);
+      doc.text(String(value), pageW-marginX, y, {align:'right'});
+      y += 8;
+    }
+    stat('Series marcadas', data.ratedSets+'/'+data.totalSets + (data.completion!=null?' ('+data.completion+'%)':''));
+    stat('Tonelaje total', data.tonnageKg+' kg');
+    if (data.avgRating!=null) stat('Valoración media', data.avgRating.toFixed(1)+'/5');
+
+    if (data.recurring.length){
+      y += 4;
+      const boxH = 10 + data.recurring.length*6;
+      checkPageBreak(boxH+10);
+      doc.setFillColor(252,238,228); doc.setDrawColor(193,74,58);
+      doc.roundedRect(marginX, y, contentW, boxH, 2,2,'FD');
+      doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(138,51,38);
+      doc.text('A VIGILAR (VARIOS DÍAS)', marginX+4, y+8);
+      let yy = y+15;
+      data.recurring.forEach(name=>{ doc.text('• '+name+' ('+data.watchCounts[name]+' días)', marginX+4, yy); yy+=6; });
+      y += boxH+10;
+    }
+
+    checkPageBreak(10);
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(90,90,90);
+    doc.text('DÍA A DÍA', marginX, y);
+    y += 8;
+
+    data.perDay.forEach((d, i)=>{
+      checkPageBreak(16);
+      if (i>0){ doc.setDrawColor(230,230,230); doc.line(marginX,y,pageW-marginX,y); y+=8; }
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(30,30,30);
+      doc.text(d.dayName.toUpperCase() + ' — ' + d.status.label.toUpperCase(), marginX, y);
+      y += 6;
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(80,80,80);
+      let line = 'Series: '+d.ratedSets+'/'+d.totalSets + '   Tonelaje: '+d.tonnageKg+'kg';
+      if (d.avgRating!=null) line += '   Valoración: '+d.avgRating.toFixed(1)+'/5';
+      doc.text(line, marginX, y);
+      y += 6;
+      if (d.watchList.length){
+        doc.setTextColor(150,50,38);
+        doc.text('A vigilar: '+d.watchList.join(', '), marginX, y);
+        y += 6;
+      }
+    });
+
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i=1;i<=pageCount;i++){
+      doc.setPage(i);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(160,160,160);
+      doc.text('Generado el ' + new Date().toLocaleDateString('es-ES'), marginX, pageH-10);
+    }
+
+    doc.save('informe-semanal-' + (data.week!=null?'semana'+data.week:'plan') + '.pdf');
+  }
+
+  function openWeekReport(plan){
+    const data = weekReportData(plan);
+    const overlay = document.createElement('div');
+    overlay.className = 'reportOverlay';
+    overlay.onclick = (e)=>{ if (e.target===overlay) overlay.remove(); };
+    const box = document.createElement('div');
+    box.className = 'reportBox';
+    const daysHtml = data.perDay.map(d=>
+      '<div class="reportStat"><span>'+d.status.icon+' '+d.dayName+'</span><b>'+d.ratedSets+'/'+d.totalSets+(d.avgRating!=null?' · '+d.avgRating.toFixed(1)+'/5':'')+'</b></div>'
+    ).join('');
+    box.innerHTML = `
+      <h3>Semana${data.week!=null?' '+data.week:''}</h3>
+      <div class="reportStatus">${data.status.icon} ${data.status.label}</div>
+      <div class="reportStat"><span>Series marcadas</span><b>${data.ratedSets}/${data.totalSets}${data.completion!=null?' ('+data.completion+'%)':''}</b></div>
+      <div class="reportStat"><span>Tonelaje total</span><b>${data.tonnageKg}kg</b></div>
+      ${data.avgRating!=null ? '<div class="reportStat"><span>Valoración media</span><b>'+data.avgRating.toFixed(1)+'/5</b></div>' : ''}
+      ${data.recurring.length ? '<div class="reportWatch"><b>A vigilar varios días:</b> '+data.recurring.join(', ')+'</div>' : ''}
+      <div style="margin-top:14px;font-family:'Oswald',sans-serif;font-weight:700;font-size:13px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.02em;">Día a día</div>
+      ${daysHtml}
+    `;
+    const actions = document.createElement('div');
+    actions.className = 'reportActions';
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = '📋 Copiar';
+    copyBtn.onclick = async ()=>{
+      try{
+        await navigator.clipboard.writeText(weekReportPlainText(data));
+        copyBtn.textContent = '✓ Copiado';
+        setTimeout(()=>{ copyBtn.textContent = '📋 Copiar'; }, 1500);
+      }catch(e){}
+    };
+    const pdfBtn = document.createElement('button');
+    pdfBtn.textContent = '📄 PDF';
+    pdfBtn.onclick = ()=> generateWeekReportPDF(data);
+    actions.appendChild(copyBtn);
+    actions.appendChild(pdfBtn);
+    if (navigator.share){
+      const shareBtn = document.createElement('button');
+      shareBtn.textContent = '📤 Compartir';
+      shareBtn.onclick = ()=> navigator.share({ title:'Informe semanal', text: weekReportPlainText(data) }).catch(()=>{});
       actions.appendChild(shareBtn);
     }
     box.appendChild(actions);
