@@ -46,8 +46,8 @@
         document.getElementById('email').value.trim(),
         document.getElementById('pass').value
       );
-      const snap = await db.collection('users').doc(cred.user.uid).get();
-      if (!snap.exists || snap.data().role !== 'superadmin'){
+      const grantSnap = await db.collection('users').doc(cred.user.uid).collection('roleGrants').doc('superadmin').get();
+      if (!grantSnap.exists){
         msg.textContent = 'Esta cuenta no tiene acceso de administrador.';
         await auth.signOut();
         return;
