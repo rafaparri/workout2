@@ -5933,6 +5933,27 @@ function renderWeekReportOverlay(plan){
 const WO2 = { uid:null, clubId:null, base:null, progressTimer:null, profileTimer:null,
               coachDays:{}, pushedOverride:{} };
 function wo2OverrideDocId(planId){ return 'plan_' + String(planId).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,140); }
+// Solo se guardan los ejercicios que el atleta ha cambiado ("L|0": ejercicio);
+// el resto sigue saliendo de la programación del entrenador, así que si el
+// entrenador corrige otro ejercicio, el atleta ve la corrección.
+function wo2DiffChanges(coachDays, athleteDays){
+  const changes = {};
+  Object.keys(athleteDays || {}).forEach(day=>{
+    (athleteDays[day] || []).forEach((entry, idx)=>{
+      const coachEntry = (coachDays[day] || [])[idx];
+      if (JSON.stringify(entry) !== JSON.stringify(coachEntry)) changes[day + '|' + idx] = entry;
+    });
+  });
+  return changes;
+}
+function wo2ApplyChanges(days, changes){
+  Object.keys(changes || {}).forEach(k=>{
+    const sep = k.indexOf('|');
+    const day = k.slice(0, sep), idx = parseInt(k.slice(sep+1), 10);
+    if (days[day] && idx < days[day].length) days[day][idx] = changes[k];
+  });
+  return days;
+}
 
 function wo2SignOut(){
   try{ dismissRestTimer(); }catch(e){}
@@ -5956,19 +5977,15 @@ async function wo2PushProgressNow(){
       updatedAt: Date.now()
     });
     for (const p of state.plans){
-      const cur = JSON.stringify(p.days || {});
-      const coach = WO2.coachDays[p.id];
+      if (WO2.coachDays[p.id] === undefined) continue;
+      const changes = wo2DiffChanges(JSON.parse(WO2.coachDays[p.id]), p.days || {});
+      const cur = Object.keys(changes).length ? JSON.stringify(changes) : null;
       const pushed = WO2.pushedOverride[p.id] || null;
+      if (cur === pushed) continue;
       const ref = WO2.base.collection('progress').doc(wo2OverrideDocId(p.id));
-      if (coach !== undefined && cur !== coach){
-        if (pushed !== cur){
-          await ref.set({ planId: p.id, days: p.days, updatedAt: Date.now() });
-          WO2.pushedOverride[p.id] = cur;
-        }
-      } else if (pushed){
-        await ref.delete();
-        WO2.pushedOverride[p.id] = null;
-      }
+      if (cur){ await ref.set({ planId: p.id, changes, updatedAt: Date.now() }); }
+      else { await ref.delete(); }
+      WO2.pushedOverride[p.id] = cur;
     }
   }catch(e){ wo2SaveError(e); }
 }
@@ -6090,9 +6107,11 @@ function wo2ShowBootError(msg){
         if (dayDates[p.id]) p.dayDates = dayDates[p.id];
         WO2.coachDays[p.id] = JSON.stringify(p.days);
         const ov = progDocs[wo2OverrideDocId(p.id)];
-        if (ov && ov.days){
-          p.days = ov.days;
-          WO2.pushedOverride[p.id] = JSON.stringify(ov.days);
+        if (ov){
+          // (formato antiguo de prueba: semana entera → se convierte a cambios)
+          const changes = ov.changes || (ov.days ? wo2DiffChanges(p.days, ov.days) : {});
+          wo2ApplyChanges(p.days, changes);
+          WO2.pushedOverride[p.id] = ov.changes ? JSON.stringify(ov.changes) : '__old_format__';
         }
         return p;
       });
