@@ -155,16 +155,40 @@
 
   async function afterSignIn(user, isNewFromLink){
     signedInUser = user;
-    const ref = db.collection('users').doc(user.uid);
-    let snap = await ref.get();
-    if (!snap.exists){
-      if (!inviteIdFromLink){
+
+    // 1) Identidad básica (nombre/correo) — se crea sola la primera vez,
+    //    no lleva ningún rol dentro.
+    const idRef = db.collection('users').doc(user.uid);
+    let idSnap = await idRef.get();
+    let identity = idSnap.exists ? idSnap.data() : null;
+
+    // 2) ¿Ya tiene el permiso de atleta? Si no, lo creamos a partir de una
+    //    invitación válida — bien la de esta visita (enlace nuevo), bien,
+    //    si esta cuenta venía del modelo antiguo (un solo rol por cuenta),
+    //    la que quedó guardada entonces, migrando sola sin que el atleta
+    //    tenga que hacer nada.
+    const grantRef = db.collection('users').doc(user.uid).collection('roleGrants').doc('athlete');
+    let grantSnap = await grantRef.get();
+
+    if (!grantSnap.exists){
+      let effectiveInviteId = inviteIdFromLink;
+      let effectiveName = null;
+      if (!effectiveInviteId && identity && identity.role === 'athlete' && identity.inviteId){
+        effectiveInviteId = identity.inviteId; // cuenta del modelo antiguo: migración automática
+        effectiveName = identity.name;
+      }
+      if (!effectiveInviteId){
+        const coachGrantSnap = await db.collection('users').doc(user.uid).collection('roleGrants').doc('coach').get();
+        if (coachGrantSnap.exists || (identity && identity.role && identity.role !== 'athlete')){
+          show('wrongRoleView');
+          return;
+        }
         document.getElementById('confirmMsg').textContent = 'No se encuentra tu invitación. Pide a tu entrenador que te envíe el enlace de nuevo.';
         document.getElementById('confirmMsg').className = 'msg err';
         show('confirmEmailView');
         return;
       }
-      const inviteSnap = await db.collection('invites').doc(inviteIdFromLink).get();
+      const inviteSnap = await db.collection('invites').doc(effectiveInviteId).get();
       if (!inviteSnap.exists){
         document.getElementById('confirmMsg').textContent = 'Esa invitación ya no es válida.';
         document.getElementById('confirmMsg').className = 'msg err';
@@ -172,25 +196,37 @@
         return;
       }
       const inv = inviteSnap.data();
-      await ref.set({
-        role: 'athlete',
-        clubId: inv.clubId,
-        name: inv.name || user.email,
-        email: user.email,
-        inviteId: inviteIdFromLink,
-        blocked: false,
-        needsReview: false,
-        createdAt: Date.now()
-      });
-      snap = await ref.get();
+
+      if (!identity){
+        await idRef.set({ email: user.email, name: inv.name || user.email, createdAt: Date.now() });
+        identity = { email: user.email, name: inv.name || user.email };
+      }
+      await grantRef.set({ clubId: inv.clubId, inviteId: effectiveInviteId, createdAt: Date.now() });
+
+      const clubAthleteRef = db.collection('clubs').doc(inv.clubId).collection('athletes').doc(user.uid);
+      const clubAthleteSnap = await clubAthleteRef.get();
+      if (!clubAthleteSnap.exists){
+        await clubAthleteRef.set({
+          name: effectiveName || inv.name || user.email,
+          email: user.email,
+          inviteId: effectiveInviteId,
+          blocked: false,
+          needsReview: false,
+          createdAt: Date.now()
+        });
+      }
+      grantSnap = await grantRef.get();
     }
-    const prof = snap.data();
-    if (prof.role !== 'athlete'){ show('wrongRoleView'); return; }
-    if (prof.blocked){ show('blockedView'); return; }
+
+    const grant = grantSnap.data();
+    currentClubId = grant.clubId;
+    const clubAthleteSnap = await db.collection('clubs').doc(currentClubId).collection('athletes').doc(user.uid).get();
+    const athleteRecord = clubAthleteSnap.exists ? clubAthleteSnap.data() : {};
+
+    if (athleteRecord.blocked){ show('blockedView'); return; }
     if (isNewFromLink){ show('setPasswordView'); return; }
-    athleteProfile = prof;
-    currentClubId = prof.clubId;
-    document.getElementById('welcomeName').textContent = '¡Hola, ' + (prof.name || '') + '!';
+    athleteProfile = athleteRecord;
+    document.getElementById('welcomeName').textContent = '¡Hola, ' + (athleteRecord.name || identity.name || '') + '!';
     show('homeView');
     loadAthleteApp();
   }
@@ -302,18 +338,14 @@
     try{
       await base.collection('progress').doc('main').set({ checks: athleteChecks }, { merge:true });
     }catch(e){
-      // Diagnóstico: releemos nuestro propio perfil tal cual lo ve Firestore
-      // ahora mismo, para comparar contra lo que la app tiene en memoria.
       let diag = '';
       try{
-        const freshSnap = await db.collection('users').doc(signedInUser.uid).get();
-        const fresh = freshSnap.exists ? freshSnap.data() : null;
-        diag = ' | uid=' + signedInUser.uid +
-          ' | currentClubId(app)="' + currentClubId + '" (códigos:' + currentClubId.split('').map(c=>c.charCodeAt(0)).join(',') + ')' +
-          ' | perfil.role="' + (fresh&&fresh.role) + '"' +
-          ' | perfil.clubId="' + (fresh&&fresh.clubId) + '" (códigos:' + ((fresh&&fresh.clubId)||'').split('').map(c=>c.charCodeAt(0)).join(',') + ')' +
-          ' | perfil.blocked=' + (fresh&&fresh.blocked);
-      }catch(e2){ diag = ' | (no se pudo releer el perfil: ' + (e2.message||e2.code) + ')'; }
+        const grantSnap = await db.collection('users').doc(signedInUser.uid).collection('roleGrants').doc('athlete').get();
+        const athSnap = await db.collection('clubs').doc(currentClubId).collection('athletes').doc(signedInUser.uid).get();
+        diag = ' | uid=' + signedInUser.uid + ' | currentClubId(app)="' + currentClubId + '"' +
+          ' | roleGrants/athlete=' + (grantSnap.exists ? JSON.stringify(grantSnap.data()) : '(no existe)') +
+          ' | clubs/athletes=' + (athSnap.exists ? JSON.stringify(athSnap.data()) : '(no existe)');
+      }catch(e2){ diag = ' | (no se pudo releer el diagnóstico: ' + (e2.message||e2.code) + ')'; }
       e.message = (e.message||e.code) + diag;
       throw e;
     }
