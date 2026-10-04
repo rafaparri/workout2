@@ -72,6 +72,7 @@ patch("  sheet.appendChild(menuItem('📄', '+ Nuevo plan',", "  if (!WO2_ATHLET
 patch("  sheet.appendChild(menuItem('👤', 'Deportista: '", "  if (!WO2_ATHLETE) sheet.appendChild(menuItem('👤', 'Deportista: '")
 patch("  sheet.appendChild(menuItem(syncStatus==='on'", "  if (!WO2_ATHLETE) sheet.appendChild(menuItem(syncStatus==='on'")
 patch("  sheet.appendChild(menuItem('💾', 'Exportar copia de seguridad', async ()=>{",
+      "  if (WO2_ATHLETE && WO2.isCoach) sheet.appendChild(menuItem('📋', 'Panel de entrenador', ()=>{ window.location.href = 'entrenador.html'; }));\n"
       "  if (WO2_ATHLETE) sheet.appendChild(menuItem('🚪', 'Salir', ()=>{ wo2SignOut(); }));\n"
       "  if (!WO2_ATHLETE) sheet.appendChild(menuItem('💾', 'Exportar copia de seguridad', async ()=>{")
 
@@ -83,7 +84,7 @@ ADAPTER = r'''
 // progress/main, y su perfil (objetivos, RM, medidas) a progress/profile.
 // Si el atleta cambia, borra o añade pesos, su versión de esa semana se
 // guarda aparte en progress/plan_<id>; la del entrenador no se toca.
-const WO2 = { uid:null, clubId:null, base:null, progressTimer:null, profileTimer:null,
+const WO2 = { uid:null, clubId:null, base:null, progressTimer:null, profileTimer:null, isCoach:false,
               coachDays:{}, pushedOverride:{} };
 function wo2OverrideDocId(planId){ return 'plan_' + String(planId).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,140); }
 // Solo se guardan los ejercicios que el atleta ha cambiado ("L|0": ejercicio);
@@ -230,6 +231,8 @@ function wo2ShowBootError(msg){
       WO2.clubId = grantSnap.data().clubId;
       WO2.base = db.collection('clubs').doc(WO2.clubId).collection('athletes').doc(user.uid);
 
+      db.collection('users').doc(user.uid).collection('roleGrants').doc('coach').get()
+        .then(c=>{ WO2.isCoach = c.exists; }).catch(()=>{});
       const [clubSnap, athSnap, idSnap] = await Promise.all([
         db.collection('clubs').doc(WO2.clubId).get().catch(()=>null),
         WO2.base.get(),
