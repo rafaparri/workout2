@@ -4469,6 +4469,7 @@ function renderMenuSheet(plan){
   if (!WO2_ATHLETE) sheet.appendChild(menuItem(syncStatus==='on' ? '🔄' : '📴', syncStatus==='on' ? 'Sincronización: activa' : 'Sincronizar entre dispositivos', ()=>{ state.showSync=true; state.showMenu=false; render(); }));
   sheet.appendChild(menuItem('🧾', 'Informe semanal', ()=>{ state.showMenu=false; generateWeekReport(plan); }));
   sheet.appendChild(menuItem('🔊', 'Elegir voz de lectura', ()=>{ state.showMenu=false; state.showVoicePicker=true; render(); }));
+  if (WO2_ATHLETE && WO2.isCoach) sheet.appendChild(menuItem('📋', 'Panel de entrenador', ()=>{ window.location.href = 'entrenador.html'; }));
   if (WO2_ATHLETE) sheet.appendChild(menuItem('🚪', 'Salir', ()=>{ wo2SignOut(); }));
   if (!WO2_ATHLETE) sheet.appendChild(menuItem('💾', 'Exportar copia de seguridad', async ()=>{
     state.showMenu = false;
@@ -5930,7 +5931,7 @@ function renderWeekReportOverlay(plan){
 // progress/main, y su perfil (objetivos, RM, medidas) a progress/profile.
 // Si el atleta cambia, borra o añade pesos, su versión de esa semana se
 // guarda aparte en progress/plan_<id>; la del entrenador no se toca.
-const WO2 = { uid:null, clubId:null, base:null, progressTimer:null, profileTimer:null,
+const WO2 = { uid:null, clubId:null, base:null, progressTimer:null, profileTimer:null, isCoach:false,
               coachDays:{}, pushedOverride:{} };
 function wo2OverrideDocId(planId){ return 'plan_' + String(planId).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,140); }
 // Solo se guardan los ejercicios que el atleta ha cambiado ("L|0": ejercicio);
@@ -6077,6 +6078,8 @@ function wo2ShowBootError(msg){
       WO2.clubId = grantSnap.data().clubId;
       WO2.base = db.collection('clubs').doc(WO2.clubId).collection('athletes').doc(user.uid);
 
+      db.collection('users').doc(user.uid).collection('roleGrants').doc('coach').get()
+        .then(c=>{ WO2.isCoach = c.exists; }).catch(()=>{});
       const [clubSnap, athSnap, idSnap] = await Promise.all([
         db.collection('clubs').doc(WO2.clubId).get().catch(()=>null),
         WO2.base.get(),
