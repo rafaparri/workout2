@@ -40,6 +40,7 @@
 </style>
 </head>
 <body>
+<div id="brandStripContainer"></div>
 <div class="wrap">
 
   <div id="loadingView" class="hidden">
@@ -114,7 +115,10 @@
 </div>
 
 <script src="firebase-init.js"></script>
+<script src="branding.js"></script>
 <script>
+  document.getElementById('brandStripContainer').appendChild(renderBrandStrip(null, null));
+
   const views = ['loadingView','confirmEmailView','setPasswordView','loginView','blockedView','dashView'];
   function show(id){ views.forEach(v=> document.getElementById(v).classList.toggle('hidden', v!==id)); }
 
@@ -241,6 +245,9 @@
   function loadClub(club){
     document.getElementById('clubName').textContent = club.name || 'Mi club';
     document.getElementById('clubSub').textContent = 'Panel del entrenador';
+    const stripContainer = document.getElementById('brandStripContainer');
+    stripContainer.innerHTML = '';
+    stripContainer.appendChild(renderBrandStrip(club.logoUrl, club.name));
   }
 
   async function loadAthletes(){
