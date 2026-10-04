@@ -65,8 +65,9 @@
     <input type="email" id="coachEmail">
     <label>Nombre del entrenador</label>
     <input type="text" id="coachName">
-    <label>URL del logo del club (opcional)</label>
-    <input type="url" id="clubLogoUrl" placeholder="https://... (enlace a una imagen)">
+    <label>Logo del club (opcional)</label>
+    <input type="file" id="clubLogoFile" accept="image/*">
+    <img id="clubLogoPreview" alt="" style="display:none; height:64px; margin:-4px 0 14px; border-radius:6px; background:#20242e; padding:6px;">
     <div class="row2">
       <div>
         <label>Días de prueba (vacío = sin límite)</label>
@@ -120,6 +121,47 @@
       .slice(0,30) + '-' + Date.now().toString(36).slice(-4);
   }
 
+  // --- Logo del club: se reduce a 256 px y se guarda dentro de la ficha del club ---
+  let pendingLogo = null;
+  function imageFileToDataUrl(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onerror = ()=> reject(new Error('No se pudo leer la imagen'));
+      reader.onload = ()=>{
+        const img = new Image();
+        img.onerror = ()=> reject(new Error('El archivo no es una imagen válida'));
+        img.onload = ()=>{
+          const max = 256;
+          const scale = Math.min(1, max / Math.max(img.width, img.height));
+          const w = Math.round(img.width*scale), h = Math.round(img.height*scale);
+          const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+          cv.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(cv.toDataURL('image/png'));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  function pickImage(onDone){
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = async ()=>{
+      if (!inp.files[0]) return;
+      try{ onDone(await imageFileToDataUrl(inp.files[0])); }
+      catch(err){ alert(err.message); }
+    };
+    inp.click();
+  }
+  document.getElementById('clubLogoFile').onchange = async (e)=>{
+    const prev = document.getElementById('clubLogoPreview');
+    if (!e.target.files[0]){ pendingLogo = null; prev.style.display='none'; return; }
+    try{
+      pendingLogo = await imageFileToDataUrl(e.target.files[0]);
+      prev.src = pendingLogo; prev.style.display = 'block';
+    }catch(err){ alert(err.message); pendingLogo = null; }
+  };
+
   document.getElementById('createClubBtn').onclick = async ()=>{
     const msg = document.getElementById('createMsg');
     msg.textContent = ''; msg.className = 'msg';
@@ -128,7 +170,7 @@
     const coachName = document.getElementById('coachName').value.trim();
     const trialDaysVal = document.getElementById('trialDays').value.trim();
     const maxAthletesVal = document.getElementById('maxAthletes').value.trim();
-    const logoUrl = document.getElementById('clubLogoUrl').value.trim() || null;
+    const logoUrl = pendingLogo || null;
     if (!name || !coachEmail || !coachName){
       msg.textContent = 'Rellena nombre del club, correo y nombre del entrenador.';
       msg.className = 'msg err';
@@ -161,7 +203,9 @@
       document.getElementById('coachName').value = '';
       document.getElementById('trialDays').value = '';
       document.getElementById('maxAthletes').value = '';
-      document.getElementById('clubLogoUrl').value = '';
+      document.getElementById('clubLogoFile').value = '';
+      pendingLogo = null;
+      document.getElementById('clubLogoPreview').style.display = 'none';
       loadClubs();
     }catch(e){
       msg.textContent = 'Error al crear el club: ' + (e.message || e.code);
@@ -192,18 +236,25 @@
           <button class="${c.blocked ? 'ok' : 'danger'}" data-id="${doc.id}" data-blocked="${!!c.blocked}" data-action="block">
             ${c.blocked ? 'Desbloquear' : 'Bloquear'}
           </button>
-          <button data-id="${doc.id}" data-current="${c.logoUrl||''}" data-action="logo">Editar logo</button>
+          <button data-id="${doc.id}" data-action="logo">${c.logoUrl ? 'Cambiar logo' : 'Subir logo'}</button>
+          ${c.logoUrl ? `<button data-id="${doc.id}" data-action="nologo">Quitar logo</button>` : ''}
         </div>`;
       row.querySelector('[data-action="block"]').onclick = async (e)=>{
         const btn = e.target;
         await db.collection('clubs').doc(btn.dataset.id).update({ blocked: btn.dataset.blocked !== 'true' });
         loadClubs();
       };
-      row.querySelector('[data-action="logo"]').onclick = async (e)=>{
-        const btn = e.target;
-        const nuevo = window.prompt('URL del logo del club (déjalo vacío para quitarlo):', btn.dataset.current);
-        if (nuevo === null) return;
-        await db.collection('clubs').doc(btn.dataset.id).update({ logoUrl: nuevo.trim() || null });
+      row.querySelector('[data-action="logo"]').onclick = (e)=>{
+        const clubId = e.target.dataset.id;
+        pickImage(async (dataUrl)=>{
+          await db.collection('clubs').doc(clubId).update({ logoUrl: dataUrl });
+          loadClubs();
+        });
+      };
+      const quitar = row.querySelector('[data-action="nologo"]');
+      if (quitar) quitar.onclick = async (e)=>{
+        if (!confirm('¿Quitar el logo de este club?')) return;
+        await db.collection('clubs').doc(e.target.dataset.id).update({ logoUrl: null });
         loadClubs();
       };
       listEl.appendChild(row);
