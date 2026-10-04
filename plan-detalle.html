@@ -47,6 +47,15 @@
   .athSet.edited .athTag{ background:#e07b39; } .athSet.added .athTag{ background:#2e9a52; }
   .athOrig{ font-size:14px; color:var(--muted); width:100%; }
   .legend{ background:var(--surface); border:1px solid var(--surface-3); border-radius:12px; padding:12px 14px; margin-bottom:16px; font-size:15px; line-height:1.5; }
+  .mini{ display:inline-flex; align-items:center; justify-content:center; min-width:34px; height:34px; border-radius:8px; color:#fff; font-size:17px; flex-shrink:0; padding:0 4px; }
+  .mini.empty{ background:none; color:var(--muted-2); font-size:13px; }
+  .athLine{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:-2px 0 8px 10px; padding:6px 10px; border-radius:8px; border-left:4px solid; font-family:'IBM Plex Mono',monospace; font-size:15px; }
+  .athLine.edited{ background:#fde9da; border-color:#e07b39; }
+  .athLine.added{ background:#dff3e5; border-color:#2e9a52; margin-left:0; }
+  .athLine.deleted{ background:var(--surface-2); border-color:#8892a0; color:var(--muted); }
+  .athLine .alabel{ font-family:Inter,sans-serif; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+  .athLine.edited .alabel{ color:#b65a1f; } .athLine.added .alabel{ color:#1f6b39; }
+  .athLine .aicon{ font-size:17px; }
 </style>
 </head>
 <body>
@@ -129,6 +138,61 @@
     }
   });
 
+
+  // --- Programación + lo que hizo el atleta, en una sola lista intercalada ---
+  function sameSet(a, b){
+    if (!a || !b) return false;
+    const r = x=> x.repsParts ? x.repsParts.join('+') : String(x.repsRaw || (x.reps ?? ''));
+    return String(a.kg ?? a.kgRaw ?? '') === String(b.kg ?? b.kgRaw ?? '') && String(a.series ?? '') === String(b.series ?? '') && r(a) === r(b);
+  }
+  // Empareja cada peso programado con lo que hizo el atleta (que puede haber
+  // cambiado, borrado o añadido pesos) y devuelve la lista en orden.
+  function planExerciseItems(coachSets, athSets){
+    const items = [];
+    if (!athSets){ coachSets.forEach((s, ci)=> items.push({ type:'same', ci, ai:ci })); return items; }
+    let ptr = 0;
+    athSets.forEach((a, ai)=>{
+      if (a.added){ items.push({ type:'added', a, ai }); return; }
+      const target = (a.edited && a.original) ? a.original : a;
+      let j = -1;
+      for (let k = ptr; k < coachSets.length; k++){ if (sameSet(coachSets[k], target)){ j = k; break; } }
+      if (j === -1 && ptr < coachSets.length) j = ptr; // el entrenador cambió ese peso después: se empareja por orden
+      if (j === -1){ items.push({ type:'added', a, ai }); return; }
+      for (let k = ptr; k < j; k++) items.push({ type:'deleted', ci:k });
+      const changed = a.edited || !sameSet(coachSets[j], a);
+      items.push({ type: changed ? 'edited' : 'same', ci:j, a, ai });
+      ptr = j + 1;
+    });
+    for (let k = ptr; k < coachSets.length; k++) items.push({ type:'deleted', ci:k });
+    return items;
+  }
+  function ratingFor(day, exIdx, ai){ return ai == null ? null : ratingInfo(athleteChecks[checkKey(planIdParam, day, exIdx, ai)] || null); }
+  function ratingBadge(rinfo){
+    return rinfo
+      ? '<span class="mini" style="background:' + rinfo.color + ';">' + rinfo.icon + '</span>'
+      : '<span class="mini empty">—</span>';
+  }
+  function coachRow(day, exIdx, si, s, badge){
+    const row = document.createElement('div');
+    row.className = 'setRow';
+    const repsVal = s.repsParts ? s.repsParts.join('+') : (s.repsRaw || (s.reps ?? ''));
+    row.innerHTML = `
+      <input class="kg" type="text" value="${s.kg ?? (s.kgRaw||'')}" data-day="${day}" data-ex="${exIdx}" data-set="${si}" data-field="kg">
+      <span class="x">kg ×</span>
+      <input class="series" type="text" value="${s.series ?? ''}" data-day="${day}" data-ex="${exIdx}" data-set="${si}" data-field="series">
+      <span class="x">×</span>
+      <input class="reps" type="text" value="${repsVal}" data-day="${day}" data-ex="${exIdx}" data-set="${si}" data-field="reps">
+      <span class="x">reps</span>
+      ${badge}`;
+    return row;
+  }
+  function athLine(kind, label, a, rinfo){
+    const d = document.createElement('div');
+    d.className = 'athLine ' + kind;
+    d.innerHTML = '<span class="alabel">' + label + '</span>' + (a ? '<span class="aval">' + setText(a) + '</span>' : '') + (rinfo ? '<span class="aicon">' + rinfo.icon + '</span>' : '');
+    return d;
+  }
+
   function render(){
     document.getElementById('loadingMsg').classList.add('hidden');
     document.getElementById('content').classList.remove('hidden');
@@ -139,8 +203,8 @@
       legend.classList.remove('hidden');
       legend.innerHTML = '<b>El atleta ha apuntado cambios en esta semana.</b><br>' +
         '<span style="color:#e07b39;font-weight:700;">Naranja</span>: peso o repeticiones cambiados. ' +
-        '<span style="color:#2e9a52;font-weight:700;">Verde</span>: pesos añadidos.<br>' +
-        'Los números editables son tu programación; debajo de cada ejercicio cambiado se ve lo que hizo el atleta.';
+        '<span style="color:#2e9a52;font-weight:700;">Verde</span>: pesos añadidos. <span style="color:#5a5e68;font-weight:700;">Gris</span>: no lo hizo.<br>' +
+        'Los números editables son tu programación; a la derecha, la valoración del atleta. Lo que cambió o añadió aparece intercalado.';
     } else { legend.classList.add('hidden'); }
 
     const wrap = document.getElementById('daysWrap');
@@ -169,46 +233,22 @@
         exName.textContent = entry.name || ('Código ' + entry.code);
         card.appendChild(exName);
 
-        entry.sets.forEach((s, si)=>{
-          const row = document.createElement('div');
-          row.className = 'setRow';
-          const repsVal = s.repsParts ? s.repsParts.join('+') : (s.repsRaw || (s.reps ?? ''));
-          const athEntry = athleteChanges[day + '|' + exIdx];
-          const rating = athEntry ? null : (athleteChecks[checkKey(planIdParam, day, exIdx, si)] || null);
-          const rinfo = ratingInfo(rating);
-          const badge = rinfo
-            ? '<span style="background:'+rinfo.color+';color:#fff;border-radius:8px;padding:6px 9px;font-size:16px;flex-shrink:0;">'+rinfo.icon+'</span>'
-            : '<span style="color:var(--muted-2);font-size:12px;flex-shrink:0;width:30px;text-align:center;">—</span>';
-          row.innerHTML = `
-            <input class="kg" type="text" value="${s.kg ?? (s.kgRaw||'')}" data-day="${day}" data-ex="${exIdx}" data-set="${si}" data-field="kg">
-            <span class="x">kg ×</span>
-            <input class="series" type="text" value="${s.series ?? ''}" data-day="${day}" data-ex="${exIdx}" data-set="${si}" data-field="series">
-            <span class="x">×</span>
-            <input class="reps" type="text" value="${repsVal}" data-day="${day}" data-ex="${exIdx}" data-set="${si}" data-field="reps">
-            <span class="x">reps</span>
-            ${badge}`;
-          card.appendChild(row);
-        });
-
         const athEntry = athleteChanges[day + '|' + exIdx];
-        if (athEntry && athEntry.sets){
-          const blk = document.createElement('div');
-          blk.className = 'athBlock';
-          blk.innerHTML = '<div class="athTitle">Lo que hizo el atleta</div>';
-          athEntry.sets.forEach((s, si)=>{
-            const r = ratingInfo(athleteChecks[checkKey(planIdParam, day, exIdx, si)] || null);
-            const row = document.createElement('div');
-            row.className = 'athSet' + (s.added ? ' added' : (s.edited ? ' edited' : ''));
-            let html = '<span>' + setText(s) + '</span>';
-            if (r) html += '<span style="font-size:18px;">' + r.icon + '</span>';
-            if (s.added) html += '<span class="athTag">➕ Añadido</span>';
-            else if (s.edited) html += '<span class="athTag">✏️ Cambiado</span>';
-            if (s.edited && !s.added && s.original) html += '<span class="athOrig">Programado: ' + setText(s.original) + '</span>';
-            row.innerHTML = html;
-            blk.appendChild(row);
-          });
-          card.appendChild(blk);
-        }
+        planExerciseItems(entry.sets || [], athEntry ? (athEntry.sets || []) : null).forEach(it=>{
+          if (it.type === 'added'){
+            card.appendChild(athLine('added', '➕ Añadido', it.a, ratingFor(day, exIdx, it.ai)));
+            return;
+          }
+          const s = entry.sets[it.ci];
+          let badge;
+          if (it.type === 'same') badge = ratingBadge(ratingFor(day, exIdx, it.ai));
+          else if (it.type === 'edited') badge = '<span class="mini" style="background:#e07b39;">✏️</span>';
+          else if (it.type === 'deleted') badge = '<span class="mini" style="background:#8892a0;" title="No lo hizo">✕</span>';
+          else badge = ratingBadge(null);
+          card.appendChild(coachRow(day, exIdx, it.ci, s, badge));
+          if (it.type === 'edited') card.appendChild(athLine('edited', 'Hizo', it.a, ratingFor(day, exIdx, it.ai)));
+          if (it.type === 'deleted') card.appendChild(athLine('deleted', 'No lo hizo', null, null));
+        });
       });
       wrap.appendChild(card);
     });
