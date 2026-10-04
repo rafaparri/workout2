@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>WorkOut 2.0 · Atleta</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -49,6 +50,7 @@
   }
   .dayPill.rest{ background:var(--surface-2); color:var(--muted-2); box-shadow:none; border:2px dashed var(--surface-3); }
 
+  .reportBtn{ width:100%; background:var(--surface); border:2px solid var(--surface-3); color:var(--chalk); font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; padding:13px 0; border-radius:12px; cursor:pointer; margin-bottom:14px; }
   .exCard{ background:var(--surface); border:1px solid var(--surface-3); border-radius:14px; padding:16px; margin-bottom:14px; }
   .exName{ font-family:'Oswald',sans-serif; font-weight:700; font-size:16px; margin-bottom:10px; }
   .chipsWrap{ display:flex; flex-wrap:wrap; gap:8px; }
@@ -59,6 +61,15 @@
   .setChip b{ color:var(--yellow-deep); }
 
   .ratingOverlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50; }
+  .reportOverlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:flex-start; justify-content:center; padding:20px; z-index:50; overflow-y:auto; }
+  .reportBox{ background:var(--surface); border-radius:16px; padding:24px; width:100%; max-width:440px; margin:20px 0; }
+  .reportBox h3{ font-family:'Oswald',sans-serif; font-weight:700; font-size:18px; text-transform:uppercase; margin:0 0 4px; }
+  .reportStatus{ font-family:'Oswald',sans-serif; font-weight:700; font-size:16px; margin-bottom:16px; }
+  .reportStat{ display:flex; justify-content:space-between; font-size:14.5px; padding:8px 0; border-bottom:1px solid var(--surface-3); }
+  .reportWatch{ background:#fdf0e8; border:1px solid var(--red); border-radius:10px; padding:12px 14px; margin:14px 0; font-size:13.5px; color:#8a3326; }
+  .reportActions{ display:flex; gap:10px; margin-top:18px; }
+  .reportActions button{ flex:1; background:var(--surface-2); border:1px solid var(--surface-3); color:var(--chalk); font-family:'Oswald',sans-serif; font-weight:700; font-size:13.5px; padding:12px 0; border-radius:10px; cursor:pointer; }
+  .reportClose{ width:100%; background:none; color:var(--muted-2); font-size:13px; text-decoration:underline; border:none; margin-top:14px; padding:6px; }
   .ratingBox{ background:var(--surface); border-radius:16px; padding:24px; width:100%; max-width:380px; text-align:center; }
   .ratingKg{ font-family:'Oswald',sans-serif; font-weight:700; font-size:44px; color:var(--yellow-deep); margin-bottom:4px; }
   .ratingSetrep{ font-family:'IBM Plex Mono',monospace; font-size:18px; margin-bottom:20px; }
@@ -430,6 +441,12 @@
       container.innerHTML = '<div class="listCard"><div class="emptyMsg">Descanso.</div></div>';
       return;
     }
+    const reportBtn = document.createElement('button');
+    reportBtn.className = 'reportBtn';
+    reportBtn.textContent = '📄 Informe del día';
+    reportBtn.onclick = ()=> openDayReport(plan, day);
+    container.appendChild(reportBtn);
+
     exEntries.forEach((entry)=>{
       const exIdx = entries.indexOf(entry);
       const card = document.createElement('div');
@@ -510,6 +527,158 @@
     closeBtn.className = 'ratingClose';
     closeBtn.textContent = 'Cerrar sin marcar';
     closeBtn.onclick = ()=> { stopSpeaking(); overlay.remove(); };
+    box.appendChild(closeBtn);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+  }
+
+  /* ============== Informe del día ============== */
+  function setTotalReps(s){
+    if (s.repsParts) return s.repsParts.reduce((a,b)=>a+b,0);
+    return (typeof s.reps === 'number') ? s.reps : 0;
+  }
+
+  function dayReportData(plan, day){
+    const entries = (plan.days && plan.days[day]) || [];
+    const exEntries = entries.filter(e=>e.type==='exercise');
+    let totalSets=0, ratedSets=0, okSets=0, badSets=0, tonnageKg=0;
+    const watchNames = new Set();
+    const ratings = [];
+    exEntries.forEach(entry=>{
+      const exIdx = entries.indexOf(entry);
+      entry.sets.forEach((s,si)=>{
+        totalSets++;
+        if (s.kg!=null && s.series) tonnageKg += s.kg * s.series * setTotalReps(s);
+        const rating = athleteChecks[checkKey(plan.id, day, exIdx, si)];
+        if (rating){
+          ratedSets++;
+          ratings.push(rating);
+          if (rating>=4) okSets++;
+          if (rating<=2){ badSets++; watchNames.add(entry.name || ('Código '+entry.code)); }
+        }
+      });
+    });
+    const avgRating = ratings.length ? (ratings.reduce((a,b)=>a+b,0)/ratings.length) : null;
+    const completion = totalSets ? Math.round(100*ratedSets/totalSets) : null;
+    let status;
+    if (badSets >= 2 || (avgRating!==null && avgRating < 2.5)) status = { icon:'⚠️', label:'A vigilar' };
+    else if (ratedSets===totalSets && totalSets>0 && avgRating>=4) status = { icon:'✓', label:'Sesión sólida' };
+    else status = { icon:'•', label:'Normal' };
+
+    return {
+      dayName: DAY_NAMES[day],
+      week: plan.meta && plan.meta.week!=null ? plan.meta.week : null,
+      totalSets, ratedSets, okSets, badSets, completion,
+      tonnageKg: Math.round(tonnageKg),
+      avgRating, watchList: Array.from(watchNames), status
+    };
+  }
+
+  function dayReportPlainText(data){
+    const lines = [];
+    lines.push('INFORME DE ENTRENO — ' + data.dayName + (data.week!=null ? ' · Semana '+data.week : ''));
+    lines.push('Estado: ' + data.status.icon + ' ' + data.status.label);
+    lines.push('Series marcadas: ' + data.ratedSets + '/' + data.totalSets + (data.completion!=null?' ('+data.completion+'%)':''));
+    lines.push('Tonelaje: ' + data.tonnageKg + 'kg');
+    if (data.avgRating!=null) lines.push('Valoración media: ' + data.avgRating.toFixed(1) + '/5');
+    if (data.watchList.length) lines.push('A vigilar: ' + data.watchList.join(', '));
+    return lines.join('\n');
+  }
+
+  function generateDayReportPDF(data){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'mm', format:'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const marginX = 18;
+    const contentW = pageW - marginX*2;
+
+    doc.setFillColor(32,36,46);
+    doc.rect(0,0,pageW,30,'F');
+    doc.setTextColor(201,154,46);
+    doc.setFont('helvetica','bold'); doc.setFontSize(16);
+    doc.text('WORKOUT 2.0', marginX, 14);
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.setTextColor(225,225,225);
+    doc.text('Informe de entreno · ' + data.dayName + (data.week!=null?' · Semana '+data.week:''), marginX, 22);
+
+    let y = 42;
+    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(30,30,30);
+    doc.text(data.status.label.toUpperCase(), marginX, y);
+    y += 12;
+
+    function stat(label, value){
+      doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(80,80,80);
+      doc.text(label, marginX, y);
+      doc.setFont('helvetica','bold'); doc.setTextColor(30,30,30);
+      doc.text(String(value), pageW-marginX, y, {align:'right'});
+      y += 8;
+    }
+    stat('Series marcadas', data.ratedSets + '/' + data.totalSets + (data.completion!=null?' ('+data.completion+'%)':''));
+    stat('Tonelaje', data.tonnageKg + ' kg');
+    if (data.avgRating!=null) stat('Valoración media', data.avgRating.toFixed(1) + '/5');
+
+    if (data.watchList.length){
+      y += 4;
+      doc.setFillColor(252,238,228); doc.setDrawColor(193,74,58);
+      const boxH = 10 + data.watchList.length*6;
+      doc.roundedRect(marginX, y, contentW, boxH, 2,2,'FD');
+      doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(138,51,38);
+      doc.text('A VIGILAR', marginX+4, y+8);
+      let yy = y+15;
+      data.watchList.forEach(w=>{ doc.text('• '+w, marginX+4, yy); yy+=6; });
+      y += boxH + 8;
+    }
+
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(160,160,160);
+    doc.text('Generado el ' + new Date().toLocaleDateString('es-ES'), marginX, pageH-10);
+
+    const fileWeek = data.week!=null ? ('semana'+data.week) : 'plan';
+    doc.save('informe-' + fileWeek + '-' + data.dayName.toLowerCase() + '.pdf');
+  }
+
+  function openDayReport(plan, day){
+    const data = dayReportData(plan, day);
+    const overlay = document.createElement('div');
+    overlay.className = 'reportOverlay';
+    overlay.onclick = (e)=>{ if (e.target===overlay) overlay.remove(); };
+    const box = document.createElement('div');
+    box.className = 'reportBox';
+    box.innerHTML = `
+      <h3>${data.dayName}${data.week!=null?' · Semana '+data.week:''}</h3>
+      <div class="reportStatus">${data.status.icon} ${data.status.label}</div>
+      <div class="reportStat"><span>Series marcadas</span><b>${data.ratedSets}/${data.totalSets}${data.completion!=null?' ('+data.completion+'%)':''}</b></div>
+      <div class="reportStat"><span>Tonelaje</span><b>${data.tonnageKg}kg</b></div>
+      ${data.avgRating!=null ? '<div class="reportStat"><span>Valoración media</span><b>'+data.avgRating.toFixed(1)+'/5</b></div>' : ''}
+      ${data.watchList.length ? '<div class="reportWatch"><b>A vigilar:</b> '+data.watchList.join(', ')+'</div>' : ''}
+    `;
+    const actions = document.createElement('div');
+    actions.className = 'reportActions';
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = '📋 Copiar';
+    copyBtn.onclick = async ()=>{
+      try{
+        await navigator.clipboard.writeText(dayReportPlainText(data));
+        copyBtn.textContent = '✓ Copiado';
+        setTimeout(()=>{ copyBtn.textContent = '📋 Copiar'; }, 1500);
+      }catch(e){}
+    };
+    const pdfBtn = document.createElement('button');
+    pdfBtn.textContent = '📄 PDF';
+    pdfBtn.onclick = ()=> generateDayReportPDF(data);
+    actions.appendChild(copyBtn);
+    actions.appendChild(pdfBtn);
+    if (navigator.share){
+      const shareBtn = document.createElement('button');
+      shareBtn.textContent = '📤 Compartir';
+      shareBtn.onclick = ()=> navigator.share({ title:'Informe de entreno', text: dayReportPlainText(data) }).catch(()=>{});
+      actions.appendChild(shareBtn);
+    }
+    box.appendChild(actions);
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'reportClose';
+    closeBtn.textContent = 'Cerrar';
+    closeBtn.onclick = ()=> overlay.remove();
     box.appendChild(closeBtn);
     overlay.appendChild(box);
     document.body.appendChild(overlay);
