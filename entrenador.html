@@ -155,9 +155,15 @@
       window.localStorage.removeItem('emailForSignIn');
       await afterSignIn(result.user, true);
     }catch(e){
-      document.getElementById('confirmMsg').textContent = 'No se ha podido validar el enlace: ' + (e.message || e.code);
-      document.getElementById('confirmMsg').className = 'msg err';
-      show('confirmEmailView');
+      // Enlace ya usado, caducado o incompleto: limpiamos la dirección y
+      // mandamos a la pantalla normal de correo + contraseña.
+      window.localStorage.removeItem('emailForSignIn');
+      window.history.replaceState(null, '', window.location.pathname);
+      document.getElementById('loginEmail').value = email;
+      const lm = document.getElementById('loginMsg');
+      lm.textContent = 'Ese enlace de invitación ya se usó o ha caducado. Entra con tu correo y tu contraseña. Si todavía no tienes contraseña, pide a tu entrenador o administrador que te reenvíe la invitación.';
+      lm.className = 'msg err';
+      show('loginView');
     }
   }
 
