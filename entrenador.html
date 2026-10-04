@@ -101,6 +101,13 @@
       <button class="signout" id="signoutBtn">Salir</button>
     </div>
 
+    <div class="card" id="selfAthleteCard">
+      <label>Mi entreno</label>
+      <p id="selfAthleteText" style="margin:0 0 12px;font-size:15px;color:var(--muted);line-height:1.4;">Comprobando…</p>
+      <button id="selfAthleteBtn" class="hidden"></button>
+      <div id="selfAthleteMsg" class="msg"></div>
+    </div>
+
     <div class="card">
       <label>Invitar nuevo atleta</label>
       <input type="email" id="inviteEmail" placeholder="correo del atleta">
@@ -251,7 +258,62 @@
     });
   }
 
+  // --- El entrenador también puede entrenar como atleta de su club, con el
+  // mismo correo. Se da de alta él mismo, sin enviar correo de invitación.
+  async function loadSelfAthlete(){
+    const u = signedInUser || auth.currentUser;
+    const txt = document.getElementById('selfAthleteText');
+    const btn = document.getElementById('selfAthleteBtn');
+    if (!u) return;
+    try{
+      const g = await db.collection('users').doc(u.uid).collection('roleGrants').doc('athlete').get();
+      btn.classList.remove('hidden');
+      if (g.exists){
+        txt.textContent = 'También entrenas como atleta. Tu programación la gestionas desde "Mis atletas", como la de cualquier otro.';
+        btn.textContent = '🏋️ Ir a mi entreno';
+        btn.onclick = ()=>{ window.location.href = 'entreno.html'; };
+      } else {
+        txt.textContent = '¿Entrenas tú también? Date de alta como atleta de tu club con este mismo correo y podrás usar la app de entreno.';
+        btn.textContent = '🏋️ Darme de alta como atleta';
+        btn.onclick = becomeAthlete;
+      }
+    }catch(e){
+      txt.textContent = 'No se ha podido comprobar: ' + (e.message || e.code);
+    }
+  }
+  async function becomeAthlete(){
+    const u = signedInUser || auth.currentUser;
+    const msg = document.getElementById('selfAthleteMsg');
+    const btn = document.getElementById('selfAthleteBtn');
+    msg.textContent = ''; btn.disabled = true;
+    try{
+      const idSnap = await db.collection('users').doc(u.uid).get();
+      const name = (idSnap.exists && idSnap.data().name) || u.email;
+      const inviteId = 'self_athlete_' + u.uid;
+      await db.collection('invites').doc(inviteId).set({
+        email: u.email, name, clubId: currentClubId, role: 'athlete', self: true, createdAt: Date.now()
+      });
+      await db.collection('users').doc(u.uid).collection('roleGrants').doc('athlete').set({
+        clubId: currentClubId, inviteId, createdAt: Date.now()
+      });
+      const athRef = db.collection('clubs').doc(currentClubId).collection('athletes').doc(u.uid);
+      const athSnap = await athRef.get();
+      if (!athSnap.exists){
+        await athRef.set({ name, email: u.email, inviteId, blocked: false, needsReview: false, createdAt: Date.now() });
+      }
+      msg.textContent = 'Hecho. Ya apareces en "Mis atletas": súbete tu programación desde ahí.';
+      msg.className = 'msg ok';
+      loadSelfAthlete();
+      loadAthletes();
+    }catch(e){
+      msg.textContent = 'No se ha podido: ' + (e.message || e.code);
+      msg.className = 'msg err';
+    }
+    btn.disabled = false;
+  }
+
   function loadClub(club){
+    loadSelfAthlete();
     document.getElementById('clubName').textContent = club.name || 'Mi club';
     document.getElementById('clubSub').textContent = 'Panel del entrenador';
     const stripContainer = document.getElementById('brandStripContainer');
