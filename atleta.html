@@ -90,6 +90,7 @@
 </style>
 </head>
 <body>
+<div id="brandStripContainer"></div>
 
 <div class="card">
 
@@ -152,7 +153,10 @@
 </div>
 
 <script src="firebase-init.js"></script>
+<script src="branding.js"></script>
 <script>
+  document.getElementById('brandStripContainer').appendChild(renderBrandStrip(null, null));
+
   const views = ['loadingView','confirmEmailView','setPasswordView','loginView','blockedView','wrongRoleView','homeView'];
   function show(id){
     views.forEach(v=> document.getElementById(v).classList.toggle('hidden', v!==id));
@@ -244,6 +248,14 @@
     currentClubId = grant.clubId;
     const clubAthleteSnap = await db.collection('clubs').doc(currentClubId).collection('athletes').doc(user.uid).get();
     const athleteRecord = clubAthleteSnap.exists ? clubAthleteSnap.data() : {};
+
+    try{
+      const clubSnap = await db.collection('clubs').doc(currentClubId).get();
+      const club = clubSnap.exists ? clubSnap.data() : {};
+      const stripContainer = document.getElementById('brandStripContainer');
+      stripContainer.innerHTML = '';
+      stripContainer.appendChild(renderBrandStrip(club.logoUrl, club.name));
+    }catch(e){}
 
     if (athleteRecord.blocked){ show('blockedView'); return; }
     if (isNewFromLink){ show('setPasswordView'); return; }
