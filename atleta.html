@@ -268,7 +268,11 @@
     }catch(e){}
 
     if (athleteRecord.blocked){ show('blockedView'); return; }
-    if (isNewFromLink){ show('setPasswordView'); return; }
+    if (isNewFromLink){
+      // Si ya es entrenador, ya tiene contraseña: no se le pide otra (cambiaría la suya)
+      const coachGrant = await db.collection('users').doc(user.uid).collection('roleGrants').doc('coach').get().catch(()=>null);
+      if (!(coachGrant && coachGrant.exists)){ show('setPasswordView'); return; }
+    }
     athleteProfile = athleteRecord;
     // La app de entreno completa vive en entreno.html (réplica de la app original)
     window.location.replace('entreno.html');
