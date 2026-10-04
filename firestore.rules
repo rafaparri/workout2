@@ -71,7 +71,11 @@ service cloud.firestore {
     }
 
     match /clubs/{clubId} {
-      allow read: if hasSuperadminGrant() || isCoachOfClub(clubId);
+      allow read: if hasSuperadminGrant() || isCoachOfClub(clubId) || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)/roleGrants/athlete) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)/roleGrants/athlete).data.clubId == clubId
+      );
       allow write: if hasSuperadminGrant();
     }
 
