@@ -26,6 +26,7 @@
   .msg{ font-size:13px; margin-top:10px; }
   .msg.err{ color:var(--red); } .msg.ok{ color:var(--ok); }
   .hidden{ display:none; }
+  .center{ text-align:center; }
   .row{ display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--surface-3); }
   .row:last-child{ border-bottom:none; }
   .avatar{ width:38px; height:38px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-family:'Oswald',sans-serif; font-weight:700; font-size:13px; color:var(--muted); flex-shrink:0; }
@@ -41,7 +42,34 @@
 <body>
 <div class="wrap">
 
-  <div id="loginView">
+  <div id="loadingView" class="hidden">
+    <h1>WorkOut 2.0</h1>
+    <p class="sub">Comprobando tu enlace…</p>
+  </div>
+
+  <div id="confirmEmailView" class="hidden">
+    <h1>Confirma tu correo</h1>
+    <p class="sub">Por seguridad, escribe el correo al que te llegó la invitación.</p>
+    <div class="card">
+      <label>Correo electrónico</label>
+      <input type="email" id="confirmEmail" placeholder="tu@correo.com">
+      <button id="confirmBtn">Continuar</button>
+      <div id="confirmMsg" class="msg"></div>
+    </div>
+  </div>
+
+  <div id="setPasswordView" class="hidden">
+    <h1>¡Ya casi está!</h1>
+    <p class="sub">Elige una contraseña para entrar directamente la próxima vez, sin esperar otro enlace.</p>
+    <div class="card">
+      <label>Nueva contraseña</label>
+      <input type="password" id="newPass" placeholder="mínimo 6 caracteres">
+      <button id="savePassBtn">Guardar y entrar</button>
+      <div id="passMsg" class="msg"></div>
+    </div>
+  </div>
+
+  <div id="loginView" class="hidden">
     <h1>WorkOut 2.0</h1>
     <p class="sub">Acceso de entrenador</p>
     <div class="card">
@@ -52,6 +80,12 @@
       <button id="loginBtn">Entrar</button>
       <div id="loginMsg" class="msg"></div>
     </div>
+  </div>
+
+  <div id="blockedView" class="hidden center">
+    <h1>Club bloqueado</h1>
+    <p class="sub">El acceso a tu club está temporalmente desactivado. Contacta con el administrador para más información.</p>
+    <button class="secondary" id="blockedSignOutBtn">Salir de esta cuenta</button>
   </div>
 
   <div id="dashView" class="hidden">
@@ -81,68 +115,132 @@
 
 <script src="firebase-init.js"></script>
 <script>
-  const loginView = document.getElementById('loginView');
-  const dashView = document.getElementById('dashView');
-  const loginMsg = document.getElementById('loginMsg');
+  const views = ['loadingView','confirmEmailView','setPasswordView','loginView','blockedView','dashView'];
+  function show(id){ views.forEach(v=> document.getElementById(v).classList.toggle('hidden', v!==id)); }
+
+  const params = new URLSearchParams(window.location.search);
+  const inviteIdFromLink = params.get('invite');
+  let signedInUser = null;
+  let currentClubId = null;
+
+  document.getElementById('signoutBtn').onclick = ()=> auth.signOut().then(()=> window.location.reload());
+  document.getElementById('blockedSignOutBtn').onclick = ()=> auth.signOut().then(()=> window.location.reload());
 
   document.getElementById('loginBtn').onclick = async ()=>{
-    loginMsg.textContent = '';
+    const msg = document.getElementById('loginMsg');
+    msg.textContent = '';
     const email = document.getElementById('loginEmail').value.trim();
     const pass = document.getElementById('loginPass').value;
-    if (!email || !pass){ loginMsg.textContent = 'Rellena correo y contraseña.'; loginMsg.className='msg err'; return; }
+    if (!email || !pass){ msg.textContent = 'Rellena correo y contraseña.'; msg.className='msg err'; return; }
     try{
-      await auth.signInWithEmailAndPassword(email, pass);
+      const cred = await auth.signInWithEmailAndPassword(email, pass);
+      authListenerDone = true;
+      await afterSignIn(cred.user, false);
     }catch(e){
-      loginMsg.textContent = 'No se ha podido entrar: ' + (e.message || e.code);
-      loginMsg.className = 'msg err';
+      msg.textContent = 'No se ha podido entrar: ' + (e.message || e.code);
+      msg.className = 'msg err';
     }
   };
 
-  document.getElementById('signoutBtn').onclick = ()=> auth.signOut();
+  async function finishSignIn(email){
+    try{
+      const result = await auth.signInWithEmailLink(email, window.location.href);
+      window.localStorage.removeItem('emailForSignIn');
+      await afterSignIn(result.user, true);
+    }catch(e){
+      document.getElementById('confirmMsg').textContent = 'No se ha podido validar el enlace: ' + (e.message || e.code);
+      document.getElementById('confirmMsg').className = 'msg err';
+      show('confirmEmailView');
+    }
+  }
 
-  let currentClubId = null;
+  async function afterSignIn(user, isNewFromLink){
+    signedInUser = user;
+    const idRef = db.collection('users').doc(user.uid);
+    let idSnap = await idRef.get();
+    let identity = idSnap.exists ? idSnap.data() : null;
 
-  auth.onAuthStateChanged(async (user)=>{
-    if (!user){
-      loginView.classList.remove('hidden');
-      dashView.classList.add('hidden');
+    const grantRef = db.collection('users').doc(user.uid).collection('roleGrants').doc('coach');
+    let grantSnap = await grantRef.get();
+
+    if (!grantSnap.exists){
+      if (!inviteIdFromLink){
+        document.getElementById('confirmMsg').textContent = 'Esta cuenta no tiene acceso de entrenador. Si crees que debería tenerlo, contacta con el administrador.';
+        document.getElementById('confirmMsg').className = 'msg err';
+        show('confirmEmailView');
+        return;
+      }
+      const inviteSnap = await db.collection('invites').doc(inviteIdFromLink).get();
+      if (!inviteSnap.exists){
+        document.getElementById('confirmMsg').textContent = 'Esa invitación ya no es válida.';
+        document.getElementById('confirmMsg').className = 'msg err';
+        show('confirmEmailView');
+        return;
+      }
+      const inv = inviteSnap.data();
+      if (!identity){
+        await idRef.set({ email: user.email, name: inv.name || user.email, createdAt: Date.now() });
+        identity = { email: user.email, name: inv.name || user.email };
+      }
+      await grantRef.set({ clubId: inv.clubId, inviteId: inviteIdFromLink, createdAt: Date.now() });
+      grantSnap = await grantRef.get();
+    }
+
+    currentClubId = grantSnap.data().clubId;
+
+    const clubSnap = await db.collection('clubs').doc(currentClubId).get();
+    const club = clubSnap.exists ? clubSnap.data() : {};
+    if (club.blocked){ show('blockedView'); return; }
+
+    if (isNewFromLink){ show('setPasswordView'); return; }
+
+    show('dashView');
+    loadClub(club);
+    loadAthletes();
+  }
+
+  document.getElementById('confirmBtn').onclick = ()=>{
+    const email = document.getElementById('confirmEmail').value.trim();
+    if (!email) return;
+    finishSignIn(email);
+  };
+
+  document.getElementById('savePassBtn').onclick = async ()=>{
+    const msg = document.getElementById('passMsg');
+    const pass = document.getElementById('newPass').value;
+    if (!pass || pass.length < 6){ msg.textContent = 'Mínimo 6 caracteres.'; msg.className = 'msg err'; return; }
+    const u = signedInUser || auth.currentUser;
+    if (!u){ msg.textContent = 'Se perdió la sesión, vuelve a abrir el enlace de invitación.'; msg.className = 'msg err'; return; }
+    try{
+      await u.updatePassword(pass);
+    }catch(e){
+      msg.textContent = 'No se pudo guardar: ' + (e.message || e.code);
+      msg.className = 'msg err';
       return;
     }
-    try{
-      const grantRef = db.collection('users').doc(user.uid).collection('roleGrants').doc('coach');
-      let grantSnap = await grantRef.get();
-      if (!grantSnap.exists){
-        loginMsg.textContent = 'Esta cuenta no tiene acceso de entrenador. Si crees que debería tenerlo, contacta con el administrador.';
-        loginMsg.className = 'msg err';
-        await auth.signOut();
-        return;
-      }
-      currentClubId = (grantSnap.data().clubId || '').trim();
-      loginView.classList.add('hidden');
-      dashView.classList.remove('hidden');
-      loadClub();
-      loadAthletes();
-    }catch(e){
-      loginMsg.textContent = 'Error al cargar tu perfil: ' + e.message;
-      loginMsg.className = 'msg err';
-    }
-  });
+    show('dashView');
+    const clubSnap = await db.collection('clubs').doc(currentClubId).get();
+    loadClub(clubSnap.exists ? clubSnap.data() : {});
+    loadAthletes();
+  };
 
-  async function loadClub(){
-    try{
-      const snap = await db.collection('clubs').doc(currentClubId).get();
-      if (!snap.exists){
-        document.getElementById('clubName').textContent = 'Club no encontrado';
-        document.getElementById('clubSub').textContent = '';
-        return;
-      }
-      const club = snap.data();
-      document.getElementById('clubName').textContent = club.name || 'Mi club';
-      document.getElementById('clubSub').textContent = club.blocked ? 'Club bloqueado' : 'Panel del entrenador';
-    }catch(e){
-      document.getElementById('clubName').textContent = 'Error al cargar el club';
-      document.getElementById('clubSub').textContent = (e.message || e.code || String(e));
-    }
+  let authListenerDone = false;
+  if (auth.isSignInWithEmailLink(window.location.href)){
+    let email = window.localStorage.getItem('emailForSignIn');
+    if (email) finishSignIn(email);
+    else show('confirmEmailView');
+  } else {
+    auth.onAuthStateChanged(async (user)=>{
+      if (authListenerDone) return;
+      authListenerDone = true;
+      if (user) await afterSignIn(user, false);
+      else show('loginView');
+    });
+  }
+
+  function loadClub(club){
+    document.getElementById('clubName').textContent = club.name || 'Mi club';
+    document.getElementById('clubSub').textContent = 'Panel del entrenador';
   }
 
   async function loadAthletes(){
