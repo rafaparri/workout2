@@ -357,16 +357,19 @@ function planId(meta){
     document.getElementById('loadingMsg').textContent = 'Falta el atleta en la dirección.';
   }
 
+  function athleteRef(){
+    return db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid);
+  }
+
   auth.onAuthStateChanged(async (user)=>{
     if (!user){ window.location.href = 'entrenador.html'; return; }
     try{
-      const coachSnap = await db.collection('users').doc(user.uid).get();
-      const coach = coachSnap.exists ? coachSnap.data() : null;
-      if (!coach || coach.role !== 'coach'){ window.location.href = 'entrenador.html'; return; }
-      currentClubId = coach.clubId;
+      const grantSnap = await db.collection('users').doc(user.uid).collection('roleGrants').doc('coach').get();
+      if (!grantSnap.exists){ window.location.href = 'entrenador.html'; return; }
+      currentClubId = grantSnap.data().clubId;
 
-      const athSnap = await db.collection('users').doc(athleteUid).get();
-      if (!athSnap.exists || athSnap.data().clubId !== currentClubId || athSnap.data().role !== 'athlete'){
+      const athSnap = await athleteRef().get();
+      if (!athSnap.exists){
         document.getElementById('loadingMsg').textContent = 'Este atleta no pertenece a tu club.';
         return;
       }
@@ -395,18 +398,18 @@ function planId(meta){
   }
 
   document.getElementById('reviewBtn').onclick = async ()=>{
-    await db.collection('users').doc(athleteUid).update({ needsReview: false });
-    const snap = await db.collection('users').doc(athleteUid).get();
+    await athleteRef().update({ needsReview: false });
+    const snap = await athleteRef().get();
     renderAthlete(snap.data());
   };
   document.getElementById('blockBtn').onclick = async ()=>{
-    await db.collection('users').doc(athleteUid).update({ blocked: true });
-    const snap = await db.collection('users').doc(athleteUid).get();
+    await athleteRef().update({ blocked: true });
+    const snap = await athleteRef().get();
     renderAthlete(snap.data());
   };
   document.getElementById('unblockBtn').onclick = async ()=>{
-    await db.collection('users').doc(athleteUid).update({ blocked: false });
-    const snap = await db.collection('users').doc(athleteUid).get();
+    await athleteRef().update({ blocked: false });
+    const snap = await athleteRef().get();
     renderAthlete(snap.data());
   };
 
@@ -433,12 +436,12 @@ function planId(meta){
       const plan = { id, meta, days: result.days, uploadedAt: Date.now() };
       await db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid)
         .collection('plans').doc(id).set(plan);
-      await db.collection('users').doc(athleteUid).update({ needsReview: true, lastUploadAt: Date.now() });
+      await athleteRef().update({ needsReview: true, lastUploadAt: Date.now() });
 
       msg.textContent = 'Subido correctamente.';
       msg.className = 'msg ok';
       fileInput.value = '';
-      const snap = await db.collection('users').doc(athleteUid).get();
+      const snap = await athleteRef().get();
       renderAthlete(snap.data());
       loadPlans();
     }catch(e){
