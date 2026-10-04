@@ -109,15 +109,15 @@
       return;
     }
     try{
-      const profSnap = await db.collection('users').doc(user.uid).get();
-      const prof = profSnap.exists ? profSnap.data() : null;
-      if (!prof || prof.role !== 'coach'){
-        loginMsg.textContent = 'Esta cuenta no tiene acceso de entrenador.';
+      const grantRef = db.collection('users').doc(user.uid).collection('roleGrants').doc('coach');
+      let grantSnap = await grantRef.get();
+      if (!grantSnap.exists){
+        loginMsg.textContent = 'Esta cuenta no tiene acceso de entrenador. Si crees que debería tenerlo, contacta con el administrador.';
         loginMsg.className = 'msg err';
         await auth.signOut();
         return;
       }
-      currentClubId = (prof.clubId || '').trim();
+      currentClubId = (grantSnap.data().clubId || '').trim();
       loginView.classList.add('hidden');
       dashView.classList.remove('hidden');
       loadClub();
@@ -147,7 +147,7 @@
 
   async function loadAthletes(){
     const listEl = document.getElementById('athletesList');
-    const snap = await db.collection('users').where('clubId','==',currentClubId).where('role','==','athlete').get();
+    const snap = await db.collection('clubs').doc(currentClubId).collection('athletes').get();
     if (snap.empty){
       listEl.innerHTML = '<div class="empty">Todavía no has invitado a ningún atleta.</div>';
       return;
