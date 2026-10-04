@@ -595,12 +595,25 @@
 
     doc.setFillColor(32,36,46);
     doc.rect(0,0,pageW,30,'F');
+
+    // Emblema circular "W2", dibujado directamente (sin imagen).
+    const markCx = marginX + 7, markCy = 15, markR = 7;
+    doc.setFillColor(244,241,234);
+    doc.circle(markCx, markCy, markR, 'F');
+    doc.setDrawColor(201,154,46);
+    doc.setLineWidth(0.6);
+    doc.circle(markCx, markCy, markR, 'S');
+    doc.setTextColor(201,154,46);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text('W2', markCx, markCy+1.3, { align:'center' });
+
+    const textX = marginX + 20;
     doc.setTextColor(201,154,46);
     doc.setFont('helvetica','bold'); doc.setFontSize(16);
-    doc.text('WORKOUT 2.0', marginX, 14);
+    doc.text('WORKOUT 2.0', textX, 14);
     doc.setFont('helvetica','normal'); doc.setFontSize(10);
     doc.setTextColor(225,225,225);
-    doc.text('Informe de entreno · ' + data.dayName + (data.week!=null?' · Semana '+data.week:''), marginX, 22);
+    doc.text('Informe de entreno · ' + data.dayName + (data.week!=null?' · Semana '+data.week:''), textX, 22);
 
     let y = 42;
     doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(30,30,30);
