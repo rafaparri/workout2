@@ -185,9 +185,15 @@
 
     if (!grantSnap.exists){
       if (!inviteIdFromLink){
-        document.getElementById('confirmMsg').textContent = 'Esta cuenta no tiene acceso de entrenador. Si crees que debería tenerlo, contacta con el administrador.';
-        document.getElementById('confirmMsg').className = 'msg err';
-        show('confirmEmailView');
+        // Había otra sesión abierta (p. ej. la de un atleta en esta misma ventana):
+        // se cierra y se pide entrar con la cuenta de entrenador.
+        const otherEmail = user.email || '';
+        await auth.signOut();
+        signedInUser = null;
+        const lm = document.getElementById('loginMsg');
+        lm.textContent = 'Estaba abierta la sesión de ' + otherEmail + ', que no es una cuenta de entrenador. Entra con tu cuenta de entrenador.';
+        lm.className = 'msg err';
+        show('loginView');
         return;
       }
       const inviteSnap = await db.collection('invites').doc(inviteIdFromLink).get();
