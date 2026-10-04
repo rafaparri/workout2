@@ -65,6 +65,12 @@
   .ratingIcons{ display:flex; gap:8px; justify-content:center; margin-bottom:16px; }
   .ratingIcons button{ flex:1; max-width:60px; font-size:26px; padding:14px 0; border-radius:12px; border:2px solid var(--surface-3); background:var(--surface-2); cursor:pointer; }
   .ratingClose{ background:none; color:var(--muted-2); font-size:13px; text-decoration:underline; border:none; width:auto; padding:6px; }
+
+  #rest-timer-bar{ position:fixed; top:0; left:0; right:0; z-index:500; color:#fff; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; box-shadow:0 4px 14px rgba(0,0,0,.3); flex-wrap:wrap; }
+  .rt-label-top{ font-family:'Oswald',sans-serif; font-weight:700; font-size:12px; letter-spacing:.04em; opacity:.85; }
+  .rt-time{ font-family:'IBM Plex Mono',monospace; font-weight:700; }
+  .rt-btns{ display:flex; gap:8px; align-items:center; }
+  .rt-btns button{ width:auto; background:rgba(255,255,255,.15); border:none; color:#fff; font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; padding:10px 12px; border-radius:8px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -320,7 +326,7 @@
   let athleteChecks = {};
   let navState = { planId: null, day: null };
 
-  document.getElementById('logoutBtn').onclick = ()=> auth.signOut().then(()=> window.location.reload());
+  document.getElementById('logoutBtn').onclick = ()=> { dismissRestTimer(); auth.signOut().then(()=> window.location.reload()); };
   document.getElementById('wrongRoleSignOutBtn').onclick = ()=> auth.signOut().then(()=> window.location.reload());
 
   async function loadAthleteApp(){
@@ -475,6 +481,10 @@
           await saveCheck(key, newVal);
           overlay.remove();
           renderApp();
+          if (newVal !== null){
+            const isLast = si === entry.sets.length-1;
+            startRestTimer(entry, s.kg, isLast ? 'betweenExercises' : 'betweenWeights');
+          }
         }catch(e){
           let errMsg = document.getElementById('ratingErrMsg');
           if (!errMsg){
@@ -496,6 +506,215 @@
     box.appendChild(closeBtn);
     overlay.appendChild(box);
     document.body.appendChild(overlay);
+  }
+
+  /* ============== Cronómetro de descanso ============== */
+  function speakText(text){
+    try{
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = 'es-ES';
+      utt.rate = 0.95;
+      window.speechSynthesis.speak(utt);
+    }catch(e){}
+  }
+  function stopSpeaking(){
+    try{ if ('speechSynthesis' in window) window.speechSynthesis.cancel(); }catch(e){}
+  }
+
+  // Estima el peso máximo conocido de un ejercicio a partir de lo que el
+  // propio atleta ha marcado bien/muy bien en sus semanas ya subidas.
+  function estimatedRMFor(code){
+    let best = null;
+    athletePlans.forEach(plan=>{
+      DAY_ORDER.forEach(day=>{
+        const entries = (plan.days && plan.days[day]) || [];
+        entries.forEach((entry, exIdx)=>{
+          if (entry.type !== 'exercise' || entry.code !== code) return;
+          entry.sets.forEach((s, si)=>{
+            const rating = athleteChecks[checkKey(plan.id, day, exIdx, si)];
+            if (rating >= 4 && s.kg != null){
+              if (best===null || s.kg>best) best = s.kg;
+            }
+          });
+        });
+      });
+    });
+    return best;
+  }
+
+  function suggestRestSeconds(kind, pct){
+    if (kind === 'betweenExercises'){
+      return (pct!==null && pct>=0.85) ? 180 : 150;
+    }
+    if (kind === 'sameWeight'){
+      if (pct===null) return 100;
+      if (pct < 0.70) return 75;
+      if (pct < 0.85) return 130;
+      return 180;
+    }
+    if (pct===null) return 100;
+    if (pct < 0.85) return 100;
+    if (pct < 0.92) return 140;
+    return 180;
+  }
+
+  let restTimerInterval = null;
+  let restAudioCtx = null;
+  const REST_TIMER_MUTED_KEY = 'wo2_rest_timer_muted';
+  let restTimerMuted = window.localStorage.getItem(REST_TIMER_MUTED_KEY) === '1';
+  let restTimer = null;
+  let restWakeLock = null;
+
+  function playHorn(){
+    if (restTimerMuted) return;
+    try{
+      if (!restAudioCtx) restAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (restAudioCtx.state === 'suspended') restAudioCtx.resume();
+      const now = restAudioCtx.currentTime;
+      [0, 0.2].forEach(offset=>{
+        const osc = restAudioCtx.createOscillator();
+        const gain = restAudioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.value = 420;
+        gain.gain.setValueAtTime(0.0001, now+offset);
+        gain.gain.exponentialRampToValueAtTime(0.32, now+offset+0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now+offset+0.18);
+        osc.connect(gain); gain.connect(restAudioCtx.destination);
+        osc.start(now+offset);
+        osc.stop(now+offset+0.2);
+      });
+    }catch(e){}
+  }
+
+  async function acquireRestWakeLock(){
+    try{
+      if ('wakeLock' in navigator){
+        restWakeLock = await navigator.wakeLock.request('screen');
+        restWakeLock.addEventListener('release', ()=>{ restWakeLock = null; });
+      }
+    }catch(e){ restWakeLock = null; }
+  }
+  function releaseRestWakeLock(){
+    try{ if (restWakeLock) restWakeLock.release(); }catch(e){}
+    restWakeLock = null;
+  }
+  document.addEventListener('visibilitychange', ()=>{
+    if (document.visibilityState === 'visible' && restTimer && !restWakeLock) acquireRestWakeLock();
+  });
+
+  function startRestTimer(entry, kg, kind){
+    const rm = entry ? estimatedRMFor(entry.code) : null;
+    const pct = (rm && kg) ? (kg/rm) : null;
+    const seconds = suggestRestSeconds(kind, pct);
+    restTimer = { endsAt: Date.now() + seconds*1000, totalSeconds: seconds, notified:false, thirtyBeeped:false, tenBeeped:false, fiveBeeped:false, lastSpokenSecond:null };
+    if (restTimerInterval) clearInterval(restTimerInterval);
+    restTimerInterval = setInterval(restTimerTick, 1000);
+    acquireRestWakeLock();
+    mountRestTimerBanner();
+  }
+
+  function restTimerTick(){
+    const rt = restTimer;
+    if (!rt){ clearInterval(restTimerInterval); restTimerInterval=null; return; }
+    const remaining = Math.ceil((rt.endsAt - Date.now())/1000);
+
+    if (remaining <= 0 && !rt.notified){
+      rt.notified = true;
+      if (!restTimerMuted){
+        try{ if (navigator.vibrate) navigator.vibrate([250,120,250,120,250]); }catch(e){}
+        playHorn();
+        speakText('Descanso terminado');
+      }
+    } else if (remaining === 30 && !rt.thirtyBeeped){
+      rt.thirtyBeeped = true;
+      playHorn();
+      if (!restTimerMuted) speakText('Treinta segundos');
+    } else if (remaining === 10 && !rt.tenBeeped){
+      rt.tenBeeped = true;
+      playHorn();
+      if (!restTimerMuted) speakText('Diez segundos');
+    } else if (remaining === 5 && !rt.fiveBeeped){
+      rt.fiveBeeped = true;
+      rt.lastSpokenSecond = 5;
+      playHorn();
+      if (!restTimerMuted) speakText('5');
+    } else if (remaining>=1 && remaining<=5 && rt.lastSpokenSecond !== remaining){
+      rt.lastSpokenSecond = remaining;
+      if (!restTimerMuted) speakText(String(remaining));
+    }
+    if (!patchRestTimerBanner()) mountRestTimerBanner();
+  }
+
+  function patchRestTimerBanner(){
+    const rt = restTimer;
+    const bar = document.getElementById('rest-timer-bar');
+    if (!rt || !bar) return false;
+    const remaining = Math.max(0, Math.ceil((rt.endsAt - Date.now())/1000));
+    const done = remaining <= 0;
+    if (String(bar.dataset.done) !== String(done)) return false;
+    if (done) return true;
+    const mm = Math.floor(remaining/60), ss = remaining%60;
+    const timeEl = bar.querySelector('.rt-time');
+    if (timeEl) timeEl.textContent = mm + ':' + String(ss).padStart(2,'0');
+    return true;
+  }
+
+  function adjustRestTimer(deltaSeconds){
+    if (!restTimer) return;
+    restTimer.endsAt += deltaSeconds*1000;
+    const remaining = Math.ceil((restTimer.endsAt-Date.now())/1000);
+    if (remaining > 0){
+      restTimer.notified = false;
+      if (remaining > 30) restTimer.thirtyBeeped = false;
+      if (remaining > 10) restTimer.tenBeeped = false;
+      if (remaining > 5) restTimer.fiveBeeped = false;
+      if (remaining > 5) restTimer.lastSpokenSecond = null;
+    }
+    patchRestTimerBanner() || mountRestTimerBanner();
+  }
+  function toggleRestTimerMute(){
+    restTimerMuted = !restTimerMuted;
+    window.localStorage.setItem(REST_TIMER_MUTED_KEY, restTimerMuted ? '1' : '0');
+    mountRestTimerBanner();
+  }
+  function dismissRestTimer(){
+    restTimer = null;
+    if (restTimerInterval){ clearInterval(restTimerInterval); restTimerInterval=null; }
+    releaseRestWakeLock();
+    const bar = document.getElementById('rest-timer-bar');
+    if (bar) bar.remove();
+  }
+
+  function mountRestTimerBanner(){
+    let bar = document.getElementById('rest-timer-bar');
+    if (!restTimer){ if (bar) bar.remove(); return; }
+    if (!bar){ bar = document.createElement('div'); bar.id = 'rest-timer-bar'; document.body.appendChild(bar); }
+
+    const remaining = Math.max(0, Math.ceil((restTimer.endsAt - Date.now())/1000));
+    const done = remaining <= 0;
+    const mm = Math.floor(remaining/60), ss = remaining%60;
+    const timeStr = mm + ':' + String(ss).padStart(2,'0');
+    bar.dataset.done = String(done);
+    bar.style.background = done ? 'var(--ok)' : '#20242e';
+
+    bar.innerHTML = `
+      <div>
+        <div class="rt-label-top">${done?'DESCANSO TERMINADO':'DESCANSO'}</div>
+        <div class="rt-time" style="font-size:${done?'20px':'32px'};">${done?'¡A por la siguiente!':timeStr}</div>
+      </div>
+      <div class="rt-btns">
+        <button id="rtMuteBtn">${restTimerMuted?'🔇':'🔊'}</button>
+        ${done ? '' : '<button id="rtMinusBtn">−30s</button><button id="rtPlusBtn">+30s</button>'}
+        <button id="rtSkipBtn">${done?'✕':'Saltar'}</button>
+      </div>`;
+    document.getElementById('rtMuteBtn').onclick = toggleRestTimerMute;
+    document.getElementById('rtSkipBtn').onclick = dismissRestTimer;
+    if (!done){
+      document.getElementById('rtMinusBtn').onclick = ()=> adjustRestTimer(-30);
+      document.getElementById('rtPlusBtn').onclick = ()=> adjustRestTimer(30);
+    }
   }
 </script>
 </body>
