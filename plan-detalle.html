@@ -56,6 +56,18 @@
   .athLine .alabel{ font-family:Inter,sans-serif; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
   .athLine.edited .alabel{ color:#b65a1f; } .athLine.added .alabel{ color:#1f6b39; }
   .athLine .aicon{ font-size:17px; }
+  .athNote{ background:#eef4fb; border-left:4px solid var(--ok); border-radius:8px; padding:8px 12px; margin:4px 0 10px; font-size:15px; }
+  .athNote .nlabel{ font-weight:700; color:#22609c; font-size:13.5px; text-transform:uppercase; letter-spacing:.03em; margin-right:8px; }
+  .athNote .nmeta{ color:var(--muted); font-size:14px; }
+  .athNote .ntext{ margin-top:4px; line-height:1.45; color:var(--chalk); white-space:pre-wrap; }
+  .coachNote{ margin:6px 0 12px; }
+  .coachNote .clabel{ font-size:13.5px; font-weight:700; color:#8a6512; text-transform:uppercase; letter-spacing:.03em; margin-bottom:5px; }
+  .coachNote textarea{ width:100%; min-height:64px; border:1.5px solid #ecd9a6; background:#fdf9ee; border-radius:10px; padding:10px 12px; font-family:Inter,sans-serif; font-size:16px; line-height:1.45; color:var(--chalk); resize:vertical; }
+  .addNoteLink{ background:none; border:none; color:#8a6512; font-size:14.5px; font-weight:700; padding:4px 0; cursor:pointer; }
+  .weekCard{ border:2px solid var(--yellow-deep); }
+  .saveRow{ display:flex; gap:10px; }
+  .saveRow button{ flex:1; }
+  .saveBar button.alt{ background:var(--ok); }
 </style>
 </head>
 <body>
@@ -72,7 +84,10 @@
 
 <div class="saveBar">
   <div style="width:100%;max-width:520px;">
-    <button id="saveBtn">Guardar cambios</button>
+    <div class="saveRow">
+      <button id="saveBtn">Guardar</button>
+      <button id="saveReviewBtn" class="alt">✓ Guardar y marcar revisado</button>
+    </div>
     <div id="saveMsg" class="msg"></div>
   </div>
 </div>
@@ -91,6 +106,8 @@
   function ratingInfo(v){ return SET_RATING_LEVELS.find(l=>l.value===v) || null; }
   function checkKey(planId, day, exIdx, si){ return planId + '|' + day + '|' + exIdx + '|' + si; }
   let athleteChecks = {};
+  let athleteNotes = {};   // notas que escribe el atleta (día / ejercicio)
+  let coachComments = {};  // comentarios del entrenador: día, ejercicio y semana
   let athleteChanges = {}; // "L|0": ejercicio tal como lo hizo el atleta
   function overrideDocId(planId){ return 'plan_' + String(planId).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,140); }
   function setText(s){
@@ -125,6 +142,12 @@
       const progSnap = await db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid)
         .collection('progress').doc('main').get();
       athleteChecks = (progSnap.exists && progSnap.data().checks) || {};
+      athleteNotes = (progSnap.exists && progSnap.data().notes) || {};
+      try{
+        const cn = await db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid)
+          .collection('coachNotes').doc('comments').get();
+        coachComments = (cn.exists && cn.data().comments) || {};
+      }catch(e){ coachComments = {}; }
       try{
         const ovSnap = await db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid)
           .collection('progress').doc(overrideDocId(planIdParam)).get();
@@ -193,6 +216,49 @@
     return d;
   }
 
+  const FEELINGS = { mal:'😞 Mal', regular:'😐 Regular', bien:'🙂 Bien', muybien:'💪 Muy bien' };
+  function athleteNoteBox(key){
+    const raw = athleteNotes[key];
+    if (!raw) return null;
+    const n = typeof raw === 'string' ? { text: raw } : raw;
+    const bits = [];
+    if (n.rpe) bits.push('RPE ' + n.rpe);
+    if (n.feeling && FEELINGS[n.feeling]) bits.push(FEELINGS[n.feeling]);
+    if (!n.text && !bits.length) return null;
+    const d = document.createElement('div');
+    d.className = 'athNote';
+    d.innerHTML = '<span class="nlabel">📝 Nota del atleta</span>' + (bits.length ? '<span class="nmeta">' + bits.join(' · ') + '</span>' : '');
+    if (n.text){ const t = document.createElement('div'); t.className = 'ntext'; t.textContent = n.text; d.appendChild(t); }
+    return d;
+  }
+  // Cuadro de comentario del entrenador. Si está vacío y es de ejercicio, se
+  // muestra como un enlace pequeño para no ocupar sitio.
+  function coachNoteBox(key, label, placeholder, collapsible){
+    const wrap = document.createElement('div');
+    wrap.className = 'coachNote';
+    const current = coachComments[key] || '';
+    const ta = document.createElement('textarea');
+    ta.dataset.commentKey = key;
+    ta.value = current;
+    ta.placeholder = placeholder;
+    const lab = document.createElement('div');
+    lab.className = 'clabel';
+    lab.textContent = label;
+    if (collapsible && !current){
+      const link = document.createElement('button');
+      link.className = 'addNoteLink';
+      link.textContent = '💬 Añadir nota a este ejercicio';
+      wrap.appendChild(link);
+      // el textarea existe aunque esté oculto, para guardarlo igual
+      ta.style.display = 'none';
+      wrap.appendChild(ta);
+      link.onclick = ()=>{ link.remove(); wrap.insertBefore(lab, ta); ta.style.display = ''; ta.focus(); };
+    } else {
+      wrap.appendChild(lab); wrap.appendChild(ta);
+    }
+    return wrap;
+  }
+
   function render(){
     document.getElementById('loadingMsg').classList.add('hidden');
     document.getElementById('content').classList.remove('hidden');
@@ -225,6 +291,8 @@
       h.className = 'dayName';
       h.textContent = DAY_NAMES[day];
       card.appendChild(h);
+      const dayNote = athleteNoteBox(planIdParam + '|' + day);
+      if (dayNote) card.appendChild(dayNote);
 
       entries.forEach((entry, exIdx)=>{
         if (entry.type !== 'exercise') return;
@@ -249,12 +317,24 @@
           if (it.type === 'edited') card.appendChild(athLine('edited', 'Hizo', it.a, ratingFor(day, exIdx, it.ai)));
           if (it.type === 'deleted') card.appendChild(athLine('deleted', 'No lo hizo', null, null));
         });
+        const exNote = athleteNoteBox(planIdParam + '|' + day + '|' + exIdx);
+        if (exNote) card.appendChild(exNote);
+        card.appendChild(coachNoteBox(planIdParam + '|' + day + '|' + exIdx, '💬 Tu nota para este ejercicio', 'Ej.: baja el ritmo en la segunda serie…', true));
       });
+      card.appendChild(coachNoteBox(planIdParam + '|' + day, '💬 Tu comentario del ' + DAY_NAMES[day].toLowerCase(), 'Comentario para el atleta sobre este día…', false));
       wrap.appendChild(card);
     });
+
+    const weekCard = document.createElement('div');
+    weekCard.className = 'dayCard weekCard';
+    weekCard.innerHTML = '<div class="dayName" style="color:var(--chalk);">Revisión de la semana</div>';
+    weekCard.appendChild(coachNoteBox(planIdParam + '|semana', '💬 Comentario general de la semana', 'Tu valoración de la semana completa, para el atleta…', false));
+    wrap.appendChild(weekCard);
   }
 
-  document.getElementById('saveBtn').onclick = async ()=>{
+  document.getElementById('saveBtn').onclick = ()=> saveAll(false);
+  document.getElementById('saveReviewBtn').onclick = ()=> saveAll(true);
+  async function saveAll(markReviewed){
     const msg = document.getElementById('saveMsg');
     // Aplica cada input directamente sobre planData.days antes de guardar.
     document.querySelectorAll('[data-field]').forEach(inp=>{
@@ -281,16 +361,21 @@
         }
       }
     });
+    const comments = {};
+    document.querySelectorAll('[data-comment-key]').forEach(ta=>{ comments[ta.dataset.commentKey] = ta.value.trim(); });
+    const athRef = db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid);
     try{
-      await db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid)
-        .collection('plans').doc(planIdParam).set(planData);
-      msg.textContent = 'Guardado.';
+      await athRef.collection('plans').doc(planIdParam).set(planData);
+      await athRef.collection('coachNotes').doc('comments').set({ comments, updatedAt: Date.now() }, { merge: true });
+      Object.assign(coachComments, comments);
+      if (markReviewed) await athRef.update({ needsReview: false, reviewedAt: Date.now() });
+      msg.textContent = markReviewed ? 'Guardado y marcado como revisado.' : 'Guardado. El atleta verá tus comentarios en su app.';
       msg.className = 'msg ok';
     }catch(e){
       msg.textContent = 'Error al guardar: ' + (e.message || e.code);
       msg.className = 'msg err';
     }
-  };
+  }
 </script>
 </body>
 </html>
