@@ -64,6 +64,7 @@
   .ratingSetrep{ font-family:'IBM Plex Mono',monospace; font-size:18px; margin-bottom:20px; }
   .ratingIcons{ display:flex; gap:8px; justify-content:center; margin-bottom:16px; }
   .ratingIcons button{ flex:1; max-width:60px; font-size:26px; padding:14px 0; border-radius:12px; border:2px solid var(--surface-3); background:var(--surface-2); cursor:pointer; }
+  .listenBtn{ width:100%; background:var(--surface-2); border:2px solid var(--surface-3); color:var(--chalk); font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; padding:12px 0; border-radius:10px; cursor:pointer; margin-bottom:16px; }
   .ratingClose{ background:none; color:var(--muted-2); font-size:13px; text-decoration:underline; border:none; width:auto; padding:6px; }
 
   #rest-timer-bar{ position:fixed; top:0; left:0; right:0; z-index:500; color:#fff; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; box-shadow:0 4px 14px rgba(0,0,0,.3); flex-wrap:wrap; }
@@ -461,12 +462,17 @@
   function openRating(planId, day, exIdx, si, entry, s){
     const overlay = document.createElement('div');
     overlay.className = 'ratingOverlay';
-    overlay.onclick = (e)=>{ if (e.target===overlay) overlay.remove(); };
+    overlay.onclick = (e)=>{ if (e.target===overlay){ stopSpeaking(); overlay.remove(); } };
     const box = document.createElement('div');
     box.className = 'ratingBox';
     const kgTxt = (s.kg!==null && s.kg!==undefined) ? (s.kg+'kg') : (s.kgRaw||'?');
     const repsTxt = s.repsParts ? s.repsParts.join('+') : (s.repsRaw || (s.reps ?? '?'));
     box.innerHTML = '<div class="ratingKg">'+kgTxt+'</div><div class="ratingSetrep">'+(s.series||'?')+' series × '+repsTxt+' reps</div>';
+    const listenBtn = document.createElement('button');
+    listenBtn.className = 'listenBtn';
+    listenBtn.textContent = '🔊 Escuchar';
+    listenBtn.onclick = ()=> speakText(buildSpeechText(entry, s));
+    box.appendChild(listenBtn);
     const icons = document.createElement('div');
     icons.className = 'ratingIcons';
     const key = checkKey(planId, day, exIdx, si);
@@ -479,6 +485,7 @@
         const newVal = current===level.value ? null : level.value;
         try{
           await saveCheck(key, newVal);
+          stopSpeaking();
           overlay.remove();
           renderApp();
           if (newVal !== null){
@@ -502,10 +509,19 @@
     const closeBtn = document.createElement('button');
     closeBtn.className = 'ratingClose';
     closeBtn.textContent = 'Cerrar sin marcar';
-    closeBtn.onclick = ()=> overlay.remove();
+    closeBtn.onclick = ()=> { stopSpeaking(); overlay.remove(); };
     box.appendChild(closeBtn);
     overlay.appendChild(box);
     document.body.appendChild(overlay);
+  }
+
+  function buildSpeechText(entry, s){
+    const name = entry.name || ('Código ' + entry.code);
+    const kgText = (s.kg!==null && s.kg!==undefined) ? (s.kg + ' kilos') : (s.kgRaw ? ('peso ' + s.kgRaw) : 'peso sin especificar');
+    const repsText = s.repsParts ? s.repsParts.join(' más ') : (s.reps!=null ? String(s.reps) : (s.repsRaw || 'sin especificar'));
+    let text = name + '. ' + kgText + '. ';
+    text += s.series ? (s.series + (s.series===1?' serie':' series') + ' de ' + repsText + ' repeticiones.') : (repsText + ' repeticiones.');
+    return text;
   }
 
   /* ============== Cronómetro de descanso ============== */
