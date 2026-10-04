@@ -7,13 +7,13 @@ function injectBrandStyles(){
   const style = document.createElement('style');
   style.id = 'brandStripStyles';
   style.textContent = `
-    .brandStrip{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 16px; background:#20242e; }
-    .brandStrip .clubSide{ display:flex; align-items:center; gap:8px; min-width:0; }
-    .brandStrip .clubLogoImg{ height:28px; max-width:120px; object-fit:contain; border-radius:4px; }
-    .brandStrip .clubNameText{ color:#f4f1ea; font-family:'Oswald',sans-serif; font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .brandStrip .poweredBy{ display:flex; align-items:center; gap:6px; flex-shrink:0; }
-    .brandStrip .poweredByText{ color:#8892a0; font-size:10px; font-family:Inter,sans-serif; white-space:nowrap; }
-    .brandStrip .rptMarkImg{ height:20px; width:auto; border-radius:3px; }
+    .brandStrip{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 18px; min-height:68px; background:#20242e; border-bottom:3px solid #c99a2e; box-shadow:0 2px 10px rgba(0,0,0,.25); }
+    .brandStrip .clubSide{ display:flex; align-items:center; gap:12px; min-width:0; }
+    .brandStrip .clubLogoImg{ height:48px; max-width:150px; object-fit:contain; border-radius:6px; }
+    .brandStrip .clubNameText{ color:#f4f1ea; font-family:'Oswald',sans-serif; font-weight:700; font-size:19px; letter-spacing:.03em; text-transform:uppercase; line-height:1.15; overflow-wrap:anywhere; }
+    .brandStrip .poweredBy{ display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0; }
+    .brandStrip .poweredByText{ color:#c9ccd3; font-size:11px; font-family:Inter,sans-serif; white-space:nowrap; }
+    .brandStrip .rptMarkImg{ height:34px; width:auto; border-radius:3px; }
   `;
   document.head.appendChild(style);
 }
