@@ -2368,6 +2368,7 @@ function renderApp(plan){
   actions.appendChild(menuBtn);
   top.appendChild(actions);
   wrap.appendChild(top);
+  if (WO2_ATHLETE) wo2CoachNoteBanner(wrap, plan.id + '|semana', 'Comentario de tu entrenador sobre la semana');
 
   // plate row
   const plateRow = el('div','plate-row');
@@ -2438,6 +2439,7 @@ function renderApp(plan){
     if (!WO2_ATHLETE) heading.appendChild(manualEditBtn);
   }
   section.appendChild(heading);
+  if (WO2_ATHLETE) wo2CoachNoteBanner(section, plan.id + '|' + state.activeDay, 'Tu entrenador sobre este día');
 
   if (state.manualEditDay === state.activeDay){
     const draftEntries = plan.days[state.activeDay] || [];
@@ -2553,6 +2555,7 @@ function renderExerciseCard(plan, day, entry, idx){
     chips.appendChild(chip);
   });
   card.appendChild(chips);
+  if (WO2_ATHLETE) wo2CoachNoteBanner(card, plan.id + '|' + day + '|' + idx, 'Tu entrenador');
 
   if (state.confirmDeleteExercise === entryKey){
     const confirmBar = el('div');
@@ -6054,6 +6057,19 @@ function wo2CoachCommentBlock(key){
     wrap.appendChild(txt);
   }
   return wrap;
+}
+function wo2CoachNoteBanner(parent, key, label){
+  const text = (WO2.coachComments[key] || '').trim();
+  if (!text) return;
+  const b = el('div');
+  b.style.cssText = 'margin:10px 0 12px;padding:12px 14px;border-radius:12px;background:#fdf6e3;border-left:5px solid var(--yellow-deep);font-family:Inter,sans-serif;';
+  b.onclick = (e)=> e.stopPropagation();
+  const l = el('div', null, '💬 ' + label);
+  l.style.cssText = 'font-size:13.5px;font-weight:700;color:#8a6512;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;';
+  const t = el('div'); t.textContent = text;
+  t.style.cssText = 'font-size:17px;line-height:1.5;color:var(--chalk);white-space:pre-wrap;';
+  b.appendChild(l); b.appendChild(t);
+  parent.appendChild(b);
 }
 function wo2Toast(text){
   let t = document.getElementById('wo2Toast');
