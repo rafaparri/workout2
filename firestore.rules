@@ -9,10 +9,21 @@ service cloud.firestore {
     // --- Permisos independientes por rol, en vez de un único campo "role"
     // en el perfil. Así, la misma persona puede tener a la vez un permiso
     // de entrenador y otro de atleta, sin que se pisen entre sí.
-    function hasCoachGrant(clubId) {
+    function clubIsBlocked(clubId) {
+      return get(/databases/$(database)/documents/clubs/$(clubId)).data.blocked == true;
+    }
+    // Sin mirar si está bloqueado — se usa solo para poder LEER la ficha
+    // del club y así mostrar el aviso de bloqueo en vez de un error de
+    // permisos genérico y confuso.
+    function isCoachOfClub(clubId) {
       return isSignedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid)/roleGrants/coach)
         && get(/databases/$(database)/documents/users/$(request.auth.uid)/roleGrants/coach).data.clubId == clubId;
+    }
+    // Esta sí exige que el club no esté bloqueado — es la que se usa para
+    // todo lo demás (atletas, planes, progreso...).
+    function hasCoachGrant(clubId) {
+      return isCoachOfClub(clubId) && !clubIsBlocked(clubId);
     }
     function hasSuperadminGrant() {
       return isSignedIn()
@@ -23,7 +34,8 @@ service cloud.firestore {
         && request.auth.uid == athleteUid
         && exists(/databases/$(database)/documents/users/$(athleteUid)/roleGrants/athlete)
         && get(/databases/$(database)/documents/users/$(athleteUid)/roleGrants/athlete).data.clubId == clubId
-        && get(/databases/$(database)/documents/clubs/$(clubId)/athletes/$(athleteUid)).data.blocked != true;
+        && get(/databases/$(database)/documents/clubs/$(clubId)/athletes/$(athleteUid)).data.blocked != true
+        && !clubIsBlocked(clubId);
     }
 
     // --- Identidad básica de cada persona (nombre, correo). Sin rol aquí.
@@ -35,15 +47,16 @@ service cloud.firestore {
     // --- Permisos por rol de cada persona (subcolección de users/{uid}).
     match /users/{uid}/roleGrants/{grantId} {
       allow read: if isSignedIn() && (request.auth.uid == uid || hasSuperadminGrant());
-      // "coach" y "superadmin" los concede siempre el superadmin (a mano
-      // por ahora, desde el panel de administrador más adelante).
-      // "athlete" se lo puede conceder el propio usuario a sí mismo, pero
-      // solo copiando el club exacto que diga una invitación válida de su
-      // entrenador — nunca inventándose otro club.
+      // "superadmin" lo concede siempre el superadmin a mano. "coach" y
+      // "athlete" se los puede conceder el propio usuario a sí mismo, pero
+      // solo copiando el club exacto que diga una invitación válida — del
+      // superadmin si es para entrenador, de su entrenador si es atleta —
+      // nunca inventándose otro club ni otro rol.
       allow create: if hasSuperadminGrant() || (
-        grantId == 'athlete' && isSignedIn() && request.auth.uid == uid &&
+        (grantId == 'athlete' || grantId == 'coach') && isSignedIn() && request.auth.uid == uid &&
         exists(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)) &&
         get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.email == request.auth.token.email &&
+        get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.role == grantId &&
         request.resource.data.clubId == get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.clubId
       );
       allow update, delete: if hasSuperadminGrant();
@@ -58,7 +71,7 @@ service cloud.firestore {
     }
 
     match /clubs/{clubId} {
-      allow read: if hasSuperadminGrant() || hasCoachGrant(clubId);
+      allow read: if hasSuperadminGrant() || isCoachOfClub(clubId);
       allow write: if hasSuperadminGrant();
     }
 
