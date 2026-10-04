@@ -99,6 +99,12 @@ patch("  const subject = 'Informe semanal' + (plan.meta && plan.meta.week!=null 
       "    ()=> generateWeekReportPDF(plan, r.perDay, wo2WeekMemo, r.status, r.watchPatterns, r.keywordPatterns, r.movementCharts)\n"
       "  ));")
 
+# Comentarios del entrenador visibles en la app: semana, día y ejercicio
+patch("  wrap.appendChild(top);\n\n  // plate row", "  wrap.appendChild(top);\n  if (WO2_ATHLETE) wo2CoachNoteBanner(wrap, plan.id + '|semana', 'Comentario de tu entrenador sobre la semana');\n\n  // plate row")
+patch("  section.appendChild(heading);\n\n  if (state.manualEditDay === state.activeDay){",
+      "  section.appendChild(heading);\n  if (WO2_ATHLETE) wo2CoachNoteBanner(section, plan.id + '|' + state.activeDay, 'Tu entrenador sobre este día');\n\n  if (state.manualEditDay === state.activeDay){")
+patch("  card.appendChild(chips);", "  card.appendChild(chips);\n  if (WO2_ATHLETE) wo2CoachNoteBanner(card, plan.id + '|' + day + '|' + idx, 'Tu entrenador');")
+
 # ---------- Arranque: cuenta del atleta + datos de WorkOut 2.0 ----------
 ADAPTER = r'''
 /* ===================== WorkOut 2.0: datos del atleta ===================== */
@@ -225,6 +231,19 @@ function wo2CoachCommentBlock(key){
     wrap.appendChild(txt);
   }
   return wrap;
+}
+function wo2CoachNoteBanner(parent, key, label){
+  const text = (WO2.coachComments[key] || '').trim();
+  if (!text) return;
+  const b = el('div');
+  b.style.cssText = 'margin:10px 0 12px;padding:12px 14px;border-radius:12px;background:#fdf6e3;border-left:5px solid var(--yellow-deep);font-family:Inter,sans-serif;';
+  b.onclick = (e)=> e.stopPropagation();
+  const l = el('div', null, '💬 ' + label);
+  l.style.cssText = 'font-size:13.5px;font-weight:700;color:#8a6512;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;';
+  const t = el('div'); t.textContent = text;
+  t.style.cssText = 'font-size:17px;line-height:1.5;color:var(--chalk);white-space:pre-wrap;';
+  b.appendChild(l); b.appendChild(t);
+  parent.appendChild(b);
 }
 function wo2Toast(text){
   let t = document.getElementById('wo2Toast');
