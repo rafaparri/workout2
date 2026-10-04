@@ -51,6 +51,10 @@
   .dayPill.rest{ background:var(--surface-2); color:var(--muted-2); box-shadow:none; border:2px dashed var(--surface-3); }
 
   .reportBtn{ width:100%; background:var(--surface); border:2px solid var(--surface-3); color:var(--chalk); font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; padding:13px 0; border-radius:12px; cursor:pointer; margin-bottom:14px; }
+  .analyticsCard{ background:var(--surface); border:1px solid var(--surface-3); border-radius:14px; padding:14px 16px; margin-bottom:12px; }
+  .analyticsHead{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; }
+  .analyticsName{ font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; }
+  .analyticsKg{ font-family:'IBM Plex Mono',monospace; font-weight:700; color:var(--yellow-deep); font-size:15px; }
   .exCard{ background:var(--surface); border:1px solid var(--surface-3); border-radius:14px; padding:16px; margin-bottom:14px; }
   .exName{ font-family:'Oswald',sans-serif; font-weight:700; font-size:16px; margin-bottom:10px; }
   .chipsWrap{ display:flex; flex-wrap:wrap; gap:8px; }
@@ -369,11 +373,18 @@
     }
   }
 
+  let showAnalytics = false;
+
   function renderApp(){
     const bc = document.getElementById('breadcrumb');
     const content = document.getElementById('appContent');
     content.innerHTML = '';
 
+    if (showAnalytics){
+      bc.innerHTML = '<a onclick="showAnalytics=false;renderApp();">Semanas</a> › Análisis';
+      renderAnalytics(content);
+      return;
+    }
     if (!navState.planId){
       bc.innerHTML = '';
       renderWeeksList(content);
@@ -392,6 +403,13 @@
   }
 
   function renderWeeksList(container){
+    if (athletePlans.length){
+      const analyticsBtn = document.createElement('button');
+      analyticsBtn.className = 'reportBtn';
+      analyticsBtn.textContent = '📈 Análisis';
+      analyticsBtn.onclick = ()=>{ showAnalytics = true; renderApp(); };
+      container.appendChild(analyticsBtn);
+    }
     const card = document.createElement('div');
     card.className = 'listCard';
     if (!athletePlans.length){
@@ -536,6 +554,84 @@
     box.appendChild(closeBtn);
     overlay.appendChild(box);
     document.body.appendChild(overlay);
+  }
+
+  /* ============== Análisis (evolución por movimiento) ============== */
+  function buildAnalytics(){
+    const byCode = {};
+    const sortedPlans = [...athletePlans].sort((a,b)=>{
+      const wa = a.meta && a.meta.week, wb = b.meta && b.meta.week;
+      if (wa!=null && wb!=null) return wa-wb;
+      return (a.uploadedAt||0)-(b.uploadedAt||0);
+    });
+    sortedPlans.forEach(plan=>{
+      const label = (plan.meta && plan.meta.week!=null) ? ('S'+plan.meta.week) : (plan.id||'').slice(0,6);
+      const perCodeThisPlan = {};
+      DAY_ORDER.forEach(day=>{
+        const entries = (plan.days && plan.days[day]) || [];
+        entries.filter(e=>e.type==='exercise').forEach(entry=>{
+          const exIdx = entries.indexOf(entry);
+          entry.sets.forEach((s,si)=>{
+            if (s.kg==null) return;
+            const rating = athleteChecks[checkKey(plan.id, day, exIdx, si)];
+            if (!perCodeThisPlan[entry.code]){
+              perCodeThisPlan[entry.code] = { name: entry.name || ('Código '+entry.code), maxKg: -Infinity, ratings: [] };
+            }
+            if (s.kg > perCodeThisPlan[entry.code].maxKg) perCodeThisPlan[entry.code].maxKg = s.kg;
+            if (rating) perCodeThisPlan[entry.code].ratings.push(rating);
+          });
+        });
+      });
+      Object.keys(perCodeThisPlan).forEach(code=>{
+        if (!byCode[code]) byCode[code] = { name: perCodeThisPlan[code].name, points: [] };
+        byCode[code].points.push({ label, maxKg: perCodeThisPlan[code].maxKg, ratings: perCodeThisPlan[code].ratings });
+      });
+    });
+    return byCode;
+  }
+
+  function sparklineSVG(points){
+    const w = 300, h = 86, padX = 12, padTop = 12, padBottom = 20;
+    const kgs = points.map(p=>p.maxKg);
+    const minKg = Math.min(...kgs), maxKg = Math.max(...kgs);
+    const range = (maxKg-minKg) || 1;
+    const chartW = w - padX*2, chartH = h - padTop - padBottom;
+    const coords = points.map((p,i)=>({
+      x: padX + chartW * (i/(points.length-1||1)),
+      y: padTop + chartH - ((p.maxKg-minKg)/range)*chartH,
+      p
+    }));
+    const path = coords.map((c,i)=> (i===0?'M':'L') + c.x.toFixed(1) + ',' + c.y.toFixed(1)).join(' ');
+    const dots = coords.map(c=>{
+      const avg = c.p.ratings.length ? c.p.ratings.reduce((a,b)=>a+b,0)/c.p.ratings.length : null;
+      const info = avg!=null ? ratingInfo(Math.round(avg)) : null;
+      const color = info ? info.color : '#8892a0';
+      return '<circle cx="'+c.x.toFixed(1)+'" cy="'+c.y.toFixed(1)+'" r="3.5" fill="'+color+'" />';
+    }).join('');
+    const labels = coords.map(c=>
+      '<text x="'+c.x.toFixed(1)+'" y="'+(h-4)+'" font-size="9" fill="#8892a0" text-anchor="middle">'+c.p.label+'</text>'
+    ).join('');
+    return '<svg viewBox="0 0 '+w+' '+h+'" width="100%" height="'+h+'">' +
+      '<path d="'+path+'" fill="none" stroke="#c99a2e" stroke-width="2"/>' + dots + labels + '</svg>';
+  }
+
+  function renderAnalytics(container){
+    const byCode = buildAnalytics();
+    const codes = Object.keys(byCode).filter(c=>byCode[c].points.length>=1);
+    if (!codes.length){
+      container.innerHTML = '<div class="listCard"><div class="emptyMsg">Todavía no hay datos suficientes para mostrar gráficas.</div></div>';
+      return;
+    }
+    codes.forEach(code=>{
+      const mc = byCode[code];
+      const lastKg = mc.points[mc.points.length-1].maxKg;
+      const card = document.createElement('div');
+      card.className = 'analyticsCard';
+      card.innerHTML =
+        '<div class="analyticsHead"><div class="analyticsName">'+mc.name+'</div><div class="analyticsKg">'+lastKg+'kg</div></div>' +
+        sparklineSVG(mc.points);
+      container.appendChild(card);
+    });
   }
 
   /* ============== Informe del día ============== */
