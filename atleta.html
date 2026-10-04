@@ -270,9 +270,8 @@
     if (athleteRecord.blocked){ show('blockedView'); return; }
     if (isNewFromLink){ show('setPasswordView'); return; }
     athleteProfile = athleteRecord;
-    document.getElementById('welcomeName').textContent = '¡Hola, ' + (athleteRecord.name || identity.name || '') + '!';
-    show('homeView');
-    loadAthleteApp();
+    // La app de entreno completa vive en entreno.html (réplica de la app original)
+    window.location.replace('entreno.html');
   }
 
   document.getElementById('confirmBtn').onclick = ()=>{
@@ -296,18 +295,7 @@
       return;
     }
 
-    try{
-      const snap = await db.collection('users').doc(u.uid).get();
-      const prof = snap.data();
-      athleteProfile = prof;
-      currentClubId = prof.clubId;
-      document.getElementById('welcomeName').textContent = '¡Hola, ' + (prof.name || '') + '!';
-      show('homeView');
-      loadAthleteApp();
-    }catch(e){
-      msg.textContent = '[Paso 2: leer perfil] uid=' + u.uid + ' — ' + (e.message || e.code);
-      msg.className = 'msg err';
-    }
+    window.location.replace('entreno.html');
   };
 
   document.getElementById('loginBtn').onclick = async ()=>{
