@@ -4469,8 +4469,9 @@ function renderMenuSheet(plan){
   if (!WO2_ATHLETE) sheet.appendChild(menuItem(syncStatus==='on' ? '🔄' : '📴', syncStatus==='on' ? 'Sincronización: activa' : 'Sincronizar entre dispositivos', ()=>{ state.showSync=true; state.showMenu=false; render(); }));
   sheet.appendChild(menuItem('🧾', 'Informe semanal', ()=>{ state.showMenu=false; generateWeekReport(plan); }));
   sheet.appendChild(menuItem('🔊', 'Elegir voz de lectura', ()=>{ state.showMenu=false; state.showVoicePicker=true; render(); }));
-  if (WO2_ATHLETE && WO2.isCoach) sheet.appendChild(menuItem('📋', 'Panel de entrenador', ()=>{ window.location.href = 'entrenador.html'; }));
-  if (WO2_ATHLETE) sheet.appendChild(menuItem('🚪', 'Salir', ()=>{ wo2SignOut(); }));
+  if (WO2.coachView) sheet.appendChild(menuItem('⬅️', 'Volver a la ficha del atleta', ()=>{ window.location.href = 'ficha-atleta.html?athlete=' + encodeURIComponent(WO2.viewedUid); }));
+  if (WO2_ATHLETE && !WO2.coachView && WO2.isCoach) sheet.appendChild(menuItem('📋', 'Panel de entrenador', ()=>{ window.location.href = 'entrenador.html'; }));
+  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', 'Salir', ()=>{ wo2SignOut(); }));
   if (!WO2_ATHLETE) sheet.appendChild(menuItem('💾', 'Exportar copia de seguridad', async ()=>{
     state.showMenu = false;
     render();
@@ -5793,8 +5794,10 @@ function renderDayReportOverlay(){
   }
   sheet.appendChild(memoWrap);
 
+  sheet.appendChild(wo2CoachCommentBlock(r.planId + '|' + r.day));
   const subject = 'Entreno ' + DAY_NAMES[r.day] + (r.data.week!==null?' · Semana '+r.data.week:'') + ' — ' + r.data.athlete;
-  sheet.appendChild(reportActionsRow(subject, dayReportPlainText(r.data, r.memo.text), ()=> generateDayReportPDF(r.data, r.memo.text)));
+  const wo2DayMemo = wo2MemoWithComments(r.memo.text, r.planId + '|' + r.day);
+  sheet.appendChild(reportActionsRow(subject, dayReportPlainText(r.data, wo2DayMemo), ()=> generateDayReportPDF(r.data, wo2DayMemo)));
 
   const closeBtn = el('button','sheet-close','Cerrar');
   closeBtn.onclick = close;
@@ -5910,11 +5913,13 @@ function renderWeekReportOverlay(plan){
   }
   sheet.appendChild(memoWrap);
 
+  sheet.appendChild(wo2CoachCommentBlock(plan.id + '|semana'));
   const subject = 'Informe semanal' + (plan.meta && plan.meta.week!=null ? ' · Semana '+plan.meta.week : '') + ' — ' + getActiveUser().name;
+  const wo2WeekMemo = wo2MemoWithComments(r.memo.text, plan.id + '|semana');
   sheet.appendChild(reportActionsRow(
     subject,
-    weekReportPlainText(plan, r.perDay, r.memo.text, r.status, r.watchPatterns, r.keywordPatterns, r.movementCharts),
-    ()=> generateWeekReportPDF(plan, r.perDay, r.memo.text, r.status, r.watchPatterns, r.keywordPatterns, r.movementCharts)
+    weekReportPlainText(plan, r.perDay, wo2WeekMemo, r.status, r.watchPatterns, r.keywordPatterns, r.movementCharts),
+    ()=> generateWeekReportPDF(plan, r.perDay, wo2WeekMemo, r.status, r.watchPatterns, r.keywordPatterns, r.movementCharts)
   ));
 
   const closeBtn = el('button','sheet-close','Cerrar');
@@ -5932,6 +5937,7 @@ function renderWeekReportOverlay(plan){
 // Si el atleta cambia, borra o añade pesos, su versión de esa semana se
 // guarda aparte en progress/plan_<id>; la del entrenador no se toca.
 const WO2 = { uid:null, clubId:null, base:null, progressTimer:null, profileTimer:null, isCoach:false,
+              coachView:false, viewedUid:null, coachComments:{},
               coachDays:{}, pushedOverride:{} };
 function wo2OverrideDocId(planId){ return 'plan_' + String(planId).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,140); }
 // Solo se guardan los ejercicios que el atleta ha cambiado ("L|0": ejercicio);
@@ -5967,6 +5973,7 @@ function wo2ScheduleProgressPush(){
   WO2.progressTimer = setTimeout(wo2PushProgressNow, 700);
 }
 async function wo2PushProgressNow(){
+  if (WO2.coachView) return; // vista del entrenador: solo lectura
   const dayDates = {};
   state.plans.forEach(p=>{ if (p.dayDates) dayDates[p.id] = p.dayDates; });
   try{
@@ -5991,7 +5998,7 @@ async function wo2PushProgressNow(){
   }catch(e){ wo2SaveError(e); }
 }
 function wo2ScheduleProfilePush(){
-  if (!WO2.base) return;
+  if (!WO2.base || WO2.coachView) return;
   clearTimeout(WO2.profileTimer);
   WO2.profileTimer = setTimeout(async ()=>{
     const u = getActiveUser();
@@ -6003,6 +6010,75 @@ function wo2ScheduleProfilePush(){
     }catch(e){ wo2SaveError(e); }
   }, 700);
 }
+// --- Comentarios del entrenador en los informes ---
+function wo2MemoWithComments(memo, key){
+  const c = (WO2.coachComments[key] || '').trim();
+  if (!c) return memo;
+  return (memo ? memo + '\n\n' : '') + 'COMENTARIOS DEL ENTRENADOR:\n' + c;
+}
+function wo2CoachCommentBlock(key){
+  const wrap = el('div');
+  wrap.style.cssText = 'margin-top:18px;padding:16px;border-radius:12px;background:#fdf6e3;border:2px solid var(--yellow-deep);';
+  const title = el('div', null, '💬 COMENTARIOS DEL ENTRENADOR');
+  title.style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:16px;color:var(--chalk);letter-spacing:.03em;margin-bottom:10px;';
+  wrap.appendChild(title);
+  const current = WO2.coachComments[key] || '';
+  if (WO2.coachView){
+    const ta = document.createElement('textarea');
+    ta.value = current;
+    ta.placeholder = 'Escribe aquí tus comentarios para el atleta…';
+    ta.style.cssText = 'width:100%;min-height:120px;box-sizing:border-box;border:1.5px solid var(--surface-3);border-radius:10px;padding:12px;font-family:Inter,sans-serif;font-size:17px;line-height:1.5;color:var(--chalk);background:#fff;';
+    wrap.appendChild(ta);
+    const btn = el('button','mark-btn ok selected','Guardar comentario');
+    btn.style.cssText += 'width:100%;margin-top:10px;font-size:17px;';
+    const msg = el('div');
+    msg.style.cssText = 'font-size:15px;margin-top:8px;text-align:center;';
+    btn.onclick = async ()=>{
+      const text = ta.value.trim();
+      btn.disabled = true;
+      try{
+        await WO2.base.collection('coachNotes').doc('comments').set({ comments: { [key]: text }, updatedAt: Date.now() }, { merge: true });
+        WO2.coachComments[key] = text;
+        msg.textContent = 'Comentario guardado. El atleta lo verá en su informe.';
+        msg.style.color = 'var(--ok)';
+      }catch(e){
+        msg.textContent = 'No se ha podido guardar (' + (e.message || e.code) + ').';
+        msg.style.color = 'var(--red)';
+      }
+      btn.disabled = false;
+    };
+    wrap.appendChild(btn); wrap.appendChild(msg);
+  } else {
+    const txt = el('div', null, current || 'Tu entrenador todavía no ha escrito comentarios en este informe.');
+    txt.style.cssText = 'font-size:17px;line-height:1.6;white-space:pre-wrap;color:' + (current ? 'var(--chalk)' : 'var(--muted)') + ';';
+    wrap.appendChild(txt);
+  }
+  return wrap;
+}
+function wo2Toast(text){
+  let t = document.getElementById('wo2Toast');
+  if (!t){
+    t = document.createElement('div');
+    t.id = 'wo2Toast';
+    t.style.cssText = 'position:fixed;left:12px;right:12px;bottom:14px;z-index:900;background:#20242e;color:#fff;padding:14px 16px;border-radius:12px;font-family:Inter,sans-serif;font-size:16px;font-weight:600;text-align:center;';
+    document.body.appendChild(t);
+  }
+  t.textContent = text;
+  clearTimeout(t._h); t._h = setTimeout(()=>{ if (t.parentNode) t.parentNode.removeChild(t); }, 3500);
+}
+function wo2CoachBanner(name){
+  const b = document.createElement('div');
+  b.style.cssText = 'background:#fdf6e3;border-bottom:2px solid var(--yellow-deep);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-family:Inter,sans-serif;font-size:15.5px;color:var(--chalk);';
+  b.innerHTML = '<span>👁 <b>Vista del entrenador</b> · entreno de <b></b> · solo lectura</span>';
+  b.querySelectorAll('b')[1].textContent = name;
+  const back = document.createElement('a');
+  back.textContent = '← Volver a la ficha';
+  back.href = 'ficha-atleta.html?athlete=' + encodeURIComponent(WO2.viewedUid);
+  back.style.cssText = 'font-weight:700;color:var(--chalk);';
+  b.appendChild(back);
+  return b;
+}
+
 function wo2SaveError(e){
   console.error('WorkOut 2.0: no se pudo guardar', e);
   let bar = document.getElementById('wo2SaveError');
@@ -6072,24 +6148,42 @@ function wo2ShowBootError(msg){
     started = true;
     if (!user){ window.location.replace('atleta.html'); return; }
     try{
-      const grantSnap = await db.collection('users').doc(user.uid).collection('roleGrants').doc('athlete').get();
-      if (!grantSnap.exists){ window.location.replace('atleta.html'); return; }
-      WO2.uid = user.uid;
-      WO2.clubId = grantSnap.data().clubId;
-      WO2.base = db.collection('clubs').doc(WO2.clubId).collection('athletes').doc(user.uid);
+      const viewAthlete = new URLSearchParams(window.location.search).get('athlete');
+      if (viewAthlete && viewAthlete !== user.uid){
+        // Vista del entrenador: entreno e informes de uno de sus atletas
+        const cg = await db.collection('users').doc(user.uid).collection('roleGrants').doc('coach').get();
+        if (!cg.exists){ window.location.replace('entrenador.html'); return; }
+        WO2.coachView = true;
+        WO2.isCoach = true;
+        WO2.viewedUid = viewAthlete;
+        WO2.uid = viewAthlete;
+        WO2.clubId = cg.data().clubId;
+        WO2.base = db.collection('clubs').doc(WO2.clubId).collection('athletes').doc(viewAthlete);
+        openFlashcards = function(){ wo2Toast('Vista del entrenador: aquí solo se consulta; el atleta es quien marca sus series.'); };
+      } else {
+        const grantSnap = await db.collection('users').doc(user.uid).collection('roleGrants').doc('athlete').get();
+        if (!grantSnap.exists){ window.location.replace('atleta.html'); return; }
+        WO2.uid = user.uid;
+        WO2.clubId = grantSnap.data().clubId;
+        WO2.base = db.collection('clubs').doc(WO2.clubId).collection('athletes').doc(user.uid);
+      }
 
       db.collection('users').doc(user.uid).collection('roleGrants').doc('coach').get()
         .then(c=>{ WO2.isCoach = c.exists; }).catch(()=>{});
-      const [clubSnap, athSnap, idSnap] = await Promise.all([
+      const [clubSnap, athSnap, idSnap, notesSnap] = await Promise.all([
         db.collection('clubs').doc(WO2.clubId).get().catch(()=>null),
         WO2.base.get(),
-        db.collection('users').doc(user.uid).get().catch(()=>null)
+        WO2.coachView ? Promise.resolve(null) : db.collection('users').doc(user.uid).get().catch(()=>null),
+        WO2.base.collection('coachNotes').doc('comments').get().catch(()=>null)
       ]);
       const club = (clubSnap && clubSnap.exists) ? clubSnap.data() : {};
+      if (WO2.coachView && !athSnap.exists){ wo2ShowBootError('Este atleta no pertenece a tu club.'); return; }
       const ath = athSnap.exists ? athSnap.data() : {};
-      if (club.blocked || ath.blocked){ window.location.replace('atleta.html'); return; }
+      if (!WO2.coachView && (club.blocked || ath.blocked)){ window.location.replace('atleta.html'); return; }
+      WO2.coachComments = (notesSnap && notesSnap.exists && notesSnap.data().comments) || {};
       strip.innerHTML = '';
       strip.appendChild(renderBrandStrip(club.logoUrl, club.name));
+      if (WO2.coachView) strip.appendChild(wo2CoachBanner(ath.name || ath.email || 'atleta'));
 
       const [plansSnap, progSnap] = await Promise.all([
         WO2.base.collection('plans').get(),
@@ -6120,7 +6214,7 @@ function wo2ShowBootError(msg){
       });
 
       const identity = (idSnap && idSnap.exists) ? idSnap.data() : {};
-      const name = ath.name || identity.name || user.email;
+      const name = ath.name || identity.name || ath.email || user.email;
       const u = makeUser(name);
       u.id = user.uid;
       if (prof.objetivos) u.objetivos = prof.objetivos;
