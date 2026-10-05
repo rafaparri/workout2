@@ -48,6 +48,9 @@
   .pill b{ font-weight:700; }
   .pdot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
   .stDetail{ font-size:14px; color:var(--muted); margin:-6px 0 14px; line-height:1.5; }
+  .impHelp{ font-size:14.5px; line-height:1.5; color:var(--muted); margin:0 0 12px; }
+  #impUser{ width:100%; font-size:16px; padding:12px; border-radius:10px; border:1px solid var(--surface-3); background:#fff; margin-bottom:12px; font-family:Inter,sans-serif; }
+  .impSummary{ background:var(--surface-2); border-radius:10px; padding:12px 14px; font-size:15px; line-height:1.6; margin-bottom:6px; }
 </style>
 </head>
 <body>
@@ -83,6 +86,21 @@
     <div class="card">
       <label>Semanas subidas</label>
       <div id="plansList"><div class="empty">Cargando…</div></div>
+    </div>
+
+    <div class="card">
+      <button class="secondary" id="impToggle" style="margin-top:0;">📥 Importar copia de seguridad</button>
+      <div id="impBox" class="hidden" style="margin-top:14px;">
+        <p class="impHelp">Trae el histórico desde la app <b>Mi Plan Halterofilia</b>: en esa app, Menú → 💾 Exportar copia de seguridad. Luego elige aquí ese archivo.</p>
+        <input type="file" id="impFile" accept=".json,application/json">
+        <div id="impPick" class="hidden">
+          <label style="margin-top:6px;">¿Qué deportista de la copia es este atleta?</label>
+          <select id="impUser"></select>
+          <div id="impSummary" class="impSummary"></div>
+          <button class="ok" id="impGo">Importar a este atleta</button>
+        </div>
+        <div id="impMsg" class="msg"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -495,6 +513,156 @@ function planId(meta){
       listEl.appendChild(row);
     });
   }
+  // ===== Importar copia de seguridad de la app original (Mi Plan Halterofilia) =====
+  let impBackup = null;
+  document.getElementById('impToggle').onclick = ()=>{
+    const box = document.getElementById('impBox');
+    box.classList.toggle('hidden');
+    document.getElementById('impToggle').textContent = box.classList.contains('hidden') ? '📥 Importar copia de seguridad' : '✕ Cerrar importación';
+  };
+  function impSetMsg(text, kind){ const m = document.getElementById('impMsg'); m.textContent = text; m.className = 'msg' + (kind ? ' ' + kind : ''); }
+  // Cuenta lo que hay de un deportista en la copia
+  function impStats(uid){
+    const d = (impBackup.data && impBackup.data[uid]) || {};
+    const plans = d.plans || [];
+    const marks = Object.keys(d.checks || {}).filter(k=> d.checks[k] != null).length;
+    const notes = Object.keys(d.notes || {}).length;
+    return { plans: plans.length, marks, notes };
+  }
+  function impShowSummary(){
+    const uid = document.getElementById('impUser').value;
+    const u = impBackup.users.find(x=>x.id === uid) || {};
+    const s = impStats(uid);
+    const extra = [];
+    if (u.objetivos) extra.push('objetivos');
+    if (u.rms && Object.keys(u.rms).length) extra.push('récords (RM)');
+    if (u.metrics && u.metrics.length) extra.push('medidas');
+    document.getElementById('impSummary').innerHTML =
+      '<b>' + s.plans + '</b> semanas · <b>' + s.marks + '</b> series marcadas · <b>' + s.notes + '</b> notas' +
+      (extra.length ? '<br>Además: ' + extra.join(', ') : '') +
+      '<br><span style="color:var(--muted);font-size:13.5px;">Lo que ya tenga este atleta se conserva. Una semana que ya exista con el mismo código se sustituye.</span>';
+  }
+  document.getElementById('impFile').onchange = (ev)=>{
+    const file = ev.target.files[0];
+    impBackup = null;
+    document.getElementById('impPick').classList.add('hidden');
+    impSetMsg('');
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const b = JSON.parse(reader.result);
+        if (!b || !Array.isArray(b.users) || !b.users.length || !b.data) throw new Error('no es una copia de Mi Plan Halterofilia');
+        impBackup = b;
+        const sel = document.getElementById('impUser');
+        sel.innerHTML = '';
+        b.users.forEach(u=>{
+          const s = impStats(u.id);
+          const o = document.createElement('option');
+          o.value = u.id;
+          o.textContent = (u.name || 'Sin nombre') + ' — ' + s.plans + ' semanas';
+          if (u.id === b.activeUserId) o.selected = true;
+          sel.appendChild(o);
+        });
+        sel.onchange = impShowSummary;
+        impShowSummary();
+        document.getElementById('impPick').classList.remove('hidden');
+      }catch(e){
+        impSetMsg('No he podido leer ese archivo (' + e.message + '). Comprueba que es la copia descargada desde Mi Plan Halterofilia.', 'err');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // Identificador válido para la base de datos (sin "/" ni "|")
+  function impSafeId(id){ return String(id).replace(/[\/|.#\[\]]/g, '_').slice(0, 140) || ('plan_' + Date.now()); }
+  // Versión "del entrenador" de un ejercicio: lo programado, sin los cambios del atleta
+  function impCoachEntry(entry){
+    if (!entry || entry.type !== 'exercise' || !Array.isArray(entry.sets)) return entry;
+    const e = JSON.parse(JSON.stringify(entry));
+    e.sets = e.sets.filter(s=> !s.added).map(s=>{
+      const base = (s.edited && s.original) ? Object.assign({}, s.original) : Object.assign({}, s);
+      delete base.edited; delete base.original; delete base.added;
+      return base;
+    });
+    return e;
+  }
+  function impRekey(map, idMap){
+    const out = {};
+    Object.keys(map || {}).forEach(k=>{
+      const sep = k.indexOf('|');
+      const pid = sep < 0 ? k : k.slice(0, sep);
+      const nid = idMap[pid] || pid;
+      out[sep < 0 ? nid : nid + k.slice(sep)] = map[k];
+    });
+    return out;
+  }
+
+  document.getElementById('impGo').onclick = async ()=>{
+    if (!impBackup) return;
+    const uid = document.getElementById('impUser').value;
+    const u = impBackup.users.find(x=>x.id === uid) || {};
+    const d = impBackup.data[uid] || {};
+    const plans = d.plans || [];
+    if (!plans.length && !Object.keys(d.checks || {}).length){ impSetMsg('Ese deportista no tiene datos en la copia.', 'err'); return; }
+    if (!confirm('¿Importar los datos de "' + (u.name || 'este deportista') + '" a este atleta?')) return;
+    const btn = document.getElementById('impGo');
+    btn.disabled = true;
+    impSetMsg('Importando… no cierres la página.');
+    try{
+      const base = athleteRef();
+      const idMap = {};
+      plans.forEach(p=>{ const s = impSafeId(p.id); if (s !== p.id) idMap[p.id] = s; });
+      const dayDates = {};
+      let done = 0;
+      for (const p of plans){
+        const id = idMap[p.id] || p.id;
+        const coachDays = {}, changes = {};
+        Object.keys(p.days || {}).forEach(day=>{
+          coachDays[day] = (p.days[day] || []).map((entry, idx)=>{
+            const c = impCoachEntry(entry);
+            if (JSON.stringify(c) !== JSON.stringify(entry)) changes[day + '|' + idx] = entry;
+            return c;
+          });
+        });
+        await base.collection('plans').doc(id).set({ id, meta: p.meta || {}, days: coachDays, uploadedAt: p.uploadedAt || Date.now(), importedAt: Date.now() });
+        const ovRef = base.collection('progress').doc('plan_' + id.replace(/[^A-Za-z0-9_-]/g,'_').slice(0,140));
+        if (Object.keys(changes).length) await ovRef.set({ planId: id, changes, updatedAt: Date.now() });
+        if (p.dayDates) dayDates[id] = p.dayDates;
+        done++;
+        impSetMsg('Importando… ' + done + ' de ' + plans.length + ' semanas.');
+      }
+      // Marcas, notas y series: se juntan con lo que ya tuviera el atleta
+      const mainRef = base.collection('progress').doc('main');
+      const cur = await mainRef.get();
+      const m = cur.exists ? cur.data() : {};
+      await mainRef.set({
+        checks: Object.assign({}, m.checks || {}, impRekey(d.checks, idMap)),
+        notes: Object.assign({}, m.notes || {}, impRekey(d.notes, idMap)),
+        seriesProgress: Object.assign({}, m.seriesProgress || {}, impRekey(d.seriesProgress, idMap)),
+        dayDates: Object.assign({}, m.dayDates || {}, dayDates),
+        updatedAt: Date.now()
+      });
+      // Perfil: objetivos, récords y medidas (solo si la copia los trae)
+      const prof = {};
+      if (u.objetivos) prof.objetivos = u.objetivos;
+      if (u.rms && Object.keys(u.rms).length) prof.rms = u.rms;
+      if (u.metrics && u.metrics.length) prof.metrics = u.metrics;
+      if (Object.keys(prof).length){ prof.updatedAt = Date.now(); await base.collection('progress').doc('profile').set(prof, { merge: true }); }
+      // El histórico importado se da por revisado
+      await base.update({ needsReview: false, reviewedAt: Date.now() });
+      impSetMsg('✓ Importado: ' + plans.length + ' semanas con sus marcas y notas.', 'ok');
+      document.getElementById('impPick').classList.add('hidden');
+      document.getElementById('impFile').value = '';
+      impBackup = null;
+      const snap = await base.get();
+      renderAthlete(snap.data());
+      loadPlans();
+    }catch(e){
+      impSetMsg('Error al importar: ' + (e.message || e.code) + '. Lo que se haya copiado ya está guardado; puedes repetir la importación sin problema.', 'err');
+    }
+    btn.disabled = false;
+  };
 </script>
 </body>
 </html>
