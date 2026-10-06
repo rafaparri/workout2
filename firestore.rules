@@ -38,9 +38,13 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
         && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.blocked != true;
     }
+    // Gestiona el club: es su dueño o el superadmin se lo ha compartido
+    // (su uid está en adminUids).
     function ownsClub(clubId) {
-      return isAdminActive()
-        && get(/databases/$(database)/documents/clubs/$(clubId)).data.ownerUid == request.auth.uid;
+      return isAdminActive() && (
+        get(/databases/$(database)/documents/clubs/$(clubId)).data.ownerUid == request.auth.uid ||
+        request.auth.uid in get(/databases/$(database)/documents/clubs/$(clubId)).data.get('adminUids', [])
+      );
     }
     function hasAthleteGrant(clubId, athleteUid) {
       return isSignedIn()
@@ -106,9 +110,15 @@ service cloud.firestore {
       // Administrador: solo lee, crea y edita SUS clubes; no puede cambiar
       // el dueño ni borrarlos. El superadmin puede todo (y reasignar dueño).
       allow read: if isAdminActive() && resource.data.ownerUid == request.auth.uid;
-      allow create: if hasSuperadminGrant() || (isAdminActive() && request.resource.data.ownerUid == request.auth.uid);
-      allow update: if hasSuperadminGrant() || (isAdminActive() && resource.data.ownerUid == request.auth.uid
-                                                && request.resource.data.ownerUid == request.auth.uid);
+      allow read: if isAdminActive() && request.auth.uid in resource.data.get('adminUids', []);
+      allow create: if hasSuperadminGrant() || (isAdminActive() && request.resource.data.ownerUid == request.auth.uid
+                                                && request.resource.data.get('adminUids', []).size() == 0);
+      // Un administrador (dueño o compartido) edita el club, pero no puede
+      // cambiar ni el dueño ni con quién está compartido.
+      allow update: if hasSuperadminGrant() || (isAdminActive()
+        && (resource.data.ownerUid == request.auth.uid || request.auth.uid in resource.data.get('adminUids', []))
+        && request.resource.data.get('ownerUid', null) == resource.data.get('ownerUid', null)
+        && request.resource.data.get('adminUids', []) == resource.data.get('adminUids', []));
       allow delete: if hasSuperadminGrant();
     }
 
