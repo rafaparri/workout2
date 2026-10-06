@@ -67,17 +67,42 @@
   .empty{ color:var(--muted-2); font-size:15px; padding:12px 0; }
   .newClub{ background:var(--surface); border:1px solid var(--surface-3); border-radius:16px; padding:20px; margin-bottom:22px; }
   .row2{ display:flex; gap:12px; flex-wrap:wrap; } .row2 > *{ flex:1; min-width:180px; }
+  .ownerRow{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:0 18px 16px; font-size:15px; color:var(--muted); }
+  .ownerRow select{ font-size:15px; padding:9px 10px; border-radius:9px; border:1px solid var(--surface-3); background:var(--surface-2); color:var(--chalk); font-family:Inter,sans-serif; }
+  .adminCard{ background:var(--surface); border:1px solid var(--surface-3); border-radius:16px; padding:16px 18px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .adminCard.blocked{ border-color:#e6b4ab; }
+  .adminCard .ainfo{ flex:1; min-width:220px; }
+  .adminCard .acts{ display:flex; gap:8px; flex-wrap:wrap; }
+  .adminCard .acts .btn{ font-size:14.5px; padding:10px 14px; }
 </style>
 </head>
 <body>
 <header>
   <div class="hin">
-    <div class="brand"><img id="rptLogo" alt="RPT"><div><div class="t1">WorkOut 2.0</div><div class="t2">Panel de administración</div></div></div>
+    <div class="brand"><img id="rptLogo" alt="RPT"><div><div class="t1">WorkOut 2.0</div><div class="t2" id="panelSub">Panel de administración</div></div></div>
     <button class="signout hidden" id="signoutBtn">Salir</button>
   </div>
 </header>
 
 <main>
+  <div class="loginBox hidden" id="confirmWrap">
+    <h1>Confirma tu correo</h1>
+    <p style="color:var(--muted);margin:-6px 0 16px;">Escribe el correo en el que has recibido la invitación.</p>
+    <label>Correo</label>
+    <input type="email" id="confirmEmail">
+    <button class="btn full" id="confirmBtn">Continuar</button>
+    <div id="confirmMsg" class="msg err"></div>
+  </div>
+
+  <div class="loginBox hidden" id="setPassWrap">
+    <h1>¡Ya casi está!</h1>
+    <p style="color:var(--muted);margin:-6px 0 16px;">Elige una contraseña para entrar la próxima vez con tu correo.</p>
+    <label>Nueva contraseña</label>
+    <input type="password" id="newPass" placeholder="mínimo 6 caracteres">
+    <button class="btn full" id="savePassBtn">Guardar y entrar</button>
+    <div id="passMsg" class="msg err"></div>
+  </div>
+
   <div class="loginBox hidden" id="loginWrap">
     <h1>Administrador</h1>
     <label>Correo</label>
@@ -92,6 +117,24 @@
     <div class="note">🔒 Desde este panel se gestionan clubes, suscripciones y accesos. <b>No hay acceso a las programaciones ni a los resultados</b>: son datos de cada entrenador.</div>
 
     <div class="kpis" id="kpis"></div>
+
+    <div id="adminsSection" class="hidden">
+      <div class="sectionHead">
+        <h2>Administradores</h2>
+        <button class="btn" id="toggleNewAdmin">+ Invitar administrador</button>
+      </div>
+      <div class="newClub hidden" id="newAdminBox">
+        <h2 style="margin-bottom:14px;">Invitar a un administrador</h2>
+        <p style="color:var(--muted);margin:-4px 0 14px;font-size:15px;">Podrá crear y gestionar sus propios clubes. No verá los tuyos ni los de otros administradores, ni las programaciones de nadie.</p>
+        <div class="row2">
+          <div><label>Nombre</label><input type="text" id="adminName"></div>
+          <div><label>Correo</label><input type="email" id="adminEmail"></div>
+        </div>
+        <button class="btn full" id="inviteAdminBtn">Enviar invitación</button>
+        <div id="adminMsg" class="msg"></div>
+      </div>
+      <div class="clubs" id="adminsList" style="margin-bottom:28px;"></div>
+    </div>
 
     <div class="sectionHead">
       <h2>Clubes</h2>
@@ -134,29 +177,169 @@
   // Suscripción: si el club no tiene el dato (clubes antiguos), cuenta como activa.
   function subActive(c){ return c.subscriptionActive !== false; }
 
+  // MODE: 'super' (superadministrador) o 'admin' (administrador de sus clubes)
+  let MODE = null, ME = null, ADMINS = [];
+  const WRAPS = ['confirmWrap','setPassWrap','loginWrap','dashWrap'];
+  function showWrap(id){
+    WRAPS.forEach(w=> document.getElementById(w).classList.toggle('hidden', w !== id));
+    document.getElementById('signoutBtn').classList.toggle('hidden', id !== 'dashWrap');
+  }
+  function showLogin(){ showWrap('loginWrap'); }
+  const inviteIdFromLink = new URLSearchParams(window.location.search).get('invite');
+
   async function showDashIfAdmin(user){
-    const g = await db.collection('users').doc(user.uid).collection('roleGrants').doc('superadmin').get();
-    if (!g.exists){
-      await auth.signOut();
-      document.getElementById('msg').textContent = 'La cuenta ' + (user.email||'') + ' no tiene acceso de administrador.';
-      showLogin();
-      return;
+    ME = user;
+    const grants = db.collection('users').doc(user.uid).collection('roleGrants');
+    const sg = await grants.doc('superadmin').get();
+    if (sg.exists){
+      MODE = 'super';
+    } else {
+      let ag = null, ad = null;
+      try{ ag = await grants.doc('admin').get(); }catch(e){}
+      try{ ad = await db.collection('admins').doc(user.uid).get(); }catch(e){}
+      if (ag && ag.exists && ad && ad.exists && ad.data().blocked){
+        await auth.signOut();
+        document.getElementById('msg').textContent = 'Tu acceso de administrador está bloqueado. Contacta con el responsable de WorkOut 2.0.';
+        showLogin(); return;
+      }
+      if (!(ag && ag.exists && ad && ad.exists)){
+        await auth.signOut();
+        document.getElementById('msg').textContent = 'La cuenta ' + (user.email||'') + ' no tiene acceso de administrador.';
+        showLogin(); return;
+      }
+      MODE = 'admin';
     }
-    document.getElementById('loginWrap').classList.add('hidden');
-    document.getElementById('dashWrap').classList.remove('hidden');
-    document.getElementById('signoutBtn').classList.remove('hidden');
-    loadClubs();
+    document.getElementById('panelSub').textContent = MODE === 'super' ? 'Panel de superadministración' : 'Panel de administración';
+    document.getElementById('adminsSection').classList.toggle('hidden', MODE !== 'super');
+    showWrap('dashWrap');
+    loadAll();
   }
-  function showLogin(){
-    document.getElementById('loginWrap').classList.remove('hidden');
-    document.getElementById('dashWrap').classList.add('hidden');
-    document.getElementById('signoutBtn').classList.add('hidden');
+  async function loadAll(){
+    if (MODE === 'super') await loadAdmins();
+    await loadClubs();
   }
+
+  // --- Aceptar una invitación de administrador (enlace del correo) ---
+  async function acceptAdminInvite(user){
+    const inv = await db.collection('invites').doc(inviteIdFromLink).get();
+    if (!inv.exists || inv.data().role !== 'admin') throw new Error('Esa invitación ya no es válida.');
+    const d = inv.data();
+    const gRef = db.collection('users').doc(user.uid).collection('roleGrants').doc('admin');
+    const g = await gRef.get();
+    if (!g.exists) await gRef.set({ inviteId: inviteIdFromLink, createdAt: Date.now() });
+    const aRef = db.collection('admins').doc(user.uid);
+    let a = null; try{ a = await aRef.get(); }catch(e){}
+    if (!a || !a.exists) await aRef.set({ email: user.email, name: d.name || user.email, blocked: false, inviteId: inviteIdFromLink, createdAt: Date.now() });
+    const idRef = db.collection('users').doc(user.uid);
+    try{ const idS = await idRef.get(); if (!idS.exists) await idRef.set({ email: user.email, name: d.name || user.email, createdAt: Date.now() }); }catch(e){}
+  }
+  async function finishSignIn(email){
+    try{
+      const res = await auth.signInWithEmailLink(email, window.location.href);
+      window.localStorage.removeItem('emailForSignIn');
+      await acceptAdminInvite(res.user);
+      ME = res.user;
+      showWrap('setPassWrap');
+    }catch(e){
+      window.history.replaceState(null, '', window.location.pathname);
+      document.getElementById('email').value = email;
+      document.getElementById('msg').textContent = (e && e.message && e.message.indexOf('invitación') >= 0) ? e.message
+        : 'Ese enlace de invitación ya se usó o ha caducado. Entra con tu correo y contraseña, o pide que te reenvíen la invitación.';
+      showLogin();
+    }
+  }
+  document.getElementById('confirmBtn').onclick = ()=>{
+    const email = document.getElementById('confirmEmail').value.trim();
+    if (email) finishSignIn(email);
+  };
+  document.getElementById('savePassBtn').onclick = async ()=>{
+    const msg = document.getElementById('passMsg');
+    const pass = document.getElementById('newPass').value;
+    if (!pass || pass.length < 6){ msg.textContent = 'Mínimo 6 caracteres.'; return; }
+    try{ await (ME || auth.currentUser).updatePassword(pass); }
+    catch(e){ msg.textContent = 'No se pudo guardar: ' + (e.message || e.code); return; }
+    window.history.replaceState(null, '', window.location.pathname);
+    showDashIfAdmin(ME || auth.currentUser);
+  };
+
   let started = false;
-  auth.onAuthStateChanged(async user=>{
-    if (started) return; started = true;
-    if (user) showDashIfAdmin(user); else showLogin();
-  });
+  if (inviteIdFromLink && auth.isSignInWithEmailLink(window.location.href)){
+    const em = window.localStorage.getItem('emailForSignIn');
+    if (em) finishSignIn(em); else showWrap('confirmWrap');
+  } else {
+    auth.onAuthStateChanged(async user=>{
+      if (started) return; started = true;
+      if (user) showDashIfAdmin(user); else showLogin();
+    });
+  }
+
+  // --- Administradores (solo superadministrador) ---
+  document.getElementById('toggleNewAdmin').onclick = ()=> document.getElementById('newAdminBox').classList.toggle('hidden');
+  document.getElementById('inviteAdminBtn').onclick = async ()=>{
+    const msg = document.getElementById('adminMsg');
+    msg.textContent = ''; msg.className = 'msg';
+    const name = document.getElementById('adminName').value.trim();
+    const email = document.getElementById('adminEmail').value.trim().toLowerCase();
+    if (!name || !email){ msg.textContent = 'Pon nombre y correo.'; msg.className = 'msg err'; return; }
+    try{
+      const inviteId = email.replace(/[^a-z0-9]/g,'_') + '_admin';
+      await db.collection('invites').doc(inviteId).set({ email, name, role:'admin', createdAt: Date.now() });
+      await auth.sendSignInLinkToEmail(email, {
+        url: window.location.origin + window.location.pathname + '?invite=' + inviteId,
+        handleCodeInApp: true
+      });
+      msg.textContent = 'Invitación enviada a ' + email + '. Aparecerá en la lista cuando la acepte.'; msg.className = 'msg ok';
+      document.getElementById('adminName').value = ''; document.getElementById('adminEmail').value = '';
+    }catch(e){ msg.textContent = 'No se ha podido invitar: ' + (e.message || e.code); msg.className = 'msg err'; }
+  };
+  async function loadAdmins(){
+    const snap = await db.collection('admins').get();
+    ADMINS = snap.docs.map(d=>({ uid:d.id, ref:d.ref, ...d.data() })).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'es'));
+  }
+  function renderAdmins(clubs){
+    const el = document.getElementById('adminsList');
+    if (!ADMINS.length){ el.innerHTML = '<div class="empty">Todavía no hay administradores. Solo tú gestionas los clubes.</div>'; return; }
+    el.innerHTML = '';
+    ADMINS.forEach(a=>{
+      const n = clubs.filter(c=> c.ownerUid === a.uid).length;
+      const ini = (a.name||a.email||'?').split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+      const card = document.createElement('div');
+      card.className = 'adminCard' + (a.blocked ? ' blocked' : '');
+      card.innerHTML = `
+        <div class="av" style="width:52px;height:52px;font-size:18px;">${esc(ini)}</div>
+        <div class="ainfo">
+          <div class="athName" style="font-size:18px;">${esc(a.name||a.email)}</div>
+          <div class="athMail">${esc(a.email||'')}</div>
+          <div class="pills">${pill('Acceso', a.blocked ? 'Bloqueado' : 'Habilitado', a.blocked ? 'bad' : 'ok')}${pill('Clubes', n, 'info')}</div>
+        </div>
+        <div class="acts">
+          <button class="btn ${a.blocked ? 'green' : 'red'}" data-a="block">${a.blocked ? 'Desbloquear' : 'Bloquear'}</button>
+          <button class="btn light" data-a="del">Eliminar</button>
+        </div>`;
+      card.querySelector('[data-a="block"]').onclick = async ()=>{
+        const q = a.blocked ? '¿Desbloquear a ' + (a.name||a.email) + '? Volverá a gestionar sus clubes.'
+                            : '¿Bloquear a ' + (a.name||a.email) + '? No podrá entrar al panel. Sus clubes siguen siendo suyos y siguen funcionando.';
+        if (!confirm(q)) return;
+        try{ await a.ref.update({ blocked: !a.blocked }); loadAll(); }catch(e){ alert('Error: ' + (e.message||e.code)); }
+      };
+      card.querySelector('[data-a="del"]').onclick = async ()=>{
+        if (!confirm('¿Eliminar al administrador ' + (a.name||a.email) + '?\n\nSus ' + n + ' clubes pasarán a ti y seguirán funcionando. Después podrás asignárselos a otro administrador.')) return;
+        try{
+          for (const c of clubs.filter(c=> c.ownerUid === a.uid)) await c.ref.update({ ownerUid: null });
+          try{ await db.collection('users').doc(a.uid).collection('roleGrants').doc('admin').delete(); }catch(e){}
+          if (a.inviteId){ try{ await db.collection('invites').doc(a.inviteId).delete(); }catch(e){} }
+          await a.ref.delete();
+          loadAll();
+        }catch(e){ alert('Error al eliminar: ' + (e.message||e.code)); }
+      };
+      el.appendChild(card);
+    });
+  }
+  function ownerName(c){
+    if (!c.ownerUid) return null;
+    const a = ADMINS.find(x=> x.uid === c.ownerUid);
+    return a ? (a.name || a.email) : null;
+  }
 
   document.getElementById('loginBtn').onclick = async ()=>{
     const msg = document.getElementById('msg');
@@ -231,7 +414,8 @@
       const maxAthletes = maxAthletesVal ? parseInt(maxAthletesVal,10) : null;
       await db.collection('clubs').doc(clubId).set({
         name, blocked:false, subscriptionActive:true, trialEndsAt, maxAthletes, logoUrl: pendingLogo || null,
-        coachName, coachEmail, createdAt: Date.now()
+        coachName, coachEmail, createdAt: Date.now(),
+        ownerUid: MODE === 'admin' ? ME.uid : null
       });
       const inviteId = coachEmail.replace(/[^a-z0-9]/g,'_') + '_coach';
       await db.collection('invites').doc(inviteId).set({ email: coachEmail, name: coachName, clubId, role:'coach', createdAt: Date.now() });
@@ -242,14 +426,17 @@
       msg.textContent = 'Club creado e invitación enviada a ' + coachEmail + '.'; msg.className = 'msg ok';
       ['clubName','coachEmail','coachName','trialDays','maxAthletes','clubLogoFile'].forEach(id=> document.getElementById(id).value = '');
       pendingLogo = null; document.getElementById('clubLogoPreview').style.display = 'none';
-      loadClubs();
+      loadAll();
     }catch(e){ msg.textContent = 'Error al crear el club: ' + (e.message || e.code); msg.className = 'msg err'; }
   };
 
   async function loadClubs(){
     const listEl = document.getElementById('clubsList');
-    const snap = await db.collection('clubs').get();
-    const clubs = snap.docs.map(d=>({ id:d.id, ref:d.ref, ...d.data() })).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    const snap = MODE === 'super'
+      ? await db.collection('clubs').get()
+      : await db.collection('clubs').where('ownerUid', '==', ME.uid).get();
+    const clubs = snap.docs.map(d=>({ id:d.id, ref:d.ref, ...d.data() })).sort((a,b)=>
+      (MODE === 'super' ? ((a.ownerUid ? 1 : 0) - (b.ownerUid ? 1 : 0)) : 0) || ((b.createdAt||0)-(a.createdAt||0)));
     const athletesByClub = {};
     await Promise.all(clubs.map(async c=>{
       try{
@@ -262,8 +449,10 @@
       '<div class="kpi"><div class="n">'+clubs.length+'</div><div class="t">Clubes dados de alta</div></div>' +
       '<div class="kpi"><div class="n" style="color:var(--green);">'+clubs.filter(subActive).length+'</div><div class="t">Suscripciones activas</div></div>' +
       '<div class="kpi"><div class="n" style="color:var(--red);">'+clubs.filter(c=>c.blocked).length+'</div><div class="t">Accesos bloqueados</div></div>' +
-      '<div class="kpi"><div class="n">'+totalAth+'</div><div class="t">Atletas en total</div></div>';
+      '<div class="kpi"><div class="n">'+totalAth+'</div><div class="t">Atletas en total</div></div>' +
+      (MODE === 'super' ? '<div class="kpi"><div class="n">'+ADMINS.length+'</div><div class="t">Administradores</div></div>' : '');
 
+    if (MODE === 'super') renderAdmins(clubs);
     if (!clubs.length){ listEl.innerHTML = '<div class="empty">Todavía no hay ningún club dado de alta.</div>'; return; }
     listEl.innerHTML = '';
     clubs.forEach(c=>{
@@ -288,6 +477,7 @@
               ${pill('Suscripción', subActive(c) ? 'Activa' : 'No activa', subActive(c) ? 'ok' : 'off')}
               ${pill('Acceso', c.blocked ? 'Bloqueado' : 'Habilitado', c.blocked ? 'bad' : 'ok')}
               ${pill('Atletas', aths ? aths.length : '—', 'info')}
+              ${MODE === 'super' ? (c.ownerUid ? pill('Admin', esc(ownerName(c) || 'eliminado'), 'off') : '<span class="pill" style="background:#fdf1d8;color:#7a5810;">★ <b>A tu cargo</b></span>') : ''}
             </div>
           </div>
         </div>
@@ -297,9 +487,24 @@
           <button class="btn light" data-a="logo">${c.logoUrl ? 'Cambiar logo' : 'Subir logo'}</button>
           ${c.logoUrl ? '<button class="btn light" data-a="nologo">Quitar logo</button>' : ''}
         </div>
+        ${MODE === 'super' ? '<div class="ownerRow"><span>Administrador:</span><select class="ownerSel"></select></div>' : ''}
         <button class="athToggle"><span>👥 Ver atletas del club (${aths ? aths.length : '—'})</span><span class="arrow">▾</span></button>
         <div class="athList hidden"></div>`;
       if (c.logoUrl) card.querySelector('.logo img').src = c.logoUrl;
+      const sel = card.querySelector('.ownerSel');
+      if (sel){
+        const known = !c.ownerUid || ADMINS.some(a=> a.uid === c.ownerUid);
+        sel.innerHTML = '<option value="">Tú (superadministrador)</option>' +
+          ADMINS.map(a=> '<option value="' + esc(a.uid) + '">' + esc(a.name || a.email) + (a.blocked ? ' (bloqueado)' : '') + '</option>').join('') +
+          (known ? '' : '<option value="' + esc(c.ownerUid) + '">Administrador eliminado</option>');
+        sel.value = c.ownerUid || '';
+        sel.onchange = async ()=>{
+          const to = sel.value || null;
+          const label = to ? (ADMINS.find(a=>a.uid===to)||{}).name : 'ti';
+          if (!confirm('¿Pasar el club ' + c.name + ' a ' + (label || 'ese administrador') + '?')){ sel.value = c.ownerUid || ''; return; }
+          try{ await c.ref.update({ ownerUid: to }); loadAll(); }catch(e){ alert('Error: ' + (e.message||e.code)); }
+        };
+      }
 
       const list = card.querySelector('.athList');
       if (!aths) list.innerHTML = '<div class="empty">No se han podido cargar los atletas.</div>';
@@ -314,15 +519,15 @@
         card.querySelector('.arrow').textContent = list.classList.contains('hidden') ? '▾' : '▴';
       };
       card.querySelector('[data-a="sub"]').onclick = async ()=>{
-        await c.ref.update({ subscriptionActive: !subActive(c) }); loadClubs();
+        await c.ref.update({ subscriptionActive: !subActive(c) }); loadAll();
       };
       card.querySelector('[data-a="block"]').onclick = async ()=>{
         if (!c.blocked && !confirm('¿Bloquear el acceso del club ' + c.name + '? Ni el entrenador ni sus atletas podrán entrar.')) return;
-        await c.ref.update({ blocked: !c.blocked }); loadClubs();
+        await c.ref.update({ blocked: !c.blocked }); loadAll();
       };
-      card.querySelector('[data-a="logo"]').onclick = ()=> pickImage(async dataUrl=>{ await c.ref.update({ logoUrl: dataUrl }); loadClubs(); });
+      card.querySelector('[data-a="logo"]').onclick = ()=> pickImage(async dataUrl=>{ await c.ref.update({ logoUrl: dataUrl }); loadAll(); });
       const nl = card.querySelector('[data-a="nologo"]');
-      if (nl) nl.onclick = async ()=>{ if (!confirm('¿Quitar el logo de este club?')) return; await c.ref.update({ logoUrl: null }); loadClubs(); };
+      if (nl) nl.onclick = async ()=>{ if (!confirm('¿Quitar el logo de este club?')) return; await c.ref.update({ logoUrl: null }); loadAll(); };
       listEl.appendChild(card);
     });
   }
