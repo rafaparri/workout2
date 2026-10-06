@@ -72,6 +72,11 @@
   /* franja de marca: fija arriba, a todo lo ancho */
   #brandStripContainer{ position:fixed; top:0; left:0; right:0; z-index:50; }
   body{ padding-top:92px; }
+  .athActions{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .actBtn{ width:auto; margin:0; padding:9px 14px; font-family:Inter,sans-serif; font-weight:600; font-size:15px; border-radius:9px; cursor:pointer; background:var(--surface-2); color:var(--chalk); border:1px solid var(--surface-3); }
+  .act-block{ background:#fbeae7; border-color:#f0c9c2; color:#9c3427; }
+  .act-unblock{ background:#dff3e5; border-color:#b9e0c5; color:#1f6b39; }
+  .act-del{ background:#fff; border-color:#f0c9c2; color:#9c3427; }
 </style>
 </head>
 <body>
@@ -413,15 +418,57 @@
           <div class="athSub">${sub}</div>
           <div class="pills">${pills}</div>
           ${isMe ? '<button class="myTrainBtn" style="margin-top:10px;">🏋️ Mi entreno</button>' : ''}
+          <div class="athActions">
+            <button class="actBtn act-edit">✏️ Editar</button>
+            ${a.blocked ? '<button class="actBtn act-unblock">🔓 Desbloquear</button>' : '<button class="actBtn act-block">🔒 Bloquear</button>'}
+            <button class="actBtn act-del">🗑️ Eliminar</button>
+          </div>
         </div>
         <span style="color:var(--muted-2);font-size:22px;">›</span>`;
       row.onclick = ()=>{ window.location.href = 'ficha-atleta.html?athlete=' + doc.id; };
+      row.querySelector('.act-edit').onclick = (e)=>{ e.stopPropagation(); editAthlete(doc.ref, a); };
+      const bBtn = row.querySelector('.act-block'), uBtn = row.querySelector('.act-unblock');
+      if (bBtn) bBtn.onclick = (e)=>{ e.stopPropagation(); setBlocked(doc.ref, a, true); };
+      if (uBtn) uBtn.onclick = (e)=>{ e.stopPropagation(); setBlocked(doc.ref, a, false); };
+      row.querySelector('.act-del').onclick = (e)=>{ e.stopPropagation(); deleteAthlete(doc.ref, a); };
       if (isMe){
         row.querySelector('.infoBtn').onclick = (e)=>{ e.stopPropagation(); document.getElementById('infoPopup').classList.remove('hidden'); };
         row.querySelector('.myTrainBtn').onclick = (e)=>{ e.stopPropagation(); window.location.href = 'entreno.html'; };
       }
       listEl.appendChild(row);
     });
+  }
+
+  // ===== Acciones sobre cada atleta: editar, bloquear, eliminar =====
+  async function editAthlete(ref, a){
+    const name = prompt('Nombre del atleta:', a.name || '');
+    if (name === null) return;
+    const clean = name.trim();
+    if (!clean){ alert('El nombre no puede quedar vacío.'); return; }
+    try{ await ref.update({ name: clean }); loadAthletes(); }
+    catch(e){ alert('No se ha podido cambiar el nombre: ' + (e.message || e.code)); }
+  }
+  async function setBlocked(ref, a, blocked){
+    const who = a.name || a.email || 'este atleta';
+    const q = blocked
+      ? '¿Bloquear a ' + who + '?\n\nNo podrá entrar en la app, pero sus datos se conservan. Puedes desbloquearlo cuando quieras.'
+      : '¿Desbloquear a ' + who + '?\n\nVolverá a poder entrar con todos sus datos.';
+    if (!confirm(q)) return;
+    try{ await ref.update({ blocked }); loadAthletes(); }
+    catch(e){ alert('No se ha podido cambiar el acceso: ' + (e.message || e.code)); }
+  }
+  async function deleteAthlete(ref, a){
+    const who = a.name || a.email || 'este atleta';
+    if (!confirm('¿Eliminar a ' + who + '?\n\nSe borrarán todas sus semanas, marcas, notas y comentarios, y perderá el acceso a la app.')) return;
+    if (!confirm('Última confirmación: esto NO se puede deshacer. ¿Eliminar a ' + who + ' definitivamente?')) return;
+    try{
+      const plans = await ref.collection('plans').get();
+      for (const d of plans.docs) await d.ref.delete();
+      try{ const prog = await ref.collection('progress').get(); for (const d of prog.docs) await d.ref.delete(); }catch(e){ console.warn(e); }
+      try{ const cn = await ref.collection('coachNotes').get(); for (const d of cn.docs) await d.ref.delete(); }catch(e){ console.warn(e); }
+      await ref.delete();
+      loadAthletes();
+    }catch(e){ alert('No se ha podido eliminar: ' + (e.message || e.code)); }
   }
 
   document.getElementById('inviteBtn').onclick = async ()=>{
