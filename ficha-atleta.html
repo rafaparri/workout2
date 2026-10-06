@@ -65,7 +65,7 @@
   <div id="loadingMsg" class="sub">Cargando…</div>
 
   <div id="content" class="hidden">
-    <div class="nameRow"><h1 id="athleteName">Atleta</h1><button class="editName" id="editNameBtn" title="Cambiar el nombre">✏️ Editar</button></div>
+    <div class="nameRow"><h1 id="athleteName">Atleta</h1><button class="editName" id="editNameBtn" style="display:none;">✏️ Editar</button></div>
     <p class="sub" id="athleteEmail"></p>
 
     <div class="card">
@@ -77,8 +77,10 @@
       <div class="row2">
         <button class="secondary" id="reviewBtn">✓ Marcar resultados como revisados</button>
       </div>
-      <button class="danger hidden" id="blockBtn">🔒 Bloquear acceso</button>
-      <button class="ok hidden" id="unblockBtn">🔓 Desbloquear acceso</button>
+      <div style="display:none;">
+        <button class="danger hidden" id="blockBtn">🔒 Bloquear acceso</button>
+        <button class="ok hidden" id="unblockBtn">🔓 Desbloquear acceso</button>
+      </div>
     </div>
 
     <div class="card">
@@ -93,7 +95,7 @@
       <div id="plansList"><div class="empty">Cargando…</div></div>
     </div>
 
-    <div class="card dangerZone">
+    <div class="card dangerZone" style="display:none;">
       <label>Eliminar atleta</label>
       <p class="impHelp">Borra al atleta de tu club con todas sus semanas, marcas, notas y comentarios. Pierde el acceso a la app. No se puede deshacer.</p>
       <button class="danger" id="deleteAthleteBtn">🗑️ Eliminar atleta</button>
