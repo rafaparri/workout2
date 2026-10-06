@@ -504,16 +504,23 @@ function planId(meta){
     try{
       await base.collection('plans').doc(id).delete();
       try{ await base.collection('progress').doc('plan_' + String(id).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,140)).delete(); }catch(e){}
-      const mainRef = base.collection('progress').doc('main');
-      const m = await mainRef.get();
-      if (m.exists){
-        const d = m.data();
-        const dayDates = Object.assign({}, d.dayDates || {}); delete dayDates[id];
-        await mainRef.set({ checks: strip(d.checks), notes: strip(d.notes), seriesProgress: strip(d.seriesProgress), dayDates, updatedAt: Date.now() });
-      }
-      const cRef = base.collection('coachNotes').doc('comments');
-      const c = await cRef.get();
-      if (c.exists){ await cRef.set({ comments: strip(c.data().comments), updatedAt: Date.now() }); }
+      // Limpieza de lo asociado a esa semana. Si alguna parte no se puede
+      // (p. ej. reglas antiguas sin permiso), la semana ya está borrada y
+      // esos restos quedan invisibles.
+      try{
+        const mainRef = base.collection('progress').doc('main');
+        const m = await mainRef.get();
+        if (m.exists){
+          const d = m.data();
+          const dayDates = Object.assign({}, d.dayDates || {}); delete dayDates[id];
+          await mainRef.set({ checks: strip(d.checks), notes: strip(d.notes), seriesProgress: strip(d.seriesProgress), dayDates, updatedAt: Date.now() });
+        }
+      }catch(e){ console.warn('progreso no limpiado', e); }
+      try{
+        const cRef = base.collection('coachNotes').doc('comments');
+        const c = await cRef.get();
+        if (c.exists){ await cRef.set({ comments: strip(c.data().comments), updatedAt: Date.now() }); }
+      }catch(e){ console.warn('comentarios no limpiados', e); }
       const snap = await base.get();
       renderAthlete(snap.data());
       loadPlans();
