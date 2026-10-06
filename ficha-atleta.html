@@ -51,6 +51,8 @@
   .impHelp{ font-size:14.5px; line-height:1.5; color:var(--muted); margin:0 0 12px; }
   #impUser{ width:100%; font-size:16px; padding:12px; border-radius:10px; border:1px solid var(--surface-3); background:#fff; margin-bottom:12px; font-family:Inter,sans-serif; }
   .impSummary{ background:var(--surface-2); border-radius:10px; padding:12px 14px; font-size:15px; line-height:1.6; margin-bottom:6px; }
+  .pRight{ display:flex; align-items:center; gap:10px; }
+  .delWeek{ width:auto; margin:0; padding:8px 10px; background:#fbeae7; border:1px solid #f0c9c2; border-radius:8px; font-size:17px; line-height:1; }
 </style>
 </head>
 <body>
@@ -492,6 +494,34 @@ function planId(meta){
     }
   };
 
+  // Borra una semana entera: la programación, lo que hizo el atleta en ella
+  // (marcas, notas, cambios, fechas) y los comentarios del entrenador.
+  async function deletePlan(id, label){
+    if (!confirm('¿Borrar "' + label + '"?\n\nSe borrará la programación y todo lo que hizo el atleta en esa semana (marcas, notas y comentarios). No se puede deshacer.')) return;
+    const base = athleteRef();
+    const prefix = id + '|';
+    const strip = (map)=>{ const out = {}; Object.keys(map || {}).forEach(k=>{ if (k !== id && !k.startsWith(prefix)) out[k] = map[k]; }); return out; };
+    try{
+      await base.collection('plans').doc(id).delete();
+      try{ await base.collection('progress').doc('plan_' + String(id).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,140)).delete(); }catch(e){}
+      const mainRef = base.collection('progress').doc('main');
+      const m = await mainRef.get();
+      if (m.exists){
+        const d = m.data();
+        const dayDates = Object.assign({}, d.dayDates || {}); delete dayDates[id];
+        await mainRef.set({ checks: strip(d.checks), notes: strip(d.notes), seriesProgress: strip(d.seriesProgress), dayDates, updatedAt: Date.now() });
+      }
+      const cRef = base.collection('coachNotes').doc('comments');
+      const c = await cRef.get();
+      if (c.exists){ await cRef.set({ comments: strip(c.data().comments), updatedAt: Date.now() }); }
+      const snap = await base.get();
+      renderAthlete(snap.data());
+      loadPlans();
+    }catch(e){
+      alert('No se ha podido borrar: ' + (e.message || e.code));
+    }
+  }
+
   async function loadPlans(){
     const listEl = document.getElementById('plansList');
     const snap = await db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid)
@@ -508,8 +538,14 @@ function planId(meta){
       const row = document.createElement('div');
       row.className = 'planRow';
       row.style.cursor = 'pointer';
-      row.innerHTML = '<span>' + label + '</span><span style="color:var(--muted-2);font-size:12.5px;">' + date + ' · Ver ›</span>';
+      row.innerHTML = '<span class="pLabel">' + label + '</span><span class="pRight"><span style="color:var(--muted-2);font-size:12.5px;">' + date + ' · Ver ›</span></span>';
       row.onclick = ()=>{ window.location.href = 'plan-detalle.html?athlete=' + athleteUid + '&plan=' + doc.id; };
+      const del = document.createElement('button');
+      del.className = 'delWeek';
+      del.title = 'Borrar esta semana';
+      del.textContent = '🗑️';
+      del.onclick = (ev)=>{ ev.stopPropagation(); deletePlan(doc.id, label); };
+      row.querySelector('.pRight').appendChild(del);
       listEl.appendChild(row);
     });
   }
