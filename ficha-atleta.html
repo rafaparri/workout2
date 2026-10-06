@@ -53,6 +53,9 @@
   .impSummary{ background:var(--surface-2); border-radius:10px; padding:12px 14px; font-size:15px; line-height:1.6; margin-bottom:6px; }
   .pRight{ display:flex; align-items:center; gap:10px; }
   .delWeek{ width:auto; margin:0; padding:8px 10px; background:#fbeae7; border:1px solid #f0c9c2; border-radius:8px; font-size:17px; line-height:1; }
+  .nameRow{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .editName{ width:auto; margin:0; padding:8px 14px; font-size:14px; background:var(--surface-2); color:var(--chalk); border:1px solid var(--surface-3); }
+  .dangerZone{ border-color:#f0c9c2; }
 </style>
 </head>
 <body>
@@ -62,7 +65,7 @@
   <div id="loadingMsg" class="sub">Cargando…</div>
 
   <div id="content" class="hidden">
-    <h1 id="athleteName">Atleta</h1>
+    <div class="nameRow"><h1 id="athleteName">Atleta</h1><button class="editName" id="editNameBtn" title="Cambiar el nombre">✏️ Editar</button></div>
     <p class="sub" id="athleteEmail"></p>
 
     <div class="card">
@@ -88,6 +91,13 @@
     <div class="card">
       <label>Semanas subidas</label>
       <div id="plansList"><div class="empty">Cargando…</div></div>
+    </div>
+
+    <div class="card dangerZone">
+      <label>Eliminar atleta</label>
+      <p class="impHelp">Borra al atleta de tu club con todas sus semanas, marcas, notas y comentarios. Pierde el acceso a la app. No se puede deshacer.</p>
+      <button class="danger" id="deleteAthleteBtn">🗑️ Eliminar atleta</button>
+      <div id="deleteMsg" class="msg"></div>
     </div>
 
     <div class="card">
@@ -705,6 +715,53 @@ function planId(meta){
       impSetMsg('Error al importar: ' + (e.message || e.code) + '. Lo que se haya copiado ya está guardado; puedes repetir la importación sin problema.', 'err');
     }
     btn.disabled = false;
+  };
+
+  // ===== Editar nombre =====
+  document.getElementById('editNameBtn').onclick = async ()=>{
+    const snap = await athleteRef().get();
+    const a = snap.data() || {};
+    const name = prompt('Nombre del atleta:', a.name || '');
+    if (name === null) return;
+    const clean = name.trim();
+    if (!clean){ alert('El nombre no puede quedar vacío.'); return; }
+    try{
+      await athleteRef().update({ name: clean });
+      const s2 = await athleteRef().get();
+      renderAthlete(s2.data());
+    }catch(e){ alert('No se ha podido cambiar el nombre: ' + (e.message || e.code)); }
+  };
+
+  // ===== Eliminar atleta (con todos sus datos) =====
+  document.getElementById('deleteAthleteBtn').onclick = async ()=>{
+    const snap = await athleteRef().get();
+    const a = snap.data() || {};
+    const who = a.name || a.email || 'este atleta';
+    if (!confirm('¿Eliminar a ' + who + '?\n\nSe borrarán todas sus semanas, marcas, notas y comentarios, y perderá el acceso a la app.')) return;
+    if (!confirm('Última confirmación: esto NO se puede deshacer. ¿Eliminar a ' + who + ' definitivamente?')) return;
+    const msg = document.getElementById('deleteMsg');
+    const btn = document.getElementById('deleteAthleteBtn');
+    btn.disabled = true;
+    msg.textContent = 'Eliminando…'; msg.className = 'msg';
+    const base = athleteRef();
+    try{
+      const plans = await base.collection('plans').get();
+      for (const d of plans.docs) await d.ref.delete();
+      try{
+        const prog = await base.collection('progress').get();
+        for (const d of prog.docs) await d.ref.delete();
+      }catch(e){ console.warn('progreso no borrado', e); }
+      try{
+        const cn = await base.collection('coachNotes').get();
+        for (const d of cn.docs) await d.ref.delete();
+      }catch(e){ console.warn('comentarios no borrados', e); }
+      await base.delete();
+      window.location.replace('entrenador.html');
+    }catch(e){
+      msg.textContent = 'No se ha podido eliminar: ' + (e.message || e.code);
+      msg.className = 'msg err';
+      btn.disabled = false;
+    }
   };
 </script>
 </body>
