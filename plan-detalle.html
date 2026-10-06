@@ -368,14 +368,27 @@
     const athRef = db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid);
     try{
       await athRef.collection('plans').doc(planIdParam).set(planData);
-      await athRef.collection('coachNotes').doc('comments').set({ comments, updatedAt: Date.now() }, { merge: true });
-      Object.assign(coachComments, comments);
       if (markReviewed) await athRef.update({ needsReview: false, reviewedAt: Date.now() });
-      msg.textContent = markReviewed ? 'Guardado y marcado como revisado.' : 'Guardado. El atleta verá tus comentarios en su app.';
-      msg.className = 'msg ok';
     }catch(e){
       msg.textContent = 'Error al guardar: ' + (e.message || e.code);
       msg.className = 'msg err';
+      return;
+    }
+    const hasComments = Object.values(comments).some(v=> v);
+    try{
+      await athRef.collection('coachNotes').doc('comments').set({ comments, updatedAt: Date.now() }, { merge: true });
+      Object.assign(coachComments, comments);
+      msg.textContent = markReviewed ? 'Guardado y marcado como revisado.' : 'Guardado. El atleta verá tus comentarios en su app.';
+      msg.className = 'msg ok';
+    }catch(e){
+      if (hasComments){
+        msg.textContent = (markReviewed ? 'Programación guardada y semana marcada como revisada' : 'Programación guardada') +
+          ', pero los COMENTARIOS no se han podido guardar: faltan por publicar las reglas nuevas de Firebase.';
+        msg.className = 'msg err';
+      } else {
+        msg.textContent = markReviewed ? 'Guardado y marcado como revisado.' : 'Guardado.';
+        msg.className = 'msg ok';
+      }
     }
   }
 </script>
