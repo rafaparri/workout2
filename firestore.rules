@@ -29,6 +29,19 @@ service cloud.firestore {
       return isSignedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid)/roleGrants/superadmin);
     }
+    // --- Administradores (nivel por debajo del superadministrador). Cada
+    // uno gestiona solo los clubes de los que es dueño (ownerUid). Si está
+    // bloqueado (admins/{uid}.blocked), no puede hacer nada.
+    function isAdminActive() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid)/roleGrants/admin)
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.blocked != true;
+    }
+    function ownsClub(clubId) {
+      return isAdminActive()
+        && get(/databases/$(database)/documents/clubs/$(clubId)).data.ownerUid == request.auth.uid;
+    }
     function hasAthleteGrant(clubId, athleteUid) {
       return isSignedIn()
         && request.auth.uid == athleteUid
@@ -53,12 +66,24 @@ service cloud.firestore {
       // superadmin si es para entrenador, de su entrenador si es atleta —
       // nunca inventándose otro club ni otro rol.
       allow create: if hasSuperadminGrant() || (
-        (grantId == 'athlete' || grantId == 'coach') && isSignedIn() && request.auth.uid == uid &&
+        (grantId == 'athlete' || grantId == 'coach' || grantId == 'admin') && isSignedIn() && request.auth.uid == uid &&
         exists(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)) &&
         get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.email == request.auth.token.email &&
         get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.role == grantId &&
-        request.resource.data.clubId == get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.clubId
+        (grantId == 'admin' ||
+         request.resource.data.clubId == get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.clubId)
       );
+      allow update, delete: if hasSuperadminGrant();
+    }
+
+    // --- Ficha de cada administrador: la crea él mismo al aceptar la
+    // invitación (tras recibir su permiso); solo el superadmin la cambia
+    // (bloquear) o la borra.
+    match /admins/{adminUid} {
+      allow read: if hasSuperadminGrant() || (isSignedIn() && request.auth.uid == adminUid);
+      allow create: if isSignedIn() && request.auth.uid == adminUid
+        && exists(/databases/$(database)/documents/users/$(adminUid)/roleGrants/admin)
+        && request.resource.data.blocked == false;
       allow update, delete: if hasSuperadminGrant();
     }
 
@@ -66,8 +91,10 @@ service cloud.firestore {
       allow read: if isSignedIn() && request.auth.token.email == resource.data.email;
       allow create, update: if hasSuperadminGrant() || (
         isSignedIn() && hasCoachGrant(request.resource.data.clubId) && request.resource.data.role == 'athlete'
+      ) || (
+        request.resource.data.role == 'coach' && ownsClub(request.resource.data.clubId)
       );
-      allow delete: if hasSuperadminGrant() || hasCoachGrant(resource.data.clubId);
+      allow delete: if hasSuperadminGrant() || hasCoachGrant(resource.data.clubId) || ownsClub(resource.data.clubId);
     }
 
     match /clubs/{clubId} {
@@ -76,7 +103,13 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/users/$(request.auth.uid)/roleGrants/athlete) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)/roleGrants/athlete).data.clubId == clubId
       );
-      allow write: if hasSuperadminGrant();
+      // Administrador: solo lee, crea y edita SUS clubes; no puede cambiar
+      // el dueño ni borrarlos. El superadmin puede todo (y reasignar dueño).
+      allow read: if isAdminActive() && resource.data.ownerUid == request.auth.uid;
+      allow create: if hasSuperadminGrant() || (isAdminActive() && request.resource.data.ownerUid == request.auth.uid);
+      allow update: if hasSuperadminGrant() || (isAdminActive() && resource.data.ownerUid == request.auth.uid
+                                                && request.resource.data.ownerUid == request.auth.uid);
+      allow delete: if hasSuperadminGrant();
     }
 
     // --- Ficha de cada atleta dentro de un club: nombre, correo, si está
@@ -84,7 +117,7 @@ service cloud.firestore {
     // club; el propio atleta solo la lee. El atleta la CREA él mismo la
     // primera vez, al autoregistrarse con una invitación válida.
     match /clubs/{clubId}/athletes/{athleteId} {
-      allow read: if hasSuperadminGrant() || hasCoachGrant(clubId) || (isSignedIn() && request.auth.uid == athleteId);
+      allow read: if hasSuperadminGrant() || ownsClub(clubId) || hasCoachGrant(clubId) || (isSignedIn() && request.auth.uid == athleteId);
       allow write: if hasCoachGrant(clubId);
       allow create: if isSignedIn() && request.auth.uid == athleteId &&
         exists(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)) &&
