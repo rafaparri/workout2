@@ -74,6 +74,10 @@
   .adminCard .ainfo{ flex:1; min-width:220px; }
   .adminCard .acts{ display:flex; gap:8px; flex-wrap:wrap; }
   .adminCard .acts .btn{ font-size:14.5px; padding:10px 14px; }
+  .shareChip{ display:inline-flex; align-items:center; gap:6px; background:#e2eefa; color:#22609c; border-radius:999px; padding:5px 6px 5px 12px; font-weight:600; }
+  .shareChip button{ background:#fff; border:none; border-radius:50%; width:24px; height:24px; cursor:pointer; color:#9c3427; font-size:13px; }
+  .shareChips{ display:inline-flex; gap:8px; flex-wrap:wrap; }
+  .shareRow{ margin-top:-8px; }
 </style>
 </head>
 <body>
@@ -301,7 +305,7 @@
     if (!ADMINS.length){ el.innerHTML = '<div class="empty">Todavía no hay administradores. Solo tú gestionas los clubes.</div>'; return; }
     el.innerHTML = '';
     ADMINS.forEach(a=>{
-      const n = clubs.filter(c=> c.ownerUid === a.uid).length;
+      const n = clubs.filter(c=> c.ownerUid === a.uid || (Array.isArray(c.adminUids) && c.adminUids.includes(a.uid))).length;
       const ini = (a.name||a.email||'?').split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
       const card = document.createElement('div');
       card.className = 'adminCard' + (a.blocked ? ' blocked' : '');
@@ -323,9 +327,10 @@
         try{ await a.ref.update({ blocked: !a.blocked }); loadAll(); }catch(e){ alert('Error: ' + (e.message||e.code)); }
       };
       card.querySelector('[data-a="del"]').onclick = async ()=>{
-        if (!confirm('¿Eliminar al administrador ' + (a.name||a.email) + '?\n\nSus ' + n + ' clubes pasarán a ti y seguirán funcionando. Después podrás asignárselos a otro administrador.')) return;
+        if (!confirm('¿Eliminar al administrador ' + (a.name||a.email) + '?\n\nLos clubes que son suyos pasarán a ti y seguirán funcionando, y dejará de tener acceso a los compartidos. Después podrás asignárselos a otro administrador.')) return;
         try{
           for (const c of clubs.filter(c=> c.ownerUid === a.uid)) await c.ref.update({ ownerUid: null });
+          for (const c of clubs.filter(c=> Array.isArray(c.adminUids) && c.adminUids.includes(a.uid))) await c.ref.update({ adminUids: c.adminUids.filter(x=> x !== a.uid) });
           try{ await db.collection('users').doc(a.uid).collection('roleGrants').doc('admin').delete(); }catch(e){}
           if (a.inviteId){ try{ await db.collection('invites').doc(a.inviteId).delete(); }catch(e){} }
           await a.ref.delete();
@@ -434,7 +439,15 @@
     const listEl = document.getElementById('clubsList');
     const snap = MODE === 'super'
       ? await db.collection('clubs').get()
-      : await db.collection('clubs').where('ownerUid', '==', ME.uid).get();
+      : await (async ()=>{
+          const [own, shared] = await Promise.all([
+            db.collection('clubs').where('ownerUid', '==', ME.uid).get(),
+            db.collection('clubs').where('adminUids', 'array-contains', ME.uid).get()
+          ]);
+          const seen = {}, docs = [];
+          own.docs.concat(shared.docs).forEach(d=>{ if (!seen[d.id]){ seen[d.id] = 1; docs.push(d); } });
+          return { docs };
+        })();
     const clubs = snap.docs.map(d=>({ id:d.id, ref:d.ref, ...d.data() })).sort((a,b)=>
       (MODE === 'super' ? ((a.ownerUid ? 1 : 0) - (b.ownerUid ? 1 : 0)) : 0) || ((b.createdAt||0)-(a.createdAt||0)));
     const athletesByClub = {};
@@ -477,6 +490,8 @@
               ${pill('Suscripción', subActive(c) ? 'Activa' : 'No activa', subActive(c) ? 'ok' : 'off')}
               ${pill('Acceso', c.blocked ? 'Bloqueado' : 'Habilitado', c.blocked ? 'bad' : 'ok')}
               ${pill('Atletas', aths ? aths.length : '—', 'info')}
+              ${MODE === 'admin' && c.ownerUid !== ME.uid ? '<span class="pill" style="background:#e2eefa;color:#22609c;">🤝 <b>Compartido contigo</b></span>' : ''}
+              ${MODE === 'super' && Array.isArray(c.adminUids) && c.adminUids.length ? pill('Compartido', c.adminUids.length, 'info') : ''}
               ${MODE === 'super' ? (c.ownerUid ? pill('Admin', esc(ownerName(c) || 'eliminado'), 'off') : '<span class="pill" style="background:#fdf1d8;color:#7a5810;">★ <b>A tu cargo</b></span>') : ''}
             </div>
           </div>
@@ -487,10 +502,38 @@
           <button class="btn light" data-a="logo">${c.logoUrl ? 'Cambiar logo' : 'Subir logo'}</button>
           ${c.logoUrl ? '<button class="btn light" data-a="nologo">Quitar logo</button>' : ''}
         </div>
-        ${MODE === 'super' ? '<div class="ownerRow"><span>Administrador:</span><select class="ownerSel"></select></div>' : ''}
+        ${MODE === 'super' ? '<div class="ownerRow"><span>Administrador:</span><select class="ownerSel"></select></div><div class="ownerRow shareRow"><span>Compartido con:</span><span class="shareChips"></span><select class="shareSel"></select></div>' : ''}
         <button class="athToggle"><span>👥 Ver atletas del club (${aths ? aths.length : '—'})</span><span class="arrow">▾</span></button>
         <div class="athList hidden"></div>`;
       if (c.logoUrl) card.querySelector('.logo img').src = c.logoUrl;
+      const shareSel = card.querySelector('.shareSel');
+      if (shareSel){
+        const shared = Array.isArray(c.adminUids) ? c.adminUids : [];
+        const chips = card.querySelector('.shareChips');
+        chips.innerHTML = shared.length ? '' : '<span style="color:var(--muted-2);">nadie</span>';
+        shared.forEach(uid=>{
+          const a = ADMINS.find(x=> x.uid === uid);
+          const chip = document.createElement('span');
+          chip.className = 'shareChip';
+          chip.innerHTML = esc(a ? (a.name || a.email) : 'administrador eliminado') + ' <button title="Dejar de compartir">✕</button>';
+          chip.querySelector('button').onclick = async ()=>{
+            if (!confirm('¿Dejar de compartir ' + c.name + ' con ' + (a ? (a.name||a.email) : 'este administrador') + '?')) return;
+            try{ await c.ref.update({ adminUids: shared.filter(x=> x !== uid) }); loadAll(); }catch(e){ alert('Error: ' + (e.message||e.code)); }
+          };
+          chips.appendChild(chip);
+        });
+        const candidates = ADMINS.filter(a=> a.uid !== c.ownerUid && !shared.includes(a.uid));
+        if (!candidates.length){ shareSel.style.display = 'none'; }
+        else {
+          shareSel.innerHTML = '<option value="">+ Compartir con…</option>' + candidates.map(a=> '<option value="' + esc(a.uid) + '">' + esc(a.name || a.email) + '</option>').join('');
+          shareSel.onchange = async ()=>{
+            const uid = shareSel.value; if (!uid) return;
+            const a = ADMINS.find(x=> x.uid === uid) || {};
+            if (!confirm('¿Compartir ' + c.name + ' con ' + (a.name || a.email) + '? Podrá gestionarlo igual que tú, pero el club sigue siendo tuyo.')){ shareSel.value = ''; return; }
+            try{ await c.ref.update({ adminUids: shared.concat([uid]) }); loadAll(); }catch(e){ alert('Error: ' + (e.message||e.code)); }
+          };
+        }
+      }
       const sel = card.querySelector('.ownerSel');
       if (sel){
         const known = !c.ownerUid || ADMINS.some(a=> a.uid === c.ownerUid);
