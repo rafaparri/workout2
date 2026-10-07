@@ -480,7 +480,6 @@
       const initials = (c.name||'?').split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
       const trial = c.trialEndsAt ? (c.trialEndsAt > Date.now() ? 'Prueba hasta ' + new Date(c.trialEndsAt).toLocaleDateString('es-ES') : 'Prueba caducada') : '';
       const meta = [
-        c.coachName || c.coachEmail ? ('Entrenador: ' + esc(c.coachName||'') + (c.coachEmail ? ' (' + esc(c.coachEmail) + ')' : '')) : '',
         c.createdAt ? 'Alta: ' + new Date(c.createdAt).toLocaleDateString('es-ES') : '',
         trial,
         c.maxAthletes!=null ? ('Máx. ' + c.maxAthletes + ' atletas') : ''
@@ -506,6 +505,15 @@
           <button class="btn ${c.blocked ? 'green' : 'red'}" data-a="block">${c.blocked ? 'Habilitar acceso' : 'Bloquear acceso'}</button>
           <button class="btn light" data-a="logo">${c.logoUrl ? 'Cambiar logo' : 'Subir logo'}</button>
           ${c.logoUrl ? '<button class="btn light" data-a="nologo">Quitar logo</button>' : ''}
+        </div>
+        <div class="ownerRow coachRow"><span>Entrenadores:</span><span class="coachChips"></span><button class="btn light" data-a="addCoach" style="padding:6px 12px;">+ Invitar entrenador</button></div>
+        <div class="coachForm hidden" style="background:var(--surface-2);border-radius:12px;padding:12px;margin:6px 0 10px;">
+          <div class="row2">
+            <div><label>Nombre del entrenador</label><input type="text" class="cfName"></div>
+            <div><label>Correo del entrenador</label><input type="email" class="cfEmail"></div>
+          </div>
+          <button class="btn full" data-a="sendCoach">Enviar invitación</button>
+          <div class="msg cfMsg"></div>
         </div>
         ${MODE === 'super' ? '<div class="ownerRow"><span>Administrador:</span><select class="ownerSel"></select></div><div class="ownerRow shareRow"><span>Compartido con:</span><span class="shareChips"></span><select class="shareSel"></select></div>' : ''}
         <button class="athToggle"><span>👥 Ver atletas del club (${aths ? aths.length : '—'})</span><span class="arrow">▾</span></button>
@@ -553,6 +561,74 @@
           try{ await c.ref.update({ ownerUid: to }); loadAll(); }catch(e){ alert('Error: ' + (e.message||e.code)); }
         };
       }
+
+      // --- Entrenadores del club (puede haber varios) ---
+      const coaches = [];
+      if (c.coachEmail) coaches.push({ name: c.coachName || '', email: c.coachEmail });
+      (Array.isArray(c.extraCoaches) ? c.extraCoaches : []).forEach(x=>{
+        if (x && x.email && !coaches.some(y=> y.email === x.email)) coaches.push({ name: x.name || '', email: x.email });
+      });
+      const coachChips = card.querySelector('.coachChips');
+      coachChips.innerHTML = coaches.length ? '' : '<span style="color:var(--muted-2);">ninguno</span>';
+      coaches.forEach(co=>{
+        const chip = document.createElement('span');
+        chip.className = 'shareChip';
+        chip.title = co.email;
+        chip.innerHTML = esc(co.name || co.email) + ' <span style="color:var(--muted);font-weight:400;">(' + esc(co.email) + ')</span>' +
+          (MODE === 'super' ? ' <button title="Quitar entrenador">✕</button>' : '');
+        const rm = chip.querySelector('button');
+        if (rm) rm.onclick = async ()=>{
+          if (!confirm('¿Quitar a ' + (co.name || co.email) + ' como entrenador de ' + c.name + '? Dejará de poder entrar en el panel del club. Los atletas y sus datos no se tocan.')) return;
+          try{
+            // 1) Retirar su permiso de entrenador de este club (si ya había aceptado)
+            const us = await db.collection('users').where('email', '==', co.email).get();
+            for (const u of us.docs){
+              const gRef = u.ref.collection('roleGrants').doc('coach');
+              const g = await gRef.get();
+              if (g.exists && g.data().clubId === c.id) await gRef.delete();
+            }
+            // 2) Anular la invitación para que el enlace ya no sirva
+            try{ await db.collection('invites').doc(co.email.replace(/[^a-z0-9]/g,'_') + '_coach').delete(); }catch(e){}
+            // 3) Quitarlo de la lista del club
+            const rest = coaches.filter(x=> x.email !== co.email);
+            await c.ref.update({
+              coachName: rest[0] ? rest[0].name : null,
+              coachEmail: rest[0] ? rest[0].email : null,
+              extraCoaches: rest.slice(1)
+            });
+            loadAll();
+          }catch(e){ alert('No se ha podido quitar: ' + (e.message || e.code)); }
+        };
+        coachChips.appendChild(chip);
+      });
+      const coachForm = card.querySelector('.coachForm');
+      card.querySelector('[data-a="addCoach"]').onclick = ()=>{
+        coachForm.classList.toggle('hidden');
+        if (!coachForm.classList.contains('hidden')) coachForm.querySelector('.cfName').focus();
+      };
+      card.querySelector('[data-a="sendCoach"]').onclick = async ()=>{
+        const cfMsg = coachForm.querySelector('.cfMsg');
+        cfMsg.textContent = ''; cfMsg.className = 'msg cfMsg';
+        const cname = coachForm.querySelector('.cfName').value.trim();
+        const cemail = coachForm.querySelector('.cfEmail').value.trim().toLowerCase();
+        if (!cname || !cemail || cemail.indexOf('@') < 0){ cfMsg.textContent = 'Rellena el nombre y un correo válido.'; cfMsg.className = 'msg err cfMsg'; return; }
+        try{
+          const inviteId = cemail.replace(/[^a-z0-9]/g,'_') + '_coach';
+          await db.collection('invites').doc(inviteId).set({ email: cemail, name: cname, clubId: c.id, role:'coach', createdAt: Date.now() });
+          await auth.sendSignInLinkToEmail(cemail, {
+            url: window.location.origin + window.location.pathname.replace('superadmin.html','entrenador.html') + '?invite=' + inviteId,
+            handleCodeInApp: true
+          });
+          if (!coaches.some(x=> x.email === cemail)){
+            if (!c.coachEmail) await c.ref.update({ coachName: cname, coachEmail: cemail });
+            else await c.ref.update({ extraCoaches: coaches.filter(x=> x.email !== c.coachEmail).concat([{ name: cname, email: cemail }]) });
+          }
+          alert('Invitación enviada a ' + cemail + '.\nCuando abra el enlace del correo, entrará como entrenador de ' + c.name + '.');
+          loadAll();
+        }catch(e){
+          cfMsg.textContent = 'No se ha podido invitar: ' + (e.message || e.code); cfMsg.className = 'msg err cfMsg';
+        }
+      };
 
       const list = card.querySelector('.athList');
       if (!aths) list.innerHTML = '<div class="empty">No se han podido cargar los atletas.</div>';
