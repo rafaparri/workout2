@@ -32,6 +32,8 @@ def patch(old, new, count=1):
 
 # ---------- Cabecera: título, Firebase Auth, configuración de WorkOut 2.0 ----------
 patch('<title>Mi Plan · Halterofilia</title>', '<title>WorkOut 2.0 · Mi entreno</title>')
+# Icono de WorkOut 2.0 en la pantalla de inicio del móvil
+patch('<link rel="apple-touch-icon" href="static/apple-touch-icon.png">', '<link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">\n<link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">\n<link rel="manifest" href="manifest.webmanifest">\n<meta name="apple-mobile-web-app-title" content="WorkOut 2.0">\n<meta name="application-name" content="WorkOut 2.0">')
 patch('<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>',
       '<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>\n'
       '<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>\n'
