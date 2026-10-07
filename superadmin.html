@@ -462,6 +462,23 @@
         athletesByClub[c.id] = s.docs.map(d=>d.data()).sort((x,y)=>String(x.name||'').localeCompare(String(y.name||''),'es'));
       }catch(e){ athletesByClub[c.id] = null; }
     }));
+    // Superadministrador: averigua quién es entrenador de cada club de verdad
+    // (aunque el club se diera de alta sin apuntar al entrenador).
+    const realCoachesByClub = {};
+    if (MODE === 'super'){
+      try{
+        const us = await db.collection('users').get();
+        await Promise.all(us.docs.map(async u=>{
+          try{
+            const g = await u.ref.collection('roleGrants').doc('coach').get();
+            if (!g.exists || !g.data().clubId) return;
+            const d = u.data() || {};
+            if (!d.email) return;
+            (realCoachesByClub[g.data().clubId] = realCoachesByClub[g.data().clubId] || []).push({ name: d.name || '', email: String(d.email).toLowerCase() });
+          }catch(e){}
+        }));
+      }catch(e){}
+    }
     const totalAth = Object.values(athletesByClub).reduce((n,l)=>n+(l?l.length:0),0);
     document.getElementById('kpis').innerHTML =
       '<div class="kpi"><div class="n">'+clubs.length+'</div><div class="t">Clubes dados de alta</div></div>' +
@@ -480,7 +497,7 @@
       const initials = (c.name||'?').split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
       const trial = c.trialEndsAt ? (c.trialEndsAt > Date.now() ? 'Prueba hasta ' + new Date(c.trialEndsAt).toLocaleDateString('es-ES') : 'Prueba caducada') : '';
       const meta = [
-        c.createdAt ? 'Alta: ' + new Date(c.createdAt).toLocaleDateString('es-ES') : '',
+        c.createdAt > 946684800000 ? 'Alta: ' + new Date(c.createdAt).toLocaleDateString('es-ES') : '',
         trial,
         c.maxAthletes!=null ? ('Máx. ' + c.maxAthletes + ' atletas') : ''
       ].filter(Boolean).join(' · ');
@@ -565,7 +582,7 @@
       // --- Entrenadores del club (puede haber varios) ---
       const coaches = [];
       if (c.coachEmail) coaches.push({ name: c.coachName || '', email: c.coachEmail });
-      (Array.isArray(c.extraCoaches) ? c.extraCoaches : []).forEach(x=>{
+      (Array.isArray(c.extraCoaches) ? c.extraCoaches : []).concat(realCoachesByClub[c.id] || []).forEach(x=>{
         if (x && x.email && !coaches.some(y=> y.email === x.email)) coaches.push({ name: x.name || '', email: x.email });
       });
       const coachChips = card.querySelector('.coachChips');
