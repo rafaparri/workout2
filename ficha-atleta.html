@@ -94,6 +94,9 @@
     <div class="card">
       <label>Subir programación (Excel)</label>
       <input type="file" id="fileInput" accept=".xlsx,.xls">
+      <label for="weekStart" style="margin-top:6px;">Fechas de la semana (lunes)</label>
+      <input type="date" id="weekStart" style="width:100%;padding:12px;margin-bottom:12px;">
+      <div id="weekRange" class="stDetail" style="margin:-6px 0 12px;"></div>
       <button id="uploadBtn">Subir y leer</button>
       <div id="uploadMsg" class="msg"></div>
     </div>
@@ -496,6 +499,8 @@ function planId(meta){
       const weekFromName = (file.name || '').match(/semana[\s_-]*n?[ºo°]?\s*(\d{1,3})/i);
       if (weekFromName){ const n = parseInt(weekFromName[1],10); if (!isNaN(n)) meta.week = n; }
 
+      const ws = wo2Monday(document.getElementById('weekStart').value);
+      if (ws) meta.startDate = ws;
       const id = planId(meta);
       const plan = { id, meta, days: result.days, uploadedAt: Date.now() };
       await db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid)
@@ -549,6 +554,28 @@ function planId(meta){
     }
   }
 
+  // ===== Fechas de cada semana (siempre de lunes a domingo) =====
+  function wo2Iso(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+  function wo2Monday(v){
+    if (!v) return null;
+    const d = new Date(v + 'T12:00:00'); if (isNaN(d)) return null;
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return wo2Iso(d);
+  }
+  function wo2Range(start){
+    if (!start) return '';
+    const a = new Date(start + 'T12:00:00'), b = new Date(a); b.setDate(a.getDate() + 6);
+    const f = (x, y)=> x.toLocaleDateString('es-ES', y ? { day:'numeric', month:'short', year:'numeric' } : { day:'numeric', month:'short' });
+    return f(a, false) + ' – ' + f(b, true);
+  }
+  function wo2ShowRange(){
+    const v = wo2Monday(document.getElementById('weekStart').value);
+    document.getElementById('weekRange').textContent = v ? ('Del ' + wo2Range(v)) : 'Si la dejas vacía, la semana se sube sin fechas.';
+  }
+  document.getElementById('weekStart').addEventListener('change', ()=>{
+    const el = document.getElementById('weekStart'); const m = wo2Monday(el.value); if (m) el.value = m; wo2ShowRange();
+  });
+
   async function loadPlans(){
     const listEl = document.getElementById('plansList');
     const snap = await db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid)
@@ -558,14 +585,40 @@ function planId(meta){
       return;
     }
     listEl.innerHTML = '';
+    // Propuesta de fechas para la próxima semana: el lunes siguiente a la última con fechas
+    let lastStart = null;
+    snap.forEach(doc=>{ const st = doc.data().meta && doc.data().meta.startDate; if (st && (!lastStart || st > lastStart)) lastStart = st; });
+    const wsEl = document.getElementById('weekStart');
+    if (!wsEl.value){
+      const base = lastStart ? new Date(lastStart + 'T12:00:00') : new Date();
+      if (lastStart) base.setDate(base.getDate() + 7);
+      wsEl.value = wo2Monday(wo2Iso(base));
+    }
+    wo2ShowRange();
     snap.forEach(doc=>{
       const p = doc.data();
       const label = (p.meta && p.meta.week!=null) ? ('Semana ' + p.meta.week) : (p.id);
-      const date = new Date(p.uploadedAt).toLocaleDateString('es-ES');
+      const start = p.meta && p.meta.startDate;
       const row = document.createElement('div');
       row.className = 'planRow';
       row.style.cursor = 'pointer';
-      row.innerHTML = '<span class="pLabel">' + label + '</span><span class="pRight"><span style="color:var(--muted-2);font-size:12.5px;">' + date + ' · Ver ›</span></span>';
+      row.style.flexWrap = 'wrap';
+      row.style.gap = '8px';
+      row.innerHTML = '<span class="pLabel" style="display:flex;flex-direction:column;gap:2px;"><b style="font-size:16px;">' + label + '</b>' +
+        '<span style="color:var(--muted-2);font-size:14px;">' + (start ? wo2Range(start) : 'Sin fechas') + '</span></span>' +
+        '<span class="pRight"><label class="wkDateBtn" title="Cambiar fechas" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin:0;">' +
+        '<input type="date" class="wkDate" value="' + (start || '') + '" aria-label="Lunes de ' + label + '" style="width:150px;margin:0;padding:8px;font-size:15px;"></label>' +
+        '<span style="color:var(--muted-2);font-size:14px;">Ver ›</span></span>';
+      const di = row.querySelector('.wkDate');
+      di.onclick = (ev)=> ev.stopPropagation();
+      di.onchange = async (ev)=>{
+        ev.stopPropagation();
+        const m = wo2Monday(di.value);
+        try{
+          await doc.ref.update({ 'meta.startDate': m || null });
+          loadPlans();
+        }catch(e){ alert('No se han podido guardar las fechas: ' + (e.message || e.code)); }
+      };
       row.onclick = ()=>{ window.location.href = 'plan-detalle.html?athlete=' + athleteUid + '&plan=' + doc.id; };
       const del = document.createElement('button');
       del.className = 'delWeek';

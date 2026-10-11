@@ -274,6 +274,14 @@
     document.getElementById('content').classList.remove('hidden');
     const label = (planData.meta && planData.meta.week!=null) ? ('Semana ' + planData.meta.week) : planIdParam;
     document.getElementById('planTitle').textContent = label;
+    if (planData.meta && planData.meta.startDate){
+      const a = new Date(planData.meta.startDate + 'T12:00:00'), b = new Date(a); b.setDate(a.getDate() + 6);
+      const r = a.toLocaleDateString('es-ES', { day:'numeric', month:'short' }) + ' – ' + b.toLocaleDateString('es-ES', { day:'numeric', month:'short', year:'numeric' });
+      const t = document.getElementById('planTitle');
+      let sub = document.getElementById('planDates');
+      if (!sub){ sub = document.createElement('div'); sub.id = 'planDates'; sub.style.cssText = 'color:var(--gold-2,#e0b453);font-weight:700;font-size:17px;margin:-2px 0 6px;'; t.after(sub); }
+      sub.textContent = r;
+    }
     const legend = document.getElementById('legend');
     if (Object.keys(athleteChanges).length){
       legend.classList.remove('hidden');

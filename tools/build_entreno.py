@@ -450,6 +450,26 @@ patch("    if (rinfo){ chip.style.cssText = 'border-left:5px solid '+rinfo.color
 # Días completos: punto verde en el botón del día.
 patch("      plate.textContent = d;\n",
       "      plate.textContent = d;\n      { const ds = dayStats(plan, d); if (ds.totalSets>0 && ds.checkedSets>=ds.totalSets) plate.classList.add('plate-done'); }\n")
+# Fechas de la semana (las pone el entrenador al subirla): en la cabecera y en cada día.
+patch("  left.appendChild(el('div','meta-line', metaBits.join(' · ') || 'Plan de entrenamiento'));",
+      "  if (plan.meta && plan.meta.startDate) metaBits.unshift(wo2WeekRange(plan.meta.startDate));\n  left.appendChild(el('div','meta-line', metaBits.join(' · ') || 'Plan de entrenamiento'));")
+patch("    btn.appendChild(el('div','plate-label', DAY_NAMES[d].slice(0,3)));",
+      "    btn.appendChild(el('div','plate-label', DAY_NAMES[d].slice(0,3) + wo2DayNum(plan, d)));")
+patch("</body>", """<script>
+// WorkOut 2.0: fechas de la semana (meta.startDate = lunes, 'AAAA-MM-DD')
+function wo2DayDate(plan, d){
+  if (!plan || !plan.meta || !plan.meta.startDate) return null;
+  const i = DAY_ORDER.indexOf(d); if (i < 0) return null;
+  const x = new Date(plan.meta.startDate + 'T12:00:00'); if (isNaN(x)) return null;
+  x.setDate(x.getDate() + i); return x;
+}
+function wo2DayNum(plan, d){ const x = wo2DayDate(plan, d); return x ? ' ' + x.getDate() : ''; }
+function wo2WeekRange(start){
+  const a = new Date(start + 'T12:00:00'), b = new Date(a); b.setDate(a.getDate() + 6);
+  return a.toLocaleDateString('es-ES', { day:'numeric', month:'short' }) + ' – ' + b.toLocaleDateString('es-ES', { day:'numeric', month:'short' });
+}
+</script>
+</body>""")
 # Cambios del atleta: fondos oscuros.
 patch("  edited: { bg:'#fde9da', border:'#e07b39',", "  edited: { bg:'#2d1c0f', border:'#e07b39',")
 patch("  added:  { bg:'#dff3e5', border:'#2e9a52',", "  added:  { bg:'#13261a', border:'#3f9a62',")

@@ -7,8 +7,6 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261011155324';</script>
-<script src="update.js?v=20261011155324"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -17,8 +15,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261011155324"></script>
-<script src="branding.js?v=20261011155324"></script>
+<script src="firebase-init.js"></script>
+<script src="branding.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
@@ -533,7 +531,7 @@ input[type=file]{display:none;}
   cursor:pointer;
 }
 </style>
-<link rel="stylesheet" href="theme-entreno.css?v=2">
+<link rel="stylesheet" href="theme-entreno.css?v=1">
 <meta name="theme-color" content="#0c0c0e">
 </head>
 <body>
@@ -2351,6 +2349,7 @@ function renderApp(plan){
   left.appendChild(userNameLine);
   const metaBits = [];
   if (plan.meta.jornada) metaBits.push(plan.meta.jornada);
+  if (plan.meta && plan.meta.startDate) metaBits.unshift(wo2WeekRange(plan.meta.startDate));
   left.appendChild(el('div','meta-line', metaBits.join(' · ') || 'Plan de entrenamiento'));
   row.appendChild(left);
 
@@ -2414,7 +2413,7 @@ function renderApp(plan){
     }
 
     btn.appendChild(plate);
-    btn.appendChild(el('div','plate-label', DAY_NAMES[d].slice(0,3)));
+    btn.appendChild(el('div','plate-label', DAY_NAMES[d].slice(0,3) + wo2DayNum(plan, d)));
     btn.onclick = ()=>{ state.activeDay = d; render(); };
     plateRow.appendChild(btn);
   });
@@ -6268,6 +6267,20 @@ function wo2ShowBootError(msg){
   });
 })();
 
+</script>
+<script>
+// WorkOut 2.0: fechas de la semana (meta.startDate = lunes, 'AAAA-MM-DD')
+function wo2DayDate(plan, d){
+  if (!plan || !plan.meta || !plan.meta.startDate) return null;
+  const i = DAY_ORDER.indexOf(d); if (i < 0) return null;
+  const x = new Date(plan.meta.startDate + 'T12:00:00'); if (isNaN(x)) return null;
+  x.setDate(x.getDate() + i); return x;
+}
+function wo2DayNum(plan, d){ const x = wo2DayDate(plan, d); return x ? ' ' + x.getDate() : ''; }
+function wo2WeekRange(start){
+  const a = new Date(start + 'T12:00:00'), b = new Date(a); b.setDate(a.getDate() + 6);
+  return a.toLocaleDateString('es-ES', { day:'numeric', month:'short' }) + ' – ' + b.toLocaleDateString('es-ES', { day:'numeric', month:'short' });
+}
 </script>
 </body>
 </html>
