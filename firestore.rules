@@ -151,6 +151,20 @@ service cloud.firestore {
       allow write: if hasCoachGrant(clubId);
     }
 
+    // Calendario de competiciones del club: lo gestiona el entrenador.
+    match /clubs/{clubId}/competitions/{compId} {
+      allow read, write: if hasCoachGrant(clubId);
+    }
+    // Ficha de competición de cada atleta (día, categoría, objetivos,
+    // intentos y resultados). El entrenador lo gestiona todo; el atleta solo
+    // ve las suyas y puede anotar los resultados, sin tocar objetivos.
+    match /clubs/{clubId}/athletes/{athleteId}/competitions/{compId} {
+      allow read: if hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId);
+      allow write: if hasCoachGrant(clubId);
+      allow update: if hasAthleteGrant(clubId, athleteId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['results', 'updatedBy', 'updatedAt']);
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

@@ -67,3 +67,7 @@ h1.brand{ font-family:ArchivoBlack,sans-serif !important; font-weight:400 !impor
 .topbar-row > div:last-child{ flex-direction:column !important; align-items:flex-end !important; gap:8px !important; }
 .topbar-row > div:last-child img{ width:54px !important; }
 .app{ overflow-x:clip; }
+
+/* Día con competición */
+.plate.plate-comp{ box-shadow:inset 0 0 0 3px #c99a2e !important; }
+.plate-empty.plate-comp{ border-color:#c99a2e !important; color:#e0b453 !important; border-style:solid !important; }

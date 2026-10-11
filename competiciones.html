@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>WorkOut 2.0 · Competiciones</title>
+<link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
+<link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
+<link rel="manifest" href="manifest.webmanifest">
+<script>window.WO2_VERSION='20261011213613';</script>
+<script src="update.js?v=20261011213613"></script>
+<meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
+<meta name="application-name" content="WorkOut 2.0">
+<meta name="theme-color" content="#0c0c0e">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+  *{ box-sizing:border-box; }
+  body{ margin:0; min-height:100vh; padding-top:92px; }
+  #brandStripContainer{ position:fixed; top:0; left:0; right:0; z-index:50; }
+  .wrap{ max-width:1000px; margin:0 auto; padding:28px clamp(16px,3vw,40px) 80px; }
+  .hidden{ display:none !important; }
+  .head{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:22px; }
+  .kicker{ font-size:15px; font-weight:800; letter-spacing:.16em; color:var(--gold-2); text-transform:uppercase; }
+  .head h1{ font-size:clamp(30px,4vw,42px) !important; margin:4px 0 0; }
+  .btns{ display:flex; gap:10px; flex-wrap:wrap; }
+  .btn{ width:auto; min-height:52px; padding:0 20px; font-size:17px; border-radius:14px; border:none; cursor:pointer; }
+  .btn.ghost{ background:transparent !important; color:var(--chalk) !important; border:2px solid #3a352b !important; }
+  .btn.danger{ background:transparent !important; color:#f08a7c !important; border:2px solid #5e2a22 !important; }
+  .secTitle{ font-size:15px; font-weight:800; letter-spacing:.14em; color:var(--muted-2); text-transform:uppercase; margin:26px 0 12px; }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+  .comp{ background:var(--surface); border:1px solid var(--surface-3); border-top:6px solid var(--band,#3a352b); border-radius:20px; padding:20px; display:flex; flex-direction:column; gap:10px; cursor:pointer; text-align:left; color:var(--chalk); font:inherit; min-height:0; width:100%; }
+  .comp:hover{ border-color:var(--gold); filter:none; }
+  .comp .d{ font-size:15px; font-weight:800; letter-spacing:.08em; color:var(--gold-2); text-transform:uppercase; }
+  .comp .n{ font-family:ArchivoBlack,sans-serif; font-size:23px; line-height:1.2; }
+  .comp .p{ font-size:16px; color:var(--muted); }
+  .chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{ background:#26231c; color:var(--chalk); border-radius:999px; padding:5px 12px; font-size:14.5px; font-weight:700; }
+  .card{ padding:20px; margin-bottom:16px; }
+  .form label{ display:block; margin:12px 0 6px; }
+  .form input, .form textarea, .form select{ width:100%; padding:12px; min-height:50px; }
+  .form textarea{ min-height:90px; resize:vertical; }
+  .row2{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+  .info{ display:flex; flex-direction:column; gap:6px; font-size:17px; color:var(--muted); margin-bottom:6px; }
+  .info b{ color:var(--chalk); }
+  .notes{ white-space:pre-wrap; background:var(--surface-2); border-radius:14px; padding:12px 14px; font-size:16px; line-height:1.5; color:var(--chalk); }
+  .ent{ background:var(--surface); border:1px solid var(--surface-3); border-radius:20px; margin-bottom:14px; overflow:hidden; }
+  .entHead{ display:flex; align-items:center; gap:14px; padding:16px 18px; cursor:pointer; flex-wrap:wrap; }
+  .entHead .avatar{ width:50px; height:50px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+  .entMain{ flex:1; min-width:180px; }
+  .entName{ font-size:20px; font-weight:800; }
+  .entSub{ font-size:15px; color:var(--muted-2); margin-top:2px; }
+  .entTot{ text-align:right; }
+  .entTot b{ font-family:ArchivoBlack,sans-serif; font-weight:400; font-size:28px; color:var(--gold-2); }
+  .entTot span{ display:block; font-size:13.5px; color:var(--muted-2); }
+  .entBody{ border-top:1px solid var(--line); padding:16px 18px 18px; }
+  .entTools{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
+  .entTools label{ margin:0 0 6px; display:block; }
+  .entTools input, .entTools select{ width:100%; padding:10px; min-height:50px; }
+  .empty{ color:var(--muted-2); font-size:16px; padding:18px 0; }
+  .msg{ font-size:15px; margin-top:10px; }
+  @media (max-width:560px){ .row2, .entTools{ grid-template-columns:1fr; } }
+</style>
+<link rel="stylesheet" href="theme.css?v=2">
+</head>
+<body>
+<div id="brandStripContainer"></div>
+<div class="wrap">
+  <div id="loading" class="empty">Cargando…</div>
+
+  <!-- Lista -->
+  <div id="listView" class="hidden">
+    <div class="head">
+      <div><div class="kicker">Panel del entrenador</div><h1>Competiciones</h1></div>
+      <div class="btns">
+        <a class="btn ghost" href="entrenador.html" style="display:inline-flex;align-items:center;text-decoration:none;font-weight:800;">← Atletas</a>
+        <button class="btn" id="newBtn">+ Nueva competición</button>
+      </div>
+    </div>
+    <div id="nextList"></div>
+    <div id="pastList"></div>
+  </div>
+
+  <!-- Formulario (crear / editar) -->
+  <div id="formView" class="hidden">
+    <div class="head"><div><div class="kicker" id="formKicker">Nueva competición</div><h1 id="formTitle">Datos de la competición</h1></div></div>
+    <div class="card form">
+      <label for="fName">Nombre</label>
+      <input type="text" id="fName" placeholder="p. ej. Campeonato de Andalucía Máster">
+      <label for="fPlace">Lugar</label>
+      <input type="text" id="fPlace" placeholder="p. ej. Sevilla">
+      <div class="row2">
+        <div><label for="fStart">Primer día</label><input type="date" id="fStart"></div>
+        <div><label for="fEnd">Último día</label><input type="date" id="fEnd"></div>
+      </div>
+      <label for="fNotes">Notas para los atletas</label>
+      <textarea id="fNotes" placeholder="Horarios de pesaje, viaje, alojamiento…"></textarea>
+      <div class="btns" style="margin-top:16px;">
+        <button class="btn" id="fSave">Guardar</button>
+        <button class="btn ghost" id="fCancel">Cancelar</button>
+      </div>
+      <div id="fMsg" class="msg"></div>
+    </div>
+  </div>
+
+  <!-- Detalle -->
+  <div id="detailView" class="hidden">
+    <div class="head">
+      <div><div class="kicker" id="dDates"></div><h1 id="dName"></h1></div>
+      <div class="btns">
+        <button class="btn ghost" id="dBack">← Competiciones</button>
+        <button class="btn ghost" id="dEdit">Editar</button>
+        <button class="btn danger" id="dDel">Borrar</button>
+      </div>
+    </div>
+    <div class="info" id="dInfo"></div>
+    <div class="secTitle">Atletas que compiten</div>
+    <div id="dEntries"></div>
+    <div class="card form" id="addBox">
+      <label for="aAth" style="margin-top:0;">Apuntar a un atleta</label>
+      <select id="aAth"></select>
+      <div class="row2">
+        <div><label for="aDay">Día que compite</label><select id="aDay"></select></div>
+        <div><label for="aCat">Categoría</label><input type="text" id="aCat" placeholder="p. ej. Máster M50 · 94 kg"></div>
+      </div>
+      <button class="btn" id="aBtn" style="margin-top:14px;">+ Apuntar</button>
+      <div id="aMsg" class="msg"></div>
+    </div>
+  </div>
+</div>
+
+<script src="firebase-init.js?v=20261011213613"></script>
+<script src="branding.js?v=20261011213613"></script>
+<script src="competicion.js?v=0"></script>
+<script>
+  const W = WO2C;
+  let CLUB = null, ME = null, MYNAME = '', ATHLETES = [], COMPS = [], CUR = null, OPEN = null;
+  const $ = (id)=> document.getElementById(id);
+  function show(id){ ['loading','listView','formView','detailView'].forEach(v=> $(v).classList.toggle('hidden', v !== id)); window.scrollTo(0,0); }
+  const compsRef = ()=> db.collection('clubs').doc(CLUB).collection('competitions');
+  const athRef = (uid)=> db.collection('clubs').doc(CLUB).collection('athletes').doc(uid);
+
+  auth.onAuthStateChanged(async (user)=>{
+    if (!user){ window.location.href = 'entrenador.html'; return; }
+    ME = user;
+    const g = await db.collection('users').doc(user.uid).collection('roleGrants').doc('coach').get();
+    if (!g.exists){ window.location.href = 'entrenador.html'; return; }
+    CLUB = g.data().clubId;
+    try{ const u = await db.collection('users').doc(user.uid).get(); MYNAME = (u.exists && u.data().name) || user.email; }catch(e){ MYNAME = user.email; }
+    try{
+      const c = await db.collection('clubs').doc(CLUB).get();
+      $('brandStripContainer').appendChild(renderBrandStrip(c.exists ? c.data().logoUrl : null, c.exists ? c.data().name : null));
+    }catch(e){ $('brandStripContainer').appendChild(renderBrandStrip(null, null)); }
+    const as = await db.collection('clubs').doc(CLUB).collection('athletes').get();
+    ATHLETES = as.docs.map(d=>({ uid:d.id, ...d.data() })).filter(a=>!a.blocked)
+      .sort((x,y)=> String(x.name||'').localeCompare(String(y.name||''),'es'));
+    await loadList();
+    const want = new URLSearchParams(location.search).get('c');
+    if (want && COMPS.find(c=>c.id === want)) openDetail(want); else show('listView');
+  });
+
+  // ---------- Lista ----------
+  async function loadList(){
+    const s = await compsRef().get();
+    COMPS = s.docs.map(d=>({ id:d.id, ...d.data() }));
+    const t = W.today();
+    const next = COMPS.filter(c=> (c.endDate || c.startDate) >= t).sort((a,b)=> a.startDate < b.startDate ? -1 : 1);
+    const past = COMPS.filter(c=> (c.endDate || c.startDate) < t).sort((a,b)=> a.startDate > b.startDate ? -1 : 1);
+    drawGroup($('nextList'), 'Próximas', next, 'Todavía no hay competiciones próximas. Crea la primera con «+ Nueva competición».');
+    drawGroup($('pastList'), 'Pasadas', past, null);
+  }
+  function drawGroup(el, title, list, emptyText){
+    el.innerHTML = '';
+    if (!list.length && !emptyText) return;
+    el.appendChild(Object.assign(document.createElement('div'), { className:'secTitle', textContent:title }));
+    if (!list.length){ el.appendChild(Object.assign(document.createElement('div'), { className:'empty', textContent:emptyText })); return; }
+    const g = document.createElement('div'); g.className = 'grid';
+    list.forEach(c=>{
+      const b = document.createElement('button'); b.className = 'comp';
+      const uids = c.athleteUids || [];
+      const names = uids.map(u=> (ATHLETES.find(a=>a.uid===u) || {}).name).filter(Boolean);
+      const t = W.today();
+      b.style.setProperty('--band', (c.startDate <= t && (c.endDate||c.startDate) >= t) ? '#3f9a62' : ((c.endDate||c.startDate) < t ? '#3a352b' : '#c99a2e'));
+      b.innerHTML = '<span class="d">' + W.esc(W.range(c.startDate, c.endDate)) + '</span>' +
+        '<span class="n">' + W.esc(c.name || 'Competición') + '</span>' +
+        (c.place ? '<span class="p">' + W.esc(c.place) + '</span>' : '') +
+        '<span class="chips">' + (names.length ? names.map(n=>'<span class="chip">' + W.esc(n) + '</span>').join('') : '<span class="chip" style="color:var(--muted-2);">Sin atletas apuntados</span>') + '</span>';
+      b.onclick = ()=> openDetail(c.id);
+      g.appendChild(b);
+    });
+    el.appendChild(g);
+  }
+  $('newBtn').onclick = ()=> openForm(null);
+
+  // ---------- Formulario ----------
+  let EDITING = null;
+  function openForm(c){
+    EDITING = c;
+    $('formKicker').textContent = c ? 'Editar competición' : 'Nueva competición';
+    $('fName').value = c ? (c.name||'') : ''; $('fPlace').value = c ? (c.place||'') : '';
+    $('fStart').value = c ? (c.startDate||'') : ''; $('fEnd').value = c ? (c.endDate||'') : '';
+    $('fNotes').value = c ? (c.notes||'') : ''; $('fMsg').textContent = '';
+    show('formView');
+  }
+  $('fStart').onchange = ()=>{ if (!$('fEnd').value || $('fEnd').value < $('fStart').value) $('fEnd').value = $('fStart').value; };
+  $('fCancel').onclick = ()=>{ if (EDITING) openDetail(EDITING.id); else show('listView'); };
+  $('fSave').onclick = async ()=>{
+    const m = $('fMsg');
+    const data = { name: $('fName').value.trim(), place: $('fPlace').value.trim(), startDate: $('fStart').value, endDate: $('fEnd').value || $('fStart').value, notes: $('fNotes').value.trim(), updatedAt: Date.now() };
+    if (!data.name || !data.startDate){ m.textContent = 'Pon al menos el nombre y el primer día.'; m.className = 'msg err'; return; }
+    if (data.endDate < data.startDate){ m.textContent = 'El último día no puede ser anterior al primero.'; m.className = 'msg err'; return; }
+    try{
+      let id;
+      if (EDITING){
+        id = EDITING.id;
+        await compsRef().doc(id).update(data);
+        // Actualiza la copia que tiene cada atleta apuntado
+        for (const uid of (EDITING.athleteUids || [])){
+          const ref = athRef(uid).collection('competitions').doc(id);
+          const s = await ref.get();
+          const upd = { name:data.name, place:data.place, startDate:data.startDate, endDate:data.endDate, notes:data.notes };
+          if (s.exists){ const d = s.data().day; if (!d || d < data.startDate || d > data.endDate) upd.day = data.startDate; }
+          await ref.set(upd, { merge:true });
+        }
+      } else {
+        const r = compsRef().doc();
+        id = r.id;
+        await r.set(Object.assign({ athleteUids:[], createdAt: Date.now() }, data));
+      }
+      await loadList();
+      openDetail(id);
+    }catch(e){ m.textContent = 'No se ha podido guardar: ' + (e.message || e.code); m.className = 'msg err'; }
+  };
+
+  // ---------- Detalle ----------
+  function compDays(c){
+    const out = []; const a = W.date(c.startDate), b = W.date(c.endDate || c.startDate);
+    for (let d = new Date(a); d <= b; d.setDate(d.getDate()+1)) out.push(W.iso(d));
+    return out;
+  }
+  async function openDetail(id){
+    CUR = COMPS.find(c=>c.id === id); if (!CUR) return show('listView');
+    $('dDates').textContent = W.range(CUR.startDate, CUR.endDate);
+    $('dName').textContent = CUR.name || 'Competición';
+    $('dInfo').innerHTML = (CUR.place ? '<span>Lugar: <b>' + W.esc(CUR.place) + '</b></span>' : '') +
+      (CUR.notes ? '<div class="notes">' + W.esc(CUR.notes) + '</div>' : '');
+    const days = compDays(CUR);
+    $('aDay').innerHTML = days.map(d=>'<option value="' + d + '">' + W.esc(W.fmt(d, { weekday:'long', day:'numeric', month:'long' })) + '</option>').join('');
+    $('aDay').parentElement.classList.toggle('hidden', days.length < 2);
+    show('detailView');
+    await drawEntries();
+  }
+  $('dBack').onclick = async ()=>{ await loadList(); show('listView'); };
+  $('dEdit').onclick = ()=> openForm(CUR);
+  $('dDel').onclick = async ()=>{
+    if (!confirm('¿Borrar «' + (CUR.name||'') + '»?\n\nSe borrarán también los objetivos y resultados de los atletas apuntados. No se puede deshacer.')) return;
+    try{
+      for (const uid of (CUR.athleteUids || [])){ try{ await athRef(uid).collection('competitions').doc(CUR.id).delete(); }catch(e){} }
+      await compsRef().doc(CUR.id).delete();
+      await loadList(); show('listView');
+    }catch(e){ alert('No se ha podido borrar: ' + (e.message || e.code)); }
+  };
+
+  async function drawEntries(){
+    const box = $('dEntries'); box.innerHTML = '<div class="empty">Cargando…</div>';
+    const uids = CUR.athleteUids || [];
+    const entries = await Promise.all(uids.map(async uid=>{
+      const s = await athRef(uid).collection('competitions').doc(CUR.id).get();
+      return { uid, a: ATHLETES.find(x=>x.uid===uid) || { name:'(atleta)' }, e: s.exists ? s.data() : null };
+    }));
+    box.innerHTML = '';
+    if (!entries.length) box.innerHTML = '<div class="empty">Todavía no hay ningún atleta apuntado.</div>';
+    entries.sort((x,y)=> String(x.a.name||'').localeCompare(String(y.a.name||''),'es')).forEach(({uid, a, e})=>{
+      if (!e) return;
+      const wrap = document.createElement('div'); wrap.className = 'ent';
+      const ini = (a.name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+      const t = W.total(e.results);
+      const g = e.goals || {};
+      const head = document.createElement('div'); head.className = 'entHead';
+      head.innerHTML = '<div class="avatar">' + W.esc(ini) + '</div>' +
+        '<div class="entMain"><div class="entName">' + W.esc(a.name||'') + '</div>' +
+        '<div class="entSub">' + W.esc([W.fmt(e.day, { weekday:'long', day:'numeric', month:'short' }), e.category].filter(Boolean).join(' · ')) + '</div>' +
+        '<div class="entSub">Objetivo: ' + (g.sn ? g.sn : '—') + ' + ' + (g.cj ? g.cj : '—') + ' = ' + (g.total ? g.total + ' kg' : '—') + '</div></div>' +
+        '<div class="entTot">' + (t !== null ? '<b>' + t + ' kg</b><span>total</span>' : (W.hasResults(e.results) ? '<span>con resultados</span>' : '<span>sin resultados</span>')) + '</div>';
+      const body = document.createElement('div'); body.className = 'entBody' + (OPEN === uid ? '' : ' hidden');
+      head.onclick = ()=>{ OPEN = (OPEN === uid) ? null : uid; drawEntries(); };
+      wrap.appendChild(head); wrap.appendChild(body);
+      box.appendChild(wrap);
+      if (OPEN !== uid) return;
+      // Día, categoría y quitar
+      const tools = document.createElement('div'); tools.className = 'entTools';
+      const days = compDays(CUR);
+      tools.innerHTML = '<div' + (days.length < 2 ? ' class="hidden"' : '') + '><label>Día que compite</label><select class="eDay">' + days.map(d=>'<option value="' + d + '"' + (d===e.day?' selected':'') + '>' + W.esc(W.fmt(d, { weekday:'long', day:'numeric', month:'long' })) + '</option>').join('') + '</select></div>' +
+        '<div><label>Categoría</label><input type="text" class="eCat" value="' + W.esc(e.category||'') + '" placeholder="p. ej. Máster M50 · 94 kg"></div>';
+      body.appendChild(tools);
+      const ed = document.createElement('div'); body.appendChild(ed);
+      const rm = document.createElement('button'); rm.className = 'btn danger'; rm.textContent = 'Quitar de esta competición'; rm.style.marginTop = '14px';
+      rm.onclick = async ()=>{
+        if (!confirm('¿Quitar a ' + (a.name||'') + ' de esta competición? Se borran sus objetivos y resultados.')) return;
+        await athRef(uid).collection('competitions').doc(CUR.id).delete();
+        CUR.athleteUids = (CUR.athleteUids||[]).filter(x=>x!==uid);
+        await compsRef().doc(CUR.id).update({ athleteUids: CUR.athleteUids });
+        OPEN = null; drawEntries();
+      };
+      body.appendChild(rm);
+      W.renderEditor(ed, e, {
+        coach: true,
+        onSave: async (ne)=>{
+          ne.day = tools.querySelector('.eDay').value || ne.day;
+          ne.category = tools.querySelector('.eCat').value.trim();
+          ne.updatedBy = { name: MYNAME, role:'coach', uid: ME.uid }; ne.updatedAt = Date.now();
+          await athRef(uid).collection('competitions').doc(CUR.id).set({ day:ne.day, category:ne.category, goals:ne.goals, plan:ne.plan, results:ne.results, updatedBy:ne.updatedBy, updatedAt:ne.updatedAt }, { merge:true });
+          setTimeout(()=> drawEntries(), 1200);
+        },
+        rmOf: async (code)=>{
+          const p = await athRef(uid).collection('progress').doc('profile').get();
+          return W.rmFromProfile(p.exists ? p.data().rms : null, code);
+        },
+        onNewRm: async (code, kg, dayIso)=>{
+          const ref = athRef(uid).collection('progress').doc('profile');
+          const p = await ref.get();
+          const rms = (p.exists && p.data().rms) || {};
+          rms[code] = (rms[code] || []).concat([{ value: kg, date: W.date(dayIso).getTime() }]).sort((x,y)=>x.date-y.date);
+          await ref.set({ rms, updatedAt: Date.now() }, { merge:true });
+        }
+      });
+    });
+    // Atletas que se pueden apuntar
+    const free = ATHLETES.filter(a=> !(CUR.athleteUids||[]).includes(a.uid));
+    $('addBox').classList.toggle('hidden', !free.length);
+    $('aAth').innerHTML = free.map(a=>'<option value="' + a.uid + '">' + W.esc(a.name || a.email) + '</option>').join('');
+  }
+
+  $('aBtn').onclick = async ()=>{
+    const uid = $('aAth').value; if (!uid) return;
+    const m = $('aMsg'); m.textContent = '';
+    const day = $('aDay').value || CUR.startDate;
+    try{
+      await athRef(uid).collection('competitions').doc(CUR.id).set({
+        compId: CUR.id, name: CUR.name, place: CUR.place || '', startDate: CUR.startDate, endDate: CUR.endDate || CUR.startDate, notes: CUR.notes || '',
+        day, category: $('aCat').value.trim(), goals:{}, plan:{ sn:[null,null,null], cj:[null,null,null] }, results: W.emptyResults(), createdAt: Date.now()
+      });
+      CUR.athleteUids = (CUR.athleteUids || []).concat([uid]);
+      await compsRef().doc(CUR.id).update({ athleteUids: CUR.athleteUids });
+      $('aCat').value = '';
+      OPEN = uid;
+      drawEntries();
+    }catch(e){ m.textContent = 'No se ha podido apuntar: ' + (e.message || e.code); m.className = 'msg err'; }
+  };
+</script>
+</body>
+</html>
