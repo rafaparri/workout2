@@ -435,6 +435,25 @@ function wo2ShowBootError(msg){
   });
 })();
 '''
+
+# ===== Aspecto "Pista en oro" (negro y oro, letra Archivo) =====
+# Hoja de estilos propia, cargada después de la de la app original.
+patch('</head>', '<link rel="stylesheet" href="theme-entreno.css?v=1">\n<meta name="theme-color" content="#0c0c0e">\n</head>')
+# Letra: Oswald/Inter de la original pasan a ArchivoBlack/Archivo (nombres sin espacios: van dentro de textos JS).
+html = html.replace("'Oswald'", "ArchivoBlack").replace('Oswald,', 'ArchivoBlack,').replace("'Inter'", "Archivo").replace('Inter,', 'Archivo,')
+# Botones pequeños (Notas, Informe, Añadir vídeo…): más grandes para el dedo.
+html = html.replace("font-weight:600;font-size:11.5px;padding:6px 11px;border-radius:8px", "font-weight:700;font-size:15px;padding:10px 14px;border-radius:12px;min-height:44px")
+html = html.replace("font-size:11px;padding:6px 10px;border-radius:8px", "font-size:15px;padding:10px 14px;border-radius:12px;min-height:44px")
+# Pesos ya marcados: se pintan enteros en oro.
+patch("    if (rinfo){ chip.style.cssText = 'border-left:5px solid '+rinfo.color+';'; }",
+      "    if (rinfo){ chip.style.cssText = 'border-left:5px solid '+rinfo.color+';'; chip.classList.add('done'); }")
+# Días completos: punto verde en el botón del día.
+patch("      plate.textContent = d;\n",
+      "      plate.textContent = d;\n      { const ds = dayStats(plan, d); if (ds.totalSets>0 && ds.checkedSets>=ds.totalSets) plate.classList.add('plate-done'); }\n")
+# Cambios del atleta: fondos oscuros.
+patch("  edited: { bg:'#fde9da', border:'#e07b39',", "  edited: { bg:'#2d1c0f', border:'#e07b39',")
+patch("  added:  { bg:'#dff3e5', border:'#2e9a52',", "  added:  { bg:'#13261a', border:'#3f9a62',")
+
 patch('\ninitApp();\n</script>', '\n' + ADAPTER + '\n</script>')
 
 open(out_path, 'w', encoding='utf-8').write(html)

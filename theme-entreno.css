@@ -1,0 +1,69 @@
+/* WorkOut 2.0 — tema "Pista en oro" para la app del atleta (entreno.html).
+   Se carga después de los estilos de la app original y solo cambia su aspecto. */
+@font-face{ font-family:'Archivo'; font-weight:400; font-display:swap; src:url(static/fonts/archivo-latin-400-normal.woff2) format('woff2'); }
+@font-face{ font-family:'Archivo'; font-weight:500; font-display:swap; src:url(static/fonts/archivo-latin-500-normal.woff2) format('woff2'); }
+@font-face{ font-family:'Archivo'; font-weight:600; font-display:swap; src:url(static/fonts/archivo-latin-600-normal.woff2) format('woff2'); }
+@font-face{ font-family:'Archivo'; font-weight:700; font-display:swap; src:url(static/fonts/archivo-latin-700-normal.woff2) format('woff2'); }
+@font-face{ font-family:'Archivo'; font-weight:800; font-display:swap; src:url(static/fonts/archivo-latin-800-normal.woff2) format('woff2'); }
+@font-face{ font-family:ArchivoBlack; font-weight:100 900; font-display:swap; src:url(static/fonts/archivo-black-latin-400-normal.woff2) format('woff2'); }
+
+html:root{
+  --bg:#0c0c0e; --surface:#17161a; --surface-2:#1d1b20; --surface-3:#3a352b;
+  --chalk:#f4f1ea; --muted:#bdb6a6; --muted-2:#8f887a;
+  --red:#d9604c; --blue:#5a8fb0; --yellow:#c99a2e; --yellow-deep:#e0b453;
+  --ok:#6fb3ea; --purple:#9a88cf; --rest:#6f695e; --border:#2e2a22;
+  --gold:#c99a2e; --ink:#0c0c0e;
+  color-scheme:dark;
+}
+html body{ background:var(--bg); color:var(--chalk); font-synthesis:none; }
+
+/* Cabecera */
+.topbar{ background:#17161a !important; border-bottom:1px solid #2e2a22 !important; border-radius:0 0 26px 26px; backdrop-filter:none !important; padding:20px 18px 18px !important; }
+.athlete-name{ font-family:ArchivoBlack,sans-serif !important; font-weight:400 !important; text-transform:none !important; font-size:24px !important; }
+.meta-line{ font-family:'Archivo',sans-serif !important; font-size:15px !important; color:var(--muted-2) !important; }
+.week-chip{ background:var(--gold) !important; color:var(--ink) !important; font-family:'Archivo',sans-serif !important; font-weight:800 !important; font-size:15px !important; padding:8px 14px !important; letter-spacing:.06em; }
+.tb-btn{ background:#26231c !important; border:none !important; color:var(--chalk) !important; font-family:'Archivo',sans-serif !important; font-weight:700 !important; font-size:15px !important; min-height:44px; padding:0 16px !important; border-radius:12px !important; text-transform:none !important; letter-spacing:0 !important; }
+
+/* Días */
+.plate-row{ gap:8px !important; padding:18px 16px 6px !important; }
+.plate-wrap{ flex:1 1 0; min-width:48px; }
+.plate{ width:100% !important; max-width:64px; height:60px !important; border-radius:14px !important; background:#26231c !important; color:var(--chalk) !important; box-shadow:none !important; font-family:ArchivoBlack,sans-serif !important; font-weight:400 !important; font-size:22px !important; }
+.plate-wrap.active .plate{ background:var(--gold) !important; color:var(--ink) !important; outline:none !important; }
+.plate.plate-done::after{ content:""; position:absolute; top:6px; right:6px; width:9px; height:9px; border-radius:50%; background:#7fd19a; }
+.plate-wrap.active .plate.plate-done::after{ background:var(--ink); }
+.plate-empty{ background:transparent !important; border:2px dashed #3a352b !important; color:var(--muted-2) !important; }
+.plate-label{ font-family:'Archivo',sans-serif !important; font-size:14px !important; font-weight:700; color:var(--muted-2) !important; }
+.plate-wrap.active .plate-label{ color:var(--chalk) !important; }
+
+/* Día y ejercicios */
+.day-heading h2{ font-family:ArchivoBlack,sans-serif !important; font-weight:400 !important; font-size:30px !important; text-transform:none !important; }
+.day-count{ font-family:'Archivo',sans-serif !important; font-size:15px !important; }
+.ex-card{ background:var(--surface) !important; border:1px solid #2e2a22 !important; border-radius:20px !important; padding:18px !important; margin-bottom:14px !important; }
+.ex-code{ background:#26231c !important; border:none !important; color:var(--gold-2, #e0b453) !important; font-family:ArchivoBlack,sans-serif !important; font-weight:400 !important; font-size:14px !important; width:38px !important; height:38px !important; }
+.ex-name{ font-family:ArchivoBlack,sans-serif !important; font-weight:400 !important; font-size:21px !important; text-transform:none !important; line-height:1.2 !important; }
+.ex-sub{ font-size:14px !important; color:var(--muted-2) !important; text-transform:none !important; letter-spacing:0 !important; }
+
+/* Pesos: botones grandes a lo ancho */
+.set-chips{ flex-direction:column; gap:10px !important; margin:16px 0 10px !important; }
+.set-chips .chip{ display:flex; align-items:center; gap:12px; min-height:60px; padding:0 16px !important; border-radius:14px !important; background:transparent !important; border:2px solid #3a352b !important; font-family:'Archivo',sans-serif !important; font-size:20px !important; font-weight:800; color:var(--chalk) !important; white-space:normal !important; }
+.set-chips .chip b{ font-family:ArchivoBlack,sans-serif; font-weight:400 !important; font-size:24px; color:var(--chalk) !important; margin-right:auto; }
+.set-chips .chip.done{ background:var(--gold) !important; border-color:var(--gold) !important; color:var(--ink) !important; }
+.set-chips .chip.done b{ color:var(--ink) !important; }
+.ex-hint{ margin-left:0 !important; font-size:13.5px !important; color:var(--muted-2) !important; text-transform:none !important; letter-spacing:0 !important; }
+.ex-actions{ margin-left:0 !important; }
+
+.note-card{ background:var(--surface) !important; border-color:#2e2a22 !important; font-family:'Archivo',sans-serif !important; font-size:16px !important; }
+
+/* Ventanas y tarjetas de series */
+.fc-wrap{ background:var(--surface) !important; border-color:#2e2a22 !important; }
+.fc-name{ font-family:ArchivoBlack,sans-serif !important; font-weight:400 !important; text-transform:none !important; }
+input, textarea, select{ background:#121114 !important; color:var(--chalk) !important; border-color:#3a352b !important; }
+
+/* Letra general */
+h1.brand{ font-family:ArchivoBlack,sans-serif !important; font-weight:400 !important; }
+
+/* Cabecera en móvil: logo y "Semana" apilados para que no se salga */
+.topbar-row{ gap:10px !important; }
+.topbar-row > div:last-child{ flex-direction:column !important; align-items:flex-end !important; gap:8px !important; }
+.topbar-row > div:last-child img{ width:54px !important; }
+.app{ overflow-x:clip; }

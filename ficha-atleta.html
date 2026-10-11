@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261007153046';</script>
-<script src="update.js?v=20261007153046"></script>
+<script>window.WO2_VERSION='20261011155324';</script>
+<script src="update.js?v=20261011155324"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -16,7 +16,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Oswald:wght@600;700&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#f4f1ea; --surface:#ffffff; --surface-2:#eceae2; --surface-3:#d9d6cb;
@@ -24,19 +24,19 @@
     --yellow-deep:#c99a2e; --ok:#2f7dc4; --red:#c14a3a; --warn:#c99a2e;
   }
   *{box-sizing:border-box;}
-  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--chalk); font-family:'Inter',system-ui,sans-serif; }
+  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--chalk); font-family:'Archivo',system-ui,sans-serif; }
   .wrap{ max-width:480px; margin:0 auto; padding:24px 18px 60px; }
   .back{
-    font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; color:var(--chalk);
+    font-family:ArchivoBlack,sans-serif; font-weight:700; font-size:15px; color:var(--chalk);
     text-decoration:none; display:flex; align-items:center; gap:8px;
     background:var(--surface); border:1px solid var(--surface-3); border-radius:10px;
     padding:12px 16px; margin-bottom:18px;
   }
-  h1{ font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; text-transform:uppercase; margin:0 0 4px; }
+  h1{ font-family:ArchivoBlack,sans-serif; font-weight:700; font-size:22px; text-transform:uppercase; margin:0 0 4px; }
   .sub{ color:var(--muted); font-size:14px; margin:0 0 20px; }
   .card{ background:var(--surface); border:1px solid var(--surface-3); border-radius:14px; padding:20px; margin-bottom:16px; }
-  label{ display:block; font-family:'Oswald',sans-serif; font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.02em; margin-bottom:6px; color:var(--muted); }
-  button{ width:100%; background:var(--chalk); color:#fff; border:none; border-radius:10px; font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; padding:14px; cursor:pointer; margin-top:6px; }
+  label{ display:block; font-family:ArchivoBlack,sans-serif; font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.02em; margin-bottom:6px; color:var(--muted); }
+  button{ width:100%; background:var(--chalk); color:#fff; border:none; border-radius:10px; font-family:ArchivoBlack,sans-serif; font-weight:700; font-size:15px; padding:14px; cursor:pointer; margin-top:6px; }
   button.secondary{ background:var(--surface-2); color:var(--chalk); border:1px solid var(--surface-3); }
   button.danger{ background:var(--red); }
   button.ok{ background:var(--ok); }
@@ -56,7 +56,7 @@
   .pdot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
   .stDetail{ font-size:14px; color:var(--muted); margin:-6px 0 14px; line-height:1.5; }
   .impHelp{ font-size:14.5px; line-height:1.5; color:var(--muted); margin:0 0 12px; }
-  #impUser{ width:100%; font-size:16px; padding:12px; border-radius:10px; border:1px solid var(--surface-3); background:#fff; margin-bottom:12px; font-family:Inter,sans-serif; }
+  #impUser{ width:100%; font-size:16px; padding:12px; border-radius:10px; border:1px solid var(--surface-3); background:#fff; margin-bottom:12px; font-family:Archivo,sans-serif; }
   .impSummary{ background:var(--surface-2); border-radius:10px; padding:12px 14px; font-size:15px; line-height:1.6; margin-bottom:6px; }
   .pRight{ display:flex; align-items:center; gap:10px; }
   .delWeek{ width:auto; margin:0; padding:8px 10px; background:#fbeae7; border:1px solid #f0c9c2; border-radius:8px; font-size:17px; line-height:1; }
@@ -64,6 +64,7 @@
   .editName{ width:auto; margin:0; padding:8px 14px; font-size:14px; background:var(--surface-2); color:var(--chalk); border:1px solid var(--surface-3); }
   .dangerZone{ border-color:#f0c9c2; }
 </style>
+<link rel="stylesheet" href="theme.css?v=2">
 </head>
 <body>
 <div class="wrap">
@@ -126,8 +127,8 @@
   </div>
 </div>
 
-<script src="firebase-init.js?v=20261007153046"></script>
-<script src="status.js?v=20261007153046"></script>
+<script src="firebase-init.js?v=20261011155324"></script>
+<script src="status.js?v=20261011155324"></script>
 <script>
 const DICT = {
   1:"Arrancada", 2:"Arr. encima de la rodilla", 3:"Arr. debajo de la rodilla",

@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261007153046';</script>
-<script src="update.js?v=20261007153046"></script>
+<script>window.WO2_VERSION='20261011155324';</script>
+<script src="update.js?v=20261011155324"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -17,8 +17,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261007153046"></script>
-<script src="branding.js?v=20261007153046"></script>
+<script src="firebase-init.js?v=20261011155324"></script>
+<script src="branding.js?v=20261011155324"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
@@ -45,7 +45,7 @@ html,body{margin:0;padding:0;}
 body{
   background:var(--bg);
   color:var(--chalk);
-  font-family:'Inter',sans-serif;
+  font-family:Archivo,sans-serif;
   min-height:100vh;
   -webkit-font-smoothing:antialiased;
 }
@@ -79,7 +79,7 @@ body{
   transform:rotate(45deg);
 }
 h1.brand{
-  font-family:'Oswald',sans-serif;
+  font-family:ArchivoBlack,sans-serif;
   font-weight:700;
   font-size:28px;
   letter-spacing:0.02em;
@@ -108,7 +108,7 @@ p.tagline{
   background:var(--surface-2);
 }
 .dropzone .dz-title{
-  font-family:'Oswald',sans-serif;
+  font-family:ArchivoBlack,sans-serif;
   font-weight:600;
   font-size:16px;
   text-transform:uppercase;
@@ -131,7 +131,7 @@ input[type=file]{display:none;}
 }
 .history-pick button{
   background:none;border:none;color:var(--yellow-deep);
-  font-size:13px;font-family:'Inter',sans-serif;font-weight:600;
+  font-size:13px;font-family:Archivo,sans-serif;font-weight:600;
   cursor:pointer;text-decoration:underline;padding:0;
 }
 
@@ -146,7 +146,7 @@ input[type=file]{display:none;}
 }
 .topbar-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
 .athlete-name{
-  font-family:'Oswald',sans-serif;
+  font-family:ArchivoBlack,sans-serif;
   font-weight:700;
   font-size:22px;
   text-transform:uppercase;
@@ -162,7 +162,7 @@ input[type=file]{display:none;}
 .week-chip{
   background:var(--yellow);
   color:#26330f;
-  font-family:'Oswald',sans-serif;
+  font-family:ArchivoBlack,sans-serif;
   font-weight:700;
   font-size:12.5px;
   padding:5px 10px;
@@ -175,7 +175,7 @@ input[type=file]{display:none;}
 }
 .tb-btn{
   background:none;border:1px solid var(--surface-3);color:var(--muted);
-  font-size:11.5px;font-family:'Inter',sans-serif;font-weight:600;
+  font-size:11.5px;font-family:Archivo,sans-serif;font-weight:600;
   padding:6px 11px;border-radius:8px;cursor:pointer;
   text-transform:uppercase;letter-spacing:.03em;
 }
@@ -199,7 +199,7 @@ input[type=file]{display:none;}
 .plate{
   border-radius:16px;
   display:flex;align-items:center;justify-content:center;
-  font-family:'Oswald',sans-serif;
+  font-family:ArchivoBlack,sans-serif;
   font-weight:700;
   position:relative;
   transition:transform .1s ease;
@@ -229,7 +229,7 @@ input[type=file]{display:none;}
   margin:20px 0 14px;
 }
 .day-heading h2{
-  font-family:'Oswald',sans-serif;
+  font-family:ArchivoBlack,sans-serif;
   font-weight:600;
   font-size:19px;
   text-transform:uppercase;
@@ -248,7 +248,7 @@ input[type=file]{display:none;}
   border-radius:12px;
   padding:18px 16px;
   margin-bottom:12px;
-  font-family:'Oswald',sans-serif;
+  font-family:ArchivoBlack,sans-serif;
   text-transform:uppercase;
   letter-spacing:.03em;
   font-size:14px;
@@ -291,7 +291,7 @@ input[type=file]{display:none;}
 }
 .ex-info{flex:1;min-width:0;}
 .ex-name{
-  font-family:'Oswald',sans-serif;
+  font-family:ArchivoBlack,sans-serif;
   font-weight:600;
   font-size:15.5px;
   text-transform:uppercase;
@@ -338,7 +338,7 @@ input[type=file]{display:none;}
   background:var(--surface-2);
   color:var(--muted);
   padding:9px 0;
-  font-family:'Oswald',sans-serif;
+  font-family:ArchivoBlack,sans-serif;
   font-weight:600;
   font-size:13px;
   cursor:pointer;
@@ -365,7 +365,7 @@ input[type=file]{display:none;}
   border-bottom:1px solid var(--border);
 }
 .fc-name{
-  font-family:'Oswald',sans-serif;font-weight:700;font-size:20px;
+  font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:20px;
   text-transform:uppercase;letter-spacing:.01em;
 }
 .fc-progress{
@@ -427,11 +427,11 @@ input[type=file]{display:none;}
 .fc-memo-textarea{
   width:100%; margin-top:14px;
   background:var(--surface-2); border:1.5px solid var(--surface-3); border-radius:12px;
-  color:var(--chalk); font-family:'Inter',sans-serif; font-size:16px; line-height:1.45;
+  color:var(--chalk); font-family:Archivo,sans-serif; font-size:16px; line-height:1.45;
   padding:14px; resize:vertical;
 }
 .fc-kg{
-  font-family:'Oswald',sans-serif;font-weight:700;font-size:clamp(64px,17vw,88px);color:var(--yellow-deep);
+  font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:clamp(64px,17vw,88px);color:var(--yellow-deep);
   line-height:1;
 }
 .fc-setrep{
@@ -450,7 +450,7 @@ input[type=file]{display:none;}
 
 .fc-final{ text-align:center; }
 .fc-final-title{
-  font-family:'Oswald',sans-serif;font-weight:700;font-size:34px;text-transform:uppercase;
+  font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:34px;text-transform:uppercase;
 }
 .fc-final-sub{ color:var(--muted); font-size:24px; margin-top:10px; font-weight:600; line-height:1.35; }
 .fc-final-actions{ display:flex; gap:12px; width:100%; margin-top:24px; }
@@ -486,7 +486,7 @@ input[type=file]{display:none;}
 }
 .debug-toggle button{
   background:none;border:none;color:var(--muted-2);
-  font-size:11.5px;text-decoration:underline;cursor:pointer;font-family:'Inter',sans-serif;
+  font-size:11.5px;text-decoration:underline;cursor:pointer;font-family:Archivo,sans-serif;
 }
 .debug-panel{
   margin:12px 20px 0;
@@ -516,7 +516,7 @@ input[type=file]{display:none;}
   max-height:70vh;overflow:auto;
 }
 .sheet h3{
-  font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:16px;margin:0 0 14px;
+  font-family:ArchivoBlack,sans-serif;text-transform:uppercase;font-size:16px;margin:0 0 14px;
 }
 .hist-item{
   display:flex;justify-content:space-between;align-items:center;
@@ -524,15 +524,17 @@ input[type=file]{display:none;}
   cursor:pointer;
 }
 .hist-item:last-child{border-bottom:none;}
-.hist-item .hi-title{font-family:'Oswald',sans-serif;font-size:14px;text-transform:uppercase;}
+.hist-item .hi-title{font-family:ArchivoBlack,sans-serif;font-size:14px;text-transform:uppercase;}
 .hist-item .hi-sub{font-size:11px;color:var(--muted-2);font-family:'IBM Plex Mono',monospace;}
 .sheet-close{
   display:block;margin:16px auto 0;
   background:none;border:1px solid var(--surface-3);color:var(--muted);
-  padding:9px 20px;border-radius:9px;font-family:'Inter',sans-serif;font-weight:600;font-size:12.5px;
+  padding:9px 20px;border-radius:9px;font-family:Archivo,sans-serif;font-weight:600;font-size:12.5px;
   cursor:pointer;
 }
 </style>
+<link rel="stylesheet" href="theme-entreno.css?v=2">
+<meta name="theme-color" content="#0c0c0e">
 </head>
 <body>
 <div id="brandStripContainer"></div>
@@ -1311,7 +1313,7 @@ function feelingSelector(selectedKey, onChange){
   FEELING_OPTIONS.forEach(opt=>{
     const btn = el('button', null, opt.label);
     const selected = selectedKey === opt.key;
-    btn.style.cssText = 'flex:1;min-width:70px;padding:9px 4px;border-radius:8px;font-family:Inter,sans-serif;font-size:12px;font-weight:600;cursor:pointer;' +
+    btn.style.cssText = 'flex:1;min-width:70px;padding:9px 4px;border-radius:8px;font-family:Archivo,sans-serif;font-size:12px;font-weight:600;cursor:pointer;' +
       (selected ? 'background:var(--yellow-deep);border:1.5px solid var(--yellow-deep);color:#2a1e04;' : 'background:var(--surface-2);border:1.5px solid var(--surface-3);color:var(--muted);');
     btn.onclick = ()=> onChange(selected ? null : opt.key);
     row.appendChild(btn);
@@ -1391,8 +1393,8 @@ function ratingInfo(value){ return SET_RATING_LEVELS.find(l=>l.value===value) ||
 // por dolor, lesión o cansancio, o al revés) en naranja, y añadidos (por
 // verse muy bien) en verde. Así se distinguen de un vistazo.
 const SET_CHANGE_STYLES = {
-  edited: { bg:'#fde9da', border:'#e07b39', label:'✏️ Cambiado respecto a lo programado' },
-  added:  { bg:'#dff3e5', border:'#2e9a52', label:'➕ Añadido a lo programado' }
+  edited: { bg:'#2d1c0f', border:'#e07b39', label:'✏️ Cambiado respecto a lo programado' },
+  added:  { bg:'#13261a', border:'#3f9a62', label:'➕ Añadido a lo programado' }
 };
 function setChangeStyle(s){
   if (!s) return null;
@@ -1741,7 +1743,7 @@ async function detectStorageBackend(){
 
 function renderBootLoading(){
   const wrap = el('div');
-  wrap.style.cssText = 'min-height:100vh;display:flex;align-items:center;justify-content:center;color:var(--muted);font-family:Inter,sans-serif;font-size:14px;background:var(--bg);';
+  wrap.style.cssText = 'min-height:100vh;display:flex;align-items:center;justify-content:center;color:var(--muted);font-family:Archivo,sans-serif;font-size:14px;background:var(--bg);';
   wrap.textContent = 'Cargando tus datos…';
   return wrap;
 }
@@ -2014,7 +2016,7 @@ function renderReviewEntry(plan, day, entry, idx){
     labelInput.type = 'text';
     labelInput.value = entry.label || '';
     labelInput.placeholder = 'Descanso, competición, nota…';
-    labelInput.style.cssText = 'flex:1;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:8px;color:var(--chalk);font-family:Inter,sans-serif;font-size:13.5px;padding:9px 10px;';
+    labelInput.style.cssText = 'flex:1;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:8px;color:var(--chalk);font-family:Archivo,sans-serif;font-size:13.5px;padding:9px 10px;';
     labelInput.addEventListener('change', ()=>{
       entry.label = labelInput.value.trim();
       entry.type = REST_WORDS.includes(entry.label.toUpperCase()) ? 'rest' : 'note';
@@ -2147,16 +2149,16 @@ function renderUpload(){
   wrap.appendChild(el('h1','brand','Programación semanal'));
   const activeUser = getActiveUser();
   const userNameBig = el('div', null, activeUser.name);
-  userNameBig.style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:24px;color:var(--yellow-deep);text-transform:uppercase;letter-spacing:.02em;margin-top:-6px;margin-bottom:16px;';
+  userNameBig.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:24px;color:var(--yellow-deep);text-transform:uppercase;letter-spacing:.02em;margin-top:-6px;margin-bottom:16px;';
   wrap.appendChild(userNameBig);
   wrap.appendChild(el('p','tagline','Sube el Excel, el PDF o una foto que te manda tu entrenador y lo convierto en tu plan del día, con los ejercicios traducidos y listos para marcar.'));
   const userBadge = el('div');
   userBadge.style.cssText = 'display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--surface-3);border-radius:20px;padding:6px 14px 6px 6px;margin-bottom:22px;cursor:pointer;';
   const avatar = el('div', null, (activeUser.name||'?').trim().charAt(0).toUpperCase());
-  avatar.style.cssText = 'width:26px;height:26px;border-radius:50%;background:var(--surface-3);color:var(--chalk);display:flex;align-items:center;justify-content:center;font-family:Oswald,sans-serif;font-weight:700;font-size:12px;flex-shrink:0;';
+  avatar.style.cssText = 'width:26px;height:26px;border-radius:50%;background:var(--surface-3);color:var(--chalk);display:flex;align-items:center;justify-content:center;font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:12px;flex-shrink:0;';
   userBadge.appendChild(avatar);
   const nameSpan = el('span', null, activeUser.name);
-  nameSpan.style.cssText = 'font-family:Oswald,sans-serif;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.02em;';
+  nameSpan.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.02em;';
   userBadge.appendChild(nameSpan);
   const changeSpan = el('span', null, users.length > 1 ? '· cambiar' : '· nuevo deportista');
   changeSpan.style.cssText = 'color:var(--muted-2);font-size:11.5px;';
@@ -2165,7 +2167,7 @@ function renderUpload(){
   wrap.appendChild(userBadge);
 
   const syncBadge = el('div', null, syncStatus==='on' ? '🔄 Sincronización activa' : '📴 Sincronizar entre dispositivos');
-  syncBadge.style.cssText = 'font-size:11.5px;color:' + (syncStatus==='on' ? 'var(--ok)' : 'var(--muted-2)') + ';text-decoration:underline;cursor:pointer;margin-bottom:18px;font-family:Inter,sans-serif;';
+  syncBadge.style.cssText = 'font-size:11.5px;color:' + (syncStatus==='on' ? 'var(--ok)' : 'var(--muted-2)') + ';text-decoration:underline;cursor:pointer;margin-bottom:18px;font-family:Archivo,sans-serif;';
   syncBadge.onclick = ()=>{ state.showSync = true; render(); };
   wrap.appendChild(syncBadge);
 
@@ -2173,7 +2175,7 @@ function renderUpload(){
   restoreRow.style.cssText = 'margin-bottom:22px;text-align:center;';
   const restoreLabel = document.createElement('label');
   restoreLabel.textContent = '⬆️ Restaurar mi última copia de seguridad';
-  restoreLabel.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border:1.5px dashed var(--surface-3);color:var(--chalk);font-family:Inter,sans-serif;font-weight:600;font-size:13px;padding:10px 16px;border-radius:10px;cursor:pointer;';
+  restoreLabel.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border:1.5px dashed var(--surface-3);color:var(--chalk);font-family:Archivo,sans-serif;font-weight:600;font-size:13px;padding:10px 16px;border-radius:10px;cursor:pointer;';
   const restoreInput = document.createElement('input');
   restoreInput.type = 'file'; restoreInput.accept = 'application/json,.json'; restoreInput.style.display = 'none';
   restoreInput.addEventListener('change', (e)=>{
@@ -2196,7 +2198,7 @@ function renderUpload(){
       reminder.appendChild(txt);
       const link = document.createElement('button');
       link.textContent = 'haz una copia ahora';
-      link.style.cssText = 'background:none;border:none;color:var(--yellow-deep);font-weight:600;text-decoration:underline;cursor:pointer;padding:0;font-size:12.5px;font-family:Inter,sans-serif;';
+      link.style.cssText = 'background:none;border:none;color:var(--yellow-deep);font-weight:600;text-decoration:underline;cursor:pointer;padding:0;font-size:12.5px;font-family:Archivo,sans-serif;';
       link.onclick = ()=>{ state.showUsers = true; render(); };
       reminder.appendChild(link);
       wrap.appendChild(reminder);
@@ -2225,7 +2227,7 @@ function renderUpload(){
   wrap.appendChild(orLine);
 
   const manualBtn = el('button', null, 'Introducir a mano');
-  manualBtn.style.cssText = 'background:none;border:1px solid var(--surface-3);color:var(--chalk);font-family:Oswald,sans-serif;font-weight:600;font-size:13.5px;text-transform:uppercase;letter-spacing:.03em;padding:12px 22px;border-radius:10px;cursor:pointer;';
+  manualBtn.style.cssText = 'background:none;border:1px solid var(--surface-3);color:var(--chalk);font-family:ArchivoBlack,sans-serif;font-weight:600;font-size:13.5px;text-transform:uppercase;letter-spacing:.03em;padding:12px 22px;border-radius:10px;cursor:pointer;';
   manualBtn.onclick = ()=>{
     const id = 'manual_' + Date.now();
     const days = {};
@@ -2241,7 +2243,7 @@ function renderUpload(){
   wrap.appendChild(manualBtn);
 
   const profileLink = el('button', null, '🎯 Objetivos y RM de ' + activeUser.name);
-  profileLink.style.cssText = 'background:none;border:none;color:var(--yellow-deep);font-family:Inter,sans-serif;font-weight:600;font-size:13px;cursor:pointer;text-decoration:underline;margin-top:18px;';
+  profileLink.style.cssText = 'background:none;border:none;color:var(--yellow-deep);font-family:Archivo,sans-serif;font-weight:600;font-size:13px;cursor:pointer;text-decoration:underline;margin-top:18px;';
   profileLink.onclick = ()=>{ state.showProfile = true; render(); };
   wrap.appendChild(profileLink);
 
@@ -2345,7 +2347,7 @@ function renderApp(plan){
   const left = el('div');
   left.appendChild(el('div','athlete-name', plan.customName || 'Programación semanal'));
   const userNameLine = el('div', null, getActiveUser().name);
-  userNameLine.style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:20px;color:var(--yellow-deep);text-transform:uppercase;letter-spacing:.02em;margin-top:2px;';
+  userNameLine.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:20px;color:var(--yellow-deep);text-transform:uppercase;letter-spacing:.02em;margin-top:2px;';
   left.appendChild(userNameLine);
   const metaBits = [];
   if (plan.meta.jornada) metaBits.push(plan.meta.jornada);
@@ -2401,6 +2403,7 @@ function renderApp(plan){
       plate.style.background = isRestOnly ? 'var(--rest)' : (palette[d] || 'var(--blue)');
       plate.style.color = (d==='J') ? '#26210a' : '#f4f1ea';
       plate.textContent = d;
+      { const ds = dayStats(plan, d); if (ds.totalSets>0 && ds.checkedSets>=ds.totalSets) plate.classList.add('plate-done'); }
 
       const { totalSets, checkedSets } = dayStats(plan, d);
       plate.style.boxShadow = (totalSets>0 && checkedSets>0)
@@ -2431,16 +2434,16 @@ function renderApp(plan){
   const exEntriesForNote = entries.filter(e=>e.type==='exercise');
   const hasNote = !!state.notes[nKeyHead] || exEntriesForNote.some((e,exIdx)=>!!state.notes[noteKey(plan, state.activeDay, exIdx)]);
   const noteBtn = el('button', null, hasNote ? '📝 Notas' : '📝 Añadir nota');
-  noteBtn.style.cssText = 'background:none;border:1px solid var(--surface-3);color:' + (hasNote?'var(--yellow-deep)':'var(--muted)') + ';font-family:Inter,sans-serif;font-weight:600;font-size:11.5px;padding:6px 11px;border-radius:8px;cursor:pointer;white-space:nowrap;align-self:flex-start;';
+  noteBtn.style.cssText = 'background:none;border:1px solid var(--surface-3);color:' + (hasNote?'var(--yellow-deep)':'var(--muted)') + ';font-family:Archivo,sans-serif;font-weight:700;font-size:15px;padding:10px 14px;border-radius:12px;min-height:44px;cursor:pointer;white-space:nowrap;align-self:flex-start;';
   noteBtn.onclick = ()=>{ state.showDayNote = true; state.dayNoteDrafts = null; render(); };
   heading.appendChild(noteBtn);
   const dayReportBtn = el('button', null, '🧾 Informe');
-  dayReportBtn.style.cssText = 'background:none;border:1px solid var(--surface-3);color:var(--muted);font-family:Inter,sans-serif;font-weight:600;font-size:11.5px;padding:6px 11px;border-radius:8px;cursor:pointer;white-space:nowrap;align-self:flex-start;';
+  dayReportBtn.style.cssText = 'background:none;border:1px solid var(--surface-3);color:var(--muted);font-family:Archivo,sans-serif;font-weight:700;font-size:15px;padding:10px 14px;border-radius:12px;min-height:44px;cursor:pointer;white-space:nowrap;align-self:flex-start;';
   dayReportBtn.onclick = ()=>{ generateDayReport(plan, state.activeDay); };
   heading.appendChild(dayReportBtn);
   if (state.manualEditDay !== state.activeDay){
     const manualEditBtn = el('button', null, '✏️ Editar a mano');
-    manualEditBtn.style.cssText = 'background:none;border:1px solid var(--surface-3);color:var(--muted);font-family:Inter,sans-serif;font-weight:600;font-size:11.5px;padding:6px 11px;border-radius:8px;cursor:pointer;white-space:nowrap;align-self:flex-start;';
+    manualEditBtn.style.cssText = 'background:none;border:1px solid var(--surface-3);color:var(--muted);font-family:Archivo,sans-serif;font-weight:700;font-size:15px;padding:10px 14px;border-radius:12px;min-height:44px;cursor:pointer;white-space:nowrap;align-self:flex-start;';
     manualEditBtn.onclick = ()=>{ startManualDayEdit(plan, state.activeDay); };
     if (!WO2_ATHLETE) heading.appendChild(manualEditBtn);
   }
@@ -2542,7 +2545,7 @@ function renderExerciseCard(plan, day, entry, idx){
     const rating = normalizeCheck(state.checks[checkKey(plan,day,idx,si)]);
     const rinfo = ratingInfo(rating);
     const chip = el('div','chip');
-    if (rinfo){ chip.style.cssText = 'border-left:5px solid '+rinfo.color+';'; }
+    if (rinfo){ chip.style.cssText = 'border-left:5px solid '+rinfo.color+';'; chip.classList.add('done'); }
     let clusterHtml = '';
     if (s.cluster){
       const c = s.cluster;
@@ -2570,7 +2573,7 @@ function renderExerciseCard(plan, day, entry, idx){
     warnTxt.style.cssText = 'font-size:12.5px;color:var(--chalk);flex:1;';
     confirmBar.appendChild(warnTxt);
     const yesBtn = el('button', null, 'Sí, borrar');
-    yesBtn.style.cssText = 'background:var(--red);border:none;color:#fff8f0;font-family:Oswald,sans-serif;font-weight:700;font-size:12px;padding:8px 12px;border-radius:8px;cursor:pointer;';
+    yesBtn.style.cssText = 'background:var(--red);border:none;color:#fff8f0;font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:12px;padding:8px 12px;border-radius:8px;cursor:pointer;';
     yesBtn.onclick = (e)=>{
       e.stopPropagation();
       deleteExerciseEntry(plan, day, idx);
@@ -2578,7 +2581,7 @@ function renderExerciseCard(plan, day, entry, idx){
       render();
     };
     const noBtn = el('button', null, 'No');
-    noBtn.style.cssText = 'background:none;border:1px solid var(--surface-3);color:var(--muted);font-family:Inter,sans-serif;font-size:12px;padding:8px 12px;border-radius:8px;cursor:pointer;';
+    noBtn.style.cssText = 'background:none;border:1px solid var(--surface-3);color:var(--muted);font-family:Archivo,sans-serif;font-size:12px;padding:8px 12px;border-radius:8px;cursor:pointer;';
     noBtn.onclick = (e)=>{ e.stopPropagation(); state.confirmDeleteExercise = null; render(); };
     confirmBar.appendChild(yesBtn); confirmBar.appendChild(noBtn);
     card.appendChild(confirmBar);
@@ -2599,12 +2602,12 @@ function renderExerciseCard(plan, day, entry, idx){
   const videoHeading = el('div');
   videoHeading.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;';
   const vTitle = el('div', null, '🎥 Vídeos' + (videos.length ? ' (' + videos.length + ')' : ''));
-  vTitle.style.cssText = 'font-family:Oswald,sans-serif;font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.02em;color:var(--muted);';
+  vTitle.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.02em;color:var(--muted);';
   videoHeading.appendChild(vTitle);
 
   const addVideoLabel = document.createElement('label');
   addVideoLabel.textContent = '+ Añadir vídeo';
-  addVideoLabel.style.cssText = 'background:none;border:1px solid var(--surface-3);color:var(--muted);font-family:Inter,sans-serif;font-weight:600;font-size:11px;padding:6px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;';
+  addVideoLabel.style.cssText = 'background:none;border:1px solid var(--surface-3);color:var(--muted);font-family:Archivo,sans-serif;font-weight:600;font-size:15px;padding:10px 14px;border-radius:12px;min-height:44px;cursor:pointer;white-space:nowrap;';
   const videoInput = document.createElement('input');
   videoInput.type = 'file'; videoInput.accept = 'video/*'; videoInput.multiple = true; videoInput.style.display = 'none';
   videoInput.addEventListener('change', (e)=>{
@@ -2643,7 +2646,7 @@ function renderExerciseCard(plan, day, entry, idx){
       vActions.style.cssText = 'display:flex;gap:8px;margin-top:8px;';
       const analyzing = !!(v.analysis && v.analysis.loading);
       const analyzeBtn = el('button', null, analyzing ? 'Analizando…' : '🔎 Analizar con IA');
-      analyzeBtn.style.cssText = 'flex:1;background:var(--surface);border:1px solid var(--surface-3);color:var(--yellow-deep);font-family:Inter,sans-serif;font-weight:600;font-size:12px;padding:9px 0;border-radius:8px;cursor:pointer;';
+      analyzeBtn.style.cssText = 'flex:1;background:var(--surface);border:1px solid var(--surface-3);color:var(--yellow-deep);font-family:Archivo,sans-serif;font-weight:600;font-size:12px;padding:9px 0;border-radius:8px;cursor:pointer;';
       if (analyzing) analyzeBtn.disabled = true;
       analyzeBtn.onclick = ()=>{ analyzeVideo(day, idx, v.id); };
       const delVBtn = el('button', null, '🗑');
@@ -2964,7 +2967,7 @@ function renderRestTimerBanner(){
   bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:500;background:' + (done ? 'var(--ok)' : '#20242e') + ';color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 4px 14px rgba(0,0,0,.3);flex-wrap:wrap;';
 
   const label = el('div');
-  label.innerHTML = '<div style="font-family:Oswald,sans-serif;font-weight:700;font-size:12px;letter-spacing:.04em;opacity:.85;">'+(done?'DESCANSO TERMINADO':'DESCANSO')+'</div>' +
+  label.innerHTML = '<div style="font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:12px;letter-spacing:.04em;opacity:.85;">'+(done?'DESCANSO TERMINADO':'DESCANSO')+'</div>' +
     '<div class="rt-time" style="font-family:IBM Plex Mono,monospace;font-weight:700;font-size:'+(done?'20px':'32px')+';">'+(done?'¡A por la siguiente!':timeStr)+'</div>';
   bar.appendChild(label);
 
@@ -2977,7 +2980,7 @@ function renderRestTimerBanner(){
   if (!done){
     const mkAdjBtn = (txt, delta)=>{
       const b = el('button', null, txt);
-      b.style.cssText = 'background:rgba(255,255,255,.15);border:none;color:#fff;font-family:Oswald,sans-serif;font-weight:700;font-size:15px;padding:10px 12px;border-radius:8px;cursor:pointer;';
+      b.style.cssText = 'background:rgba(255,255,255,.15);border:none;color:#fff;font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:15px;padding:10px 12px;border-radius:8px;cursor:pointer;';
       b.onclick = ()=> adjustRestTimer(delta);
       return b;
     };
@@ -2985,7 +2988,7 @@ function renderRestTimerBanner(){
     btns.appendChild(mkAdjBtn('+30s', 30));
   }
   const skip = el('button', null, done ? '✕' : 'Saltar');
-  skip.style.cssText = 'background:rgba(255,255,255,.2);border:none;color:#fff;font-family:Oswald,sans-serif;font-weight:700;font-size:15px;padding:10px 14px;border-radius:8px;cursor:pointer;';
+  skip.style.cssText = 'background:rgba(255,255,255,.2);border:none;color:#fff;font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:15px;padding:10px 14px;border-radius:8px;cursor:pointer;';
   skip.onclick = ()=> dismissRestTimer();
   btns.appendChild(skip);
   bar.appendChild(btns);
@@ -3028,7 +3031,7 @@ function renderFlashcardOverlay(plan){
     nextHint.style.cssText = 'font-family:IBM Plex Mono,monospace;font-weight:700;font-size:20px;color:var(--chalk);text-align:right;max-width:170px;line-height:1.2;';
     nextHint.textContent = kgDisplayText(nextSet) + '×' + (nextSet.series||'?') + '×' + repDisplayText(nextSet) + ' →';
   } else {
-    nextHint.style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:20px;color:var(--red);letter-spacing:.04em;';
+    nextHint.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:20px;color:var(--red);letter-spacing:.04em;';
     nextHint.textContent = 'FIN';
   }
   rightWrap.appendChild(nextHint);
@@ -3158,7 +3161,7 @@ function renderFlashcardOverlay(plan){
     card.appendChild(el('div','fc-kg', kgDisplayText(s)));
     if (s.optional){
       const optBadge = el('div', null, '🔓 Serie opcional (según cómo vayas)');
-      optBadge.style.cssText = 'font-family:Inter,sans-serif;font-size:18px;color:var(--yellow-deep);text-align:center;font-weight:700;';
+      optBadge.style.cssText = 'font-family:Archivo,sans-serif;font-size:18px;color:var(--yellow-deep);text-align:center;font-weight:700;';
       card.appendChild(optBadge);
     }
     const repDisplay = repDisplayText(s);
@@ -3174,7 +3177,7 @@ function renderFlashcardOverlay(plan){
     }
     if (entry.parts && entry.parts.length > 1){
       const comboHint = el('div');
-      comboHint.style.cssText = 'font-family:Inter,sans-serif;font-size:18px;font-weight:600;color:var(--muted);text-align:center;';
+      comboHint.style.cssText = 'font-family:Archivo,sans-serif;font-size:18px;font-weight:600;color:var(--muted);text-align:center;';
       comboHint.textContent = entry.parts.map((p,i)=>{
         const n = s.repsParts ? s.repsParts[i] : null;
         const base = DICT[p.code] || ('Cód. '+p.code);
@@ -3184,7 +3187,7 @@ function renderFlashcardOverlay(plan){
     }
     if (cardChg){
       const editedBadge = el('div', null, cardChg.label);
-      editedBadge.style.cssText = 'font-family:Inter,sans-serif;font-size:18px;font-weight:700;color:#fff;background:' + cardChg.border + ';padding:8px 14px;border-radius:10px;text-align:center;';
+      editedBadge.style.cssText = 'font-family:Archivo,sans-serif;font-size:18px;font-weight:700;color:#fff;background:' + cardChg.border + ';padding:8px 14px;border-radius:10px;text-align:center;';
       card.appendChild(editedBadge);
       const detail = setChangeDetail(s);
       if (detail){
@@ -3196,7 +3199,7 @@ function renderFlashcardOverlay(plan){
 
     if (s.series && s.series > 1){
       const seriesLbl = el('div', null, 'MARCA CADA SERIE');
-      seriesLbl.style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:13px;color:var(--muted-2);letter-spacing:.04em;text-align:center;margin-top:-6px;';
+      seriesLbl.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:13px;color:var(--muted-2);letter-spacing:.04em;text-align:center;margin-top:-6px;';
       card.appendChild(seriesLbl);
       const seriesRow = el('div');
       seriesRow.style.cssText = 'display:flex;gap:8px;width:100%;justify-content:center;flex-wrap:wrap;';
@@ -3204,7 +3207,7 @@ function renderFlashcardOverlay(plan){
       for (let i=0;i<s.series;i++){
         const done = !!progress[i];
         const sBtn = el('button', null, String(i+1));
-        sBtn.style.cssText = 'width:50px;height:50px;border-radius:12px;font-family:Oswald,sans-serif;font-weight:700;font-size:22px;cursor:pointer;border:2px solid ' +
+        sBtn.style.cssText = 'width:50px;height:50px;border-radius:12px;font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:22px;cursor:pointer;border:2px solid ' +
           (done ? 'var(--ok)' : 'var(--surface-3)') + ';background:' + (done ? 'var(--ok)' : 'var(--surface-2)') + ';color:' + (done ? '#fff' : 'var(--chalk)') + ';';
         sBtn.onclick = ()=>{
           const arr = state.seriesProgress[key] ? state.seriesProgress[key].slice() : [];
@@ -3245,25 +3248,25 @@ function renderFlashcardOverlay(plan){
     card.appendChild(markRow);
 
     const stopBtn = el('button', null, '⏹ Terminar ejercicio');
-    stopBtn.style.cssText = 'width:100%;margin-top:10px;background:var(--surface-2);border:3px solid var(--red);color:var(--red);font-family:Oswald,sans-serif;font-weight:700;font-size:21px;padding:17px 0;border-radius:12px;cursor:pointer;';
+    stopBtn.style.cssText = 'width:100%;margin-top:10px;background:var(--surface-2);border:3px solid var(--red);color:var(--red);font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:21px;padding:17px 0;border-radius:12px;cursor:pointer;';
     stopBtn.onclick = ()=>{ stopSpeaking(); dismissRestTimer(); goToCard(totalCards-1, 'next'); };
     card.appendChild(stopBtn);
 
     const listenBtn = el('button', null, '🔊 Escuchar');
-    listenBtn.style.cssText = 'width:100%;margin-top:10px;background:var(--surface-2);border:2px solid var(--surface-3);color:var(--chalk);font-family:Oswald,sans-serif;font-weight:700;font-size:20px;padding:16px 0;border-radius:12px;cursor:pointer;';
+    listenBtn.style.cssText = 'width:100%;margin-top:10px;background:var(--surface-2);border:2px solid var(--surface-3);color:var(--chalk);font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:20px;padding:16px 0;border-radius:12px;cursor:pointer;';
     listenBtn.onclick = ()=> speakText(buildSpeechText(entry, s));
     card.appendChild(listenBtn);
 
     const secondaryRow = el('div');
     secondaryRow.style.cssText = 'display:flex;gap:10px;width:100%;margin-top:10px;';
     const editSetBtn = el('button', null, '✏️ Editar');
-    editSetBtn.style.cssText = 'flex:1;background:var(--surface-2);border:2px solid var(--surface-3);color:var(--chalk);font-family:Oswald,sans-serif;font-weight:700;font-size:20px;padding:16px 0;border-radius:12px;cursor:pointer;';
+    editSetBtn.style.cssText = 'flex:1;background:var(--surface-2);border:2px solid var(--surface-3);color:var(--chalk);font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:20px;padding:16px 0;border-radius:12px;cursor:pointer;';
     editSetBtn.onclick = ()=>{ state.flashcard.editingSet = true; render(); };
     secondaryRow.appendChild(editSetBtn);
 
     if (state.flashcard.confirmDeleteSetIdx !== cardIdx){
       const delSetBtn = el('button', null, '🗑 Borrar');
-      delSetBtn.style.cssText = 'flex:1;background:var(--surface-2);border:2px solid var(--surface-3);color:var(--chalk);font-family:Oswald,sans-serif;font-weight:700;font-size:20px;padding:16px 0;border-radius:12px;cursor:pointer;';
+      delSetBtn.style.cssText = 'flex:1;background:var(--surface-2);border:2px solid var(--surface-3);color:var(--chalk);font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:20px;padding:16px 0;border-radius:12px;cursor:pointer;';
       delSetBtn.onclick = ()=>{ state.flashcard.confirmDeleteSetIdx = cardIdx; render(); };
       secondaryRow.appendChild(delSetBtn);
     }
@@ -3273,12 +3276,12 @@ function renderFlashcardOverlay(plan){
       const confirmRow = el('div');
       confirmRow.style.cssText = 'width:100%;margin-top:10px;';
       const txt = el('div', null, '¿Borrar este peso?');
-      txt.style.cssText = 'font-family:Inter,sans-serif;font-weight:600;font-size:20px;color:var(--chalk);text-align:center;margin-bottom:10px;';
+      txt.style.cssText = 'font-family:Archivo,sans-serif;font-weight:600;font-size:20px;color:var(--chalk);text-align:center;margin-bottom:10px;';
       confirmRow.appendChild(txt);
       const btnRow = el('div');
       btnRow.style.cssText = 'display:flex;gap:10px;';
       const yesBtn = el('button', null, 'Sí, borrar');
-      yesBtn.style.cssText = 'flex:1;background:var(--red);border:2px solid var(--red);color:#fff8f0;font-family:Oswald,sans-serif;font-weight:700;font-size:20px;padding:16px 0;border-radius:12px;cursor:pointer;';
+      yesBtn.style.cssText = 'flex:1;background:var(--red);border:2px solid var(--red);color:#fff8f0;font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:20px;padding:16px 0;border-radius:12px;cursor:pointer;';
       yesBtn.onclick = ()=>{
         deleteSetFromEntry(plan, day, exIdx, cardIdx);
         state.flashcard.confirmDeleteSetIdx = null;
@@ -3286,7 +3289,7 @@ function renderFlashcardOverlay(plan){
         render();
       };
       const noBtn = el('button', null, 'No');
-      noBtn.style.cssText = 'flex:1;background:var(--surface-2);border:2px solid var(--surface-3);color:var(--chalk);font-family:Oswald,sans-serif;font-weight:700;font-size:20px;padding:16px 0;border-radius:12px;cursor:pointer;';
+      noBtn.style.cssText = 'flex:1;background:var(--surface-2);border:2px solid var(--surface-3);color:var(--chalk);font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:20px;padding:16px 0;border-radius:12px;cursor:pointer;';
       noBtn.onclick = ()=>{ state.flashcard.confirmDeleteSetIdx = null; render(); };
       btnRow.appendChild(yesBtn); btnRow.appendChild(noBtn);
       confirmRow.appendChild(btnRow);
@@ -3582,7 +3585,7 @@ function renderHistorySheet(){
       const inp = document.createElement('input');
       inp.type = 'text'; inp.value = state.renamePlanDraft;
       inp.placeholder = p.meta.athlete || 'Nombre de la semana';
-      inp.style.cssText = 'flex:1;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:8px;color:var(--chalk);font-family:Inter,sans-serif;font-size:13.5px;padding:8px 10px;';
+      inp.style.cssText = 'flex:1;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:8px;color:var(--chalk);font-family:Archivo,sans-serif;font-size:13.5px;padding:8px 10px;';
       inp.oninput = (e)=>{ state.renamePlanDraft = e.target.value; };
       const weekInp = document.createElement('input');
       weekInp.type = 'number'; weekInp.inputMode = 'numeric'; weekInp.value = state.renameWeekDraft || '';
@@ -3616,7 +3619,7 @@ function renderHistorySheet(){
       const confirmWrap = el('div');
       confirmWrap.style.cssText = 'display:flex;gap:6px;align-items:center;';
       const yesBtn = el('button', null, '🗑 Sí');
-      yesBtn.style.cssText = 'background:var(--red);border:none;color:#fff8f0;font-family:Oswald,sans-serif;font-weight:700;font-size:12px;padding:8px 12px;border-radius:8px;cursor:pointer;';
+      yesBtn.style.cssText = 'background:var(--red);border:none;color:#fff8f0;font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:12px;padding:8px 12px;border-radius:8px;cursor:pointer;';
       yesBtn.onclick = (e)=>{
         e.stopPropagation();
         state.plans = state.plans.filter(x=>x.id!==p.id);
@@ -3631,7 +3634,7 @@ function renderHistorySheet(){
         render();
       };
       const noBtn = el('button', null, 'No');
-      noBtn.style.cssText = 'background:none;border:1px solid var(--surface-3);color:var(--muted);font-family:Inter,sans-serif;font-size:12px;padding:8px 12px;border-radius:8px;cursor:pointer;';
+      noBtn.style.cssText = 'background:none;border:1px solid var(--surface-3);color:var(--muted);font-family:Archivo,sans-serif;font-size:12px;padding:8px 12px;border-radius:8px;cursor:pointer;';
       noBtn.onclick = (e)=>{ e.stopPropagation(); state.confirmDeleteId=null; render(); };
       confirmWrap.appendChild(el('span',null,'¿Eliminar?'));
       confirmWrap.appendChild(yesBtn); confirmWrap.appendChild(noBtn);
@@ -3668,7 +3671,7 @@ function renderHistorySheet(){
 /* ---- Selector de ejercicio (código + nombre del diccionario) ---- */
 function dictSelect(selectedCode, onChange){
   const sel = document.createElement('select');
-  sel.style.cssText = 'width:100%;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:8px;color:var(--chalk);font-family:Inter,sans-serif;font-size:13px;padding:9px 8px;';
+  sel.style.cssText = 'width:100%;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:8px;color:var(--chalk);font-family:Archivo,sans-serif;font-size:13px;padding:9px 8px;';
   const placeholder = document.createElement('option');
   placeholder.value = ''; placeholder.textContent = 'Elige ejercicio…';
   sel.appendChild(placeholder);
@@ -3875,13 +3878,13 @@ function renderProfileScreen(){
 
   const compNameRow = el('div'); compNameRow.style.cssText = 'margin-top:14px;';
   const compNameLbl = el('div', null, 'Nombre de la competición');
-  compNameLbl.style.cssText = 'font-family:Oswald,sans-serif;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px;';
+  compNameLbl.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px;';
   compNameRow.appendChild(compNameLbl);
   const compNameInput = document.createElement('input');
   compNameInput.type = 'text';
   compNameInput.placeholder = 'Ej. Campeonato de España M50';
   compNameInput.value = u.objetivos.competitionName || '';
-  compNameInput.style.cssText = 'width:100%;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:8px;color:var(--chalk);font-family:Inter,sans-serif;font-size:15px;padding:10px;';
+  compNameInput.style.cssText = 'width:100%;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:8px;color:var(--chalk);font-family:Archivo,sans-serif;font-size:15px;padding:10px;';
   compNameInput.addEventListener('change', ()=>{
     u.objetivos.competitionName = compNameInput.value.trim() || null;
     saveUsersAsync(users);
@@ -3892,7 +3895,7 @@ function renderProfileScreen(){
 
   const compRow = el('div'); compRow.style.cssText = 'margin-top:14px;';
   const compLbl = el('div', null, 'Fecha de la próxima competición');
-  compLbl.style.cssText = 'font-family:Oswald,sans-serif;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px;';
+  compLbl.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px;';
   compRow.appendChild(compLbl);
   const compInput = document.createElement('input');
   compInput.type = 'date';
@@ -3915,7 +3918,7 @@ function renderProfileScreen(){
   [1,10].forEach(code=>{
     const row = el('div'); row.style.cssText = 'margin-top:14px;';
     const lbl = el('div', null, code + ' · ' + DICT[code]);
-    lbl.style.cssText = 'font-family:Oswald,sans-serif;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px;';
+    lbl.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px;';
     row.appendChild(lbl);
 
     const inputRow = el('div');
@@ -3952,7 +3955,7 @@ function renderProfileScreen(){
     const proj = goalProjectionText(u, code);
     if (proj){
       const projEl = el('div');
-      projEl.style.cssText = 'font-family:Inter,sans-serif;font-size:12.5px;margin-top:6px;line-height:1.4;' +
+      projEl.style.cssText = 'font-family:Archivo,sans-serif;font-size:12.5px;margin-top:6px;line-height:1.4;' +
         (proj.tone==='ok' ? 'color:var(--ok);font-weight:600;' : proj.tone==='warn' ? 'color:var(--red);' : 'color:var(--muted-2);');
       projEl.textContent = proj.text;
       row.appendChild(projEl);
@@ -4102,7 +4105,7 @@ function renderProfileScreen(){
       if (tMax){
         const hintBtn = el('button', null, '📋 Usar de mis entrenos: ' + tMax.kg + 'kg' +
           (tMax.week!==null && tMax.week!==undefined ? ' (semana ' + tMax.week + ')' : ''));
-        hintBtn.style.cssText = 'background:none;border:1px dashed var(--surface-3);color:var(--yellow-deep);font-family:Inter,sans-serif;font-weight:600;font-size:12px;padding:9px 10px;border-radius:8px;cursor:pointer;margin-top:10px;width:100%;';
+        hintBtn.style.cssText = 'background:none;border:1px dashed var(--surface-3);color:var(--yellow-deep);font-family:Archivo,sans-serif;font-weight:600;font-size:12px;padding:9px 10px;border-radius:8px;cursor:pointer;margin-top:10px;width:100%;';
         hintBtn.onclick = ()=>{
           state.rmForm.value = String(tMax.kg);
           state.rmForm.date = new Date(tMax.uploadedAt).toISOString().slice(0,10);
@@ -4515,7 +4518,7 @@ function renderUsersSheet(){
       const row = el('div'); row.style.cssText = 'display:flex;gap:8px;align-items:center;flex:1;';
       const inp = document.createElement('input');
       inp.type = 'text'; inp.value = state.renameDraft;
-      inp.style.cssText = 'flex:1;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:8px;color:var(--chalk);font-family:Inter,sans-serif;font-size:13.5px;padding:8px 10px;';
+      inp.style.cssText = 'flex:1;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:8px;color:var(--chalk);font-family:Archivo,sans-serif;font-size:13.5px;padding:8px 10px;';
       inp.oninput = (e)=>{ state.renameDraft = e.target.value; };
       const okBtn = el('button', null, '✓');
       okBtn.style.cssText = 'background:var(--ok);border:none;color:#fff;width:34px;height:34px;border-radius:8px;cursor:pointer;flex-shrink:0;';
@@ -4543,7 +4546,7 @@ function renderUsersSheet(){
       const btns = el('div'); btns.style.cssText = 'display:flex;gap:6px;align-items:center;';
       if (state.confirmDeleteUserId === u.id){
         const yesBtn = el('button', null, '🗑 Sí');
-        yesBtn.style.cssText = 'background:var(--red);border:none;color:#fff8f0;font-family:Oswald,sans-serif;font-weight:700;font-size:12px;padding:8px 12px;border-radius:8px;cursor:pointer;';
+        yesBtn.style.cssText = 'background:var(--red);border:none;color:#fff8f0;font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:12px;padding:8px 12px;border-radius:8px;cursor:pointer;';
         yesBtn.onclick = (e)=>{
           e.stopPropagation();
           if (users.length <= 1){ state.confirmDeleteUserId=null; render(); return; }
@@ -4555,7 +4558,7 @@ function renderUsersSheet(){
           else { render(); }
         };
         const noBtn = el('button', null, 'No');
-        noBtn.style.cssText = 'background:none;border:1px solid var(--surface-3);color:var(--muted);font-family:Inter,sans-serif;font-size:12px;padding:8px 12px;border-radius:8px;cursor:pointer;';
+        noBtn.style.cssText = 'background:none;border:1px solid var(--surface-3);color:var(--muted);font-family:Archivo,sans-serif;font-size:12px;padding:8px 12px;border-radius:8px;cursor:pointer;';
         noBtn.onclick = (e)=>{ e.stopPropagation(); state.confirmDeleteUserId=null; render(); };
         btns.appendChild(el('span',null,'¿Eliminar?'));
         btns.appendChild(yesBtn); btns.appendChild(noBtn);
@@ -4581,7 +4584,7 @@ function renderUsersSheet(){
     const inp = document.createElement('input');
     inp.type = 'text'; inp.placeholder = 'Nombre del deportista';
     inp.value = state.newUserName;
-    inp.style.cssText = 'flex:1;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:8px;color:var(--chalk);font-family:Inter,sans-serif;font-size:13.5px;padding:9px 10px;';
+    inp.style.cssText = 'flex:1;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:8px;color:var(--chalk);font-family:Archivo,sans-serif;font-size:13.5px;padding:9px 10px;';
     inp.oninput = (e)=>{ state.newUserName = e.target.value; };
     const okBtn = el('button','tb-btn','Añadir');
     okBtn.onclick = ()=>{
@@ -4640,7 +4643,7 @@ function renderUsersSheet(){
   backupSection.appendChild(backupRow);
 
   const viewJsonBtn = el('button', null, '📋 Ver y copiar el JSON (si la descarga no funciona)');
-  viewJsonBtn.style.cssText = 'width:100%;margin-top:8px;background:none;border:none;color:var(--muted-2);font-family:Inter,sans-serif;font-size:11.5px;text-decoration:underline;cursor:pointer;padding:4px 0;';
+  viewJsonBtn.style.cssText = 'width:100%;margin-top:8px;background:none;border:none;color:var(--muted-2);font-family:Archivo,sans-serif;font-size:11.5px;text-decoration:underline;cursor:pointer;padding:4px 0;';
   viewJsonBtn.onclick = async ()=>{
     viewJsonBtn.textContent = 'Preparando…';
     const backup = await buildBackupObject();
@@ -5698,7 +5701,7 @@ function reportDataBlock(data){
 
   const statusRow = el('div');
   const isWatch = data.status.label === 'A vigilar';
-  statusRow.style.cssText = 'display:flex;align-items:center;gap:10px;font-family:Oswald,sans-serif;font-weight:700;font-size:22px;margin-bottom:16px;letter-spacing:.02em;' + (isWatch ? 'color:var(--red);' : 'color:var(--chalk);');
+  statusRow.style.cssText = 'display:flex;align-items:center;gap:10px;font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:22px;margin-bottom:16px;letter-spacing:.02em;' + (isWatch ? 'color:var(--red);' : 'color:var(--chalk);');
   statusRow.innerHTML = '<span style="font-size:28px;">'+data.status.icon+'</span> ' + data.status.label.toUpperCase();
   wrap.appendChild(statusRow);
 
@@ -5706,7 +5709,7 @@ function reportDataBlock(data){
   grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;margin-bottom:16px;';
   const metric = (label, value)=>{
     const m = el('div');
-    m.innerHTML = '<div style="font-family:Inter,sans-serif;color:var(--muted-2);font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;">'+label+'</div>' +
+    m.innerHTML = '<div style="font-family:Archivo,sans-serif;color:var(--muted-2);font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;">'+label+'</div>' +
       '<div style="font-family:IBM Plex Mono,monospace;color:var(--chalk);font-weight:700;font-size:22px;margin-top:3px;">'+value+'</div>';
     return m;
   };
@@ -5724,7 +5727,7 @@ function reportDataBlock(data){
     const recBox = el('div');
     recBox.style.cssText = 'background:var(--surface);border:2px solid var(--yellow-deep);border-radius:10px;padding:12px 14px;margin-bottom:16px;';
     const rTitle = el('div', null, '🏆 MARCA IMPORTANTE');
-    rTitle.style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:16px;color:var(--yellow-deep);margin-bottom:8px;letter-spacing:.02em;';
+    rTitle.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:16px;color:var(--yellow-deep);margin-bottom:8px;letter-spacing:.02em;';
     recBox.appendChild(rTitle);
     data.records.forEach(r=>{
       const rl = el('div');
@@ -5739,7 +5742,7 @@ function reportDataBlock(data){
     const watchBox = el('div');
     watchBox.style.cssText = 'background:var(--surface);border:2px solid var(--red);border-radius:10px;padding:12px 14px;margin-bottom:16px;';
     const wTitle = el('div', null, '⚠️ A VIGILAR');
-    wTitle.style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:16px;color:var(--red);margin-bottom:8px;letter-spacing:.02em;';
+    wTitle.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:16px;color:var(--red);margin-bottom:8px;letter-spacing:.02em;';
     watchBox.appendChild(wTitle);
     data.watchList.forEach(w=>{
       const wl = el('div');
@@ -5751,7 +5754,7 @@ function reportDataBlock(data){
   }
 
   const exTitle = el('div', null, 'EJERCICIOS');
-  exTitle.style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:14px;color:var(--muted-2);letter-spacing:.03em;margin-bottom:8px;';
+  exTitle.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:14px;color:var(--muted-2);letter-spacing:.03em;margin-bottom:8px;';
   wrap.appendChild(exTitle);
   if (data.exLines.length){
     data.exLines.forEach(l=>{
@@ -5768,7 +5771,7 @@ function reportDataBlock(data){
 
   if (data.note){
     const noteBox = el('div');
-    noteBox.style.cssText = 'margin-top:16px;padding-top:14px;border-top:1px solid var(--surface-3);font-family:Inter,sans-serif;font-size:17px;color:var(--chalk);line-height:1.6;';
+    noteBox.style.cssText = 'margin-top:16px;padding-top:14px;border-top:1px solid var(--surface-3);font-family:Archivo,sans-serif;font-size:17px;color:var(--chalk);line-height:1.6;';
     noteBox.innerHTML = '<div style="color:var(--muted-2);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;">Nota del atleta</div>' + data.note.replace(/\n/g,'<br>');
     wrap.appendChild(noteBox);
   }
@@ -5795,7 +5798,7 @@ function renderDayReportOverlay(){
     memoWrap.appendChild(err);
   } else if (r.memo.text){
     const title = el('div', null, 'LECTURA DEL ENTRENADOR');
-    title.style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:14px;color:var(--muted-2);letter-spacing:.03em;';
+    title.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:14px;color:var(--muted-2);letter-spacing:.03em;';
     memoWrap.appendChild(title);
     const txt = el('div', null, r.memo.text);
     txt.style.cssText = 'font-size:17px;line-height:1.6;color:var(--chalk);white-space:pre-wrap;margin-top:8px;';
@@ -5826,20 +5829,20 @@ function renderWeekReportOverlay(plan){
   if (r.status){
     const isWatch = r.status.label.indexOf('vigilar') !== -1;
     const statusRow = el('div', null, r.status.icon + ' ' + r.status.label.toUpperCase());
-    statusRow.style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:22px;letter-spacing:.02em;margin-bottom:16px;' + (isWatch ? 'color:var(--red);' : 'color:var(--chalk);');
+    statusRow.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:22px;letter-spacing:.02em;margin-bottom:16px;' + (isWatch ? 'color:var(--red);' : 'color:var(--chalk);');
     sheet.appendChild(statusRow);
   }
 
   const commentWrap = el('div');
   commentWrap.style.cssText = 'margin-bottom:18px;';
   const commentLbl = el('div', null, 'TU COMENTARIO SOBRE LA SEMANA');
-  commentLbl.style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:14px;color:var(--muted-2);letter-spacing:.03em;margin-bottom:6px;';
+  commentLbl.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:14px;color:var(--muted-2);letter-spacing:.03em;margin-bottom:6px;';
   commentWrap.appendChild(commentLbl);
   const commentArea = document.createElement('textarea');
   commentArea.rows = 3;
   commentArea.placeholder = 'Ej. Semana de mucho estrés en el trabajo que se ha notado en los entrenos…';
   commentArea.value = plan.weekComment || '';
-  commentArea.style.cssText = 'width:100%;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:10px;color:var(--chalk);font-family:Inter,sans-serif;font-size:16px;line-height:1.4;padding:12px;resize:vertical;';
+  commentArea.style.cssText = 'width:100%;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:10px;color:var(--chalk);font-family:Archivo,sans-serif;font-size:16px;line-height:1.4;padding:12px;resize:vertical;';
   commentArea.addEventListener('change', ()=>{
     plan.weekComment = commentArea.value.trim() || null;
     persistUserData();
@@ -5851,7 +5854,7 @@ function renderWeekReportOverlay(plan){
     const patBox = el('div');
     patBox.style.cssText = 'background:var(--surface);border:2px solid var(--yellow-deep);border-radius:10px;padding:14px 16px;margin-bottom:18px;';
     const patTitle = el('div', null, 'PATRONES DE LA SEMANA');
-    patTitle.style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:16px;color:var(--yellow-deep);margin-bottom:10px;letter-spacing:.02em;';
+    patTitle.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:16px;color:var(--yellow-deep);margin-bottom:10px;letter-spacing:.02em;';
     patBox.appendChild(patTitle);
     (r.watchPatterns||[]).forEach(p=>{
       const line = el('div');
@@ -5861,7 +5864,7 @@ function renderWeekReportOverlay(plan){
     });
     if (r.keywordPatterns && r.keywordPatterns.length){
       const kwLine = el('div');
-      kwLine.style.cssText = 'font-family:Inter,sans-serif;font-size:14px;color:var(--muted);line-height:1.6;margin-top:8px;';
+      kwLine.style.cssText = 'font-family:Archivo,sans-serif;font-size:14px;color:var(--muted);line-height:1.6;margin-top:8px;';
       kwLine.innerHTML = '<b style="color:var(--chalk);">Palabras que se repiten en las notas</b> (pista automática por coincidencia de texto, no un diagnóstico — conviene leer las notas originales de esos días): ' +
         r.keywordPatterns.map(k=>'"'+k.word+'" ('+k.days.length+' días)').join(', ');
       patBox.appendChild(kwLine);
@@ -5873,7 +5876,7 @@ function renderWeekReportOverlay(plan){
     const dCard = el('div');
     dCard.style.cssText = 'margin-bottom:14px;';
     const dHead = el('div', null, d.status.icon + '  ' + d.dayName.toUpperCase() + (d.dateStr ? '  ·  '+d.dateStr : ''));
-    dHead.style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:16px;color:var(--muted-2);letter-spacing:.03em;margin-bottom:6px;';
+    dHead.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:16px;color:var(--muted-2);letter-spacing:.03em;margin-bottom:6px;';
     dCard.appendChild(dHead);
     dCard.appendChild(reportDataBlock(d));
     sheet.appendChild(dCard);
@@ -5884,14 +5887,14 @@ function renderWeekReportOverlay(plan){
 
   if (r.movementCharts && r.movementCharts.length){
     const chartsTitle = el('div', null, 'MÁXIMOS ACUMULADOS POR MOVIMIENTO');
-    chartsTitle.style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:16px;color:var(--chalk);letter-spacing:.02em;margin:10px 0 12px;';
+    chartsTitle.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:16px;color:var(--chalk);letter-spacing:.02em;margin:10px 0 12px;';
     sheet.appendChild(chartsTitle);
     r.movementCharts.forEach(mc=>{
       const card = el('div');
       card.style.cssText = 'background:var(--surface-2);border:1px solid var(--surface-3);border-radius:10px;padding:12px 14px;margin-bottom:12px;';
       const head = el('div');
       head.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;';
-      head.appendChild(el('div', null, mc.name)).style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:15px;color:var(--chalk);';
+      head.appendChild(el('div', null, mc.name)).style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:15px;color:var(--chalk);';
       const lastKg = mc.points[mc.points.length-1].maxKg;
       const kgEl = el('div', null, lastKg+'kg');
       kgEl.style.cssText = 'font-family:IBM Plex Mono,monospace;font-weight:700;font-size:15px;color:var(--yellow-deep);';
@@ -5914,7 +5917,7 @@ function renderWeekReportOverlay(plan){
     memoWrap.appendChild(err);
   } else if (r.memo.text){
     const title = el('div', null, 'LECTURA DEL ENTRENADOR');
-    title.style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:14px;color:var(--muted-2);letter-spacing:.03em;';
+    title.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:14px;color:var(--muted-2);letter-spacing:.03em;';
     memoWrap.appendChild(title);
     const txt = el('div', null, r.memo.text);
     txt.style.cssText = 'font-size:17px;line-height:1.6;color:var(--chalk);white-space:pre-wrap;margin-top:8px;';

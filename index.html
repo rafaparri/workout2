@@ -2,71 +2,84 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>WorkOut 2.0</title>
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261007153046';</script>
-<script src="update.js?v=20261007153046"></script>
+<script>window.WO2_VERSION='20261011155324';</script>
+<script src="update.js?v=20261011155324"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#0c0c0e">
+<link rel="stylesheet" href="theme.css?v=2">
 <style>
-  :root{
-    --bg:#f4f1ea; --surface:#ffffff; --surface-2:#eceae2; --surface-3:#d9d6cb;
-    --chalk:#20242e; --muted:#5a5e68; --muted-2:#8892a0; --gold:#c99a2e;
+  *{ box-sizing:border-box; }
+  body{ margin:0; min-height:100vh; display:flex; flex-direction:column; }
+  .top{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px clamp(16px,4vw,56px); background:#121114; border-bottom:1px solid var(--line); }
+  .brand{ display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--chalk); }
+  .brand img{ width:64px; height:auto; }
+  .brand span{ font-family:ArchivoBlack,sans-serif; font-size:22px; }
+  .brand b{ color:var(--gold); font-weight:400; }
+  .topNote{ font-size:15px; color:var(--muted-2); text-align:right; }
+  .hero{ position:relative; overflow:hidden; background:var(--surface); border-bottom:1px solid var(--line); padding:clamp(36px,6vw,64px) clamp(16px,4vw,56px) 120px; }
+  .slash{ position:absolute; right:-90px; top:-60px; width:min(520px,62vw); height:calc(100% + 120px); background:var(--gold); transform:skewX(-18deg); }
+  .heroFig{ position:absolute; right:clamp(10px,5vw,80px); top:50%; transform:translateY(-62%); width:min(430px,42vw); filter:brightness(0); }
+  .heroText{ position:relative; max-width:620px; display:flex; flex-direction:column; gap:18px; }
+  .kicker{ font-size:16px; font-weight:800; letter-spacing:.16em; color:var(--gold-2); }
+  .hero h1{ margin:0; font-size:clamp(40px,7vw,76px) !important; line-height:.98; }
+  .hero p{ margin:0; font-size:clamp(18px,2.2vw,22px); line-height:1.45; color:var(--muted); max-width:540px; }
+  .roles{ position:relative; margin-top:-72px; padding:0 clamp(16px,4vw,56px) 40px; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; }
+  .role{ display:flex; flex-direction:column; gap:12px; padding:28px; border-radius:20px; text-decoration:none; background:#1d1b20; border:1px solid var(--surface-3); color:var(--chalk); box-shadow:0 14px 30px rgba(0,0,0,.5); min-height:200px; transition:transform .15s ease, border-color .15s ease; }
+  .role:hover{ transform:translateY(-3px); border-color:var(--gold); }
+  .role.main{ background:var(--gold); color:var(--ink); border-color:var(--gold); }
+  .role svg{ width:44px; height:44px; stroke:var(--gold); }
+  .role.main svg{ stroke:var(--ink); }
+  .role .t{ font-family:ArchivoBlack,sans-serif; font-size:28px; }
+  .role .d{ font-size:19px; line-height:1.4; color:var(--muted); }
+  .role.main .d{ color:var(--ink); font-weight:600; }
+  footer{ margin-top:auto; text-align:center; padding:24px; font-size:15px; color:var(--muted-2); }
+  @media (max-width:640px){
+    .topNote{ display:none; }
+    .hero{ padding-top:24px; }
+    .slash{ right:-120px; width:66vw; height:180px; top:0; }
+    .heroFig{ top:22px; right:10px; transform:none; width:46vw; }
+    .heroText{ margin-top:150px; }
+    .role{ min-height:0; }
   }
-  *{box-sizing:border-box;}
-  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--chalk); font-family:'Inter',system-ui,sans-serif; display:flex; flex-direction:column; }
-  header{ background:#20242e; border-bottom:4px solid var(--gold); color:#f4f1ea; padding:34px 20px 30px; text-align:center; }
-  header img{ height:86px; width:auto; }
-  header h1{ font-family:'Oswald',sans-serif; font-weight:700; font-size:40px; letter-spacing:.04em; text-transform:uppercase; margin:10px 0 6px; }
-  header p{ margin:0; font-size:18px; color:#c9ccd3; }
-  main{ flex:1; width:100%; max-width:980px; margin:0 auto; padding:36px 20px 40px; }
-  .ask{ text-align:center; font-family:'Oswald',sans-serif; font-weight:600; font-size:22px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0 0 24px; }
-  .grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:20px; }
-  .entry{ display:flex; flex-direction:column; gap:12px; background:var(--surface); border:1px solid var(--surface-3); border-radius:18px; padding:28px 24px; text-decoration:none; color:var(--chalk); box-shadow:0 2px 0 rgba(0,0,0,.03); transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
-  .entry:hover{ transform:translateY(-3px); box-shadow:0 10px 24px rgba(32,36,46,.12); border-color:var(--gold); }
-  .icon{ width:64px; height:64px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:32px; }
-  .entry h2{ font-family:'Oswald',sans-serif; font-weight:700; font-size:28px; text-transform:uppercase; letter-spacing:.03em; margin:4px 0 0; }
-  .entry p{ margin:0; font-size:17px; line-height:1.45; color:var(--muted); }
-  .go{ margin-top:auto; padding-top:10px; font-weight:700; font-size:17px; color:var(--gold); }
-  footer{ text-align:center; padding:20px; font-size:14px; color:var(--muted-2); }
 </style>
 </head>
 <body>
-  <header>
-    <img id="rptLogo" alt="RPT">
-    <h1>WorkOut 2.0</h1>
-    <p>Gestión del entrenamiento para clubes de halterofilia</p>
-  </header>
-  <main>
-    <div class="ask">¿Cómo quieres entrar?</div>
-    <div class="grid">
-      <a class="entry" href="superadmin.html">
-        <div class="icon" style="background:#e8e6f3;">🛡️</div>
-        <h2>Administrador</h2>
-        <p>Clubes dados de alta, suscripciones y control de accesos.</p>
-        <div class="go">Entrar →</div>
-      </a>
-      <a class="entry" href="entrenador.html">
-        <div class="icon" style="background:#e2eefa;">📋</div>
-        <h2>Entrenador</h2>
-        <p>Tus atletas, su programación semanal, resultados e informes.</p>
-        <div class="go">Entrar →</div>
-      </a>
-      <a class="entry" href="atleta.html">
-        <div class="icon" style="background:#fdf1d8;">🏋️</div>
-        <h2>Atleta</h2>
-        <p>Tu entreno del día, marcas, notas e informes de tu entrenador.</p>
-        <div class="go">Entrar →</div>
-      </a>
+  <div class="top">
+    <a class="brand" href="./"><img src="static/figura-oro.png" alt=""><span>WORKOUT<b> 2.0</b></span></a>
+    <div class="topNote">con tecnología de RPT</div>
+  </div>
+  <section class="hero">
+    <div class="slash" aria-hidden="true"></div>
+    <img class="heroFig" src="static/figura-oro.png" alt="" aria-hidden="true">
+    <div class="heroText">
+      <span class="kicker">HALTEROFILIA · CLUBES</span>
+      <h1>Cada kilo,<br>cada semana,<br>bajo control.</h1>
+      <p>El entrenador programa, el atleta marca y todo el club ve cómo avanza.</p>
     </div>
-  </main>
-  <footer>con tecnología de RPT</footer>
-<script src="branding.js?v=20261007153046"></script>
-<script>document.getElementById('rptLogo').src = 'data:image/png;base64,' + RPT_LOGO_B64;</script>
+  </section>
+  <nav class="roles" aria-label="Cómo quieres entrar">
+    <a class="role main" href="atleta.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></svg>
+      <span class="t">Soy atleta</span>
+      <span class="d">Mi entreno de hoy, mis marcas y lo que me dice el entrenador.</span>
+    </a>
+    <a class="role" href="entrenador.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6v3H9zM7 5.5H5v15h14v-15h-2M8.5 12l2.5 2.5 4.5-5"/></svg>
+      <span class="t">Soy entrenador</span>
+      <span class="d">Programar semanas, revisar y comentar a cada atleta.</span>
+    </a>
+    <a class="role" href="superadmin.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/></svg>
+      <span class="t">Administración</span>
+      <span class="d">Clubes, suscripciones y accesos.</span>
+    </a>
+  </nav>
+  <footer>WorkOut 2.0 · RPT</footer>
 </body>
 </html>

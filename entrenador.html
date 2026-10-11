@@ -7,15 +7,15 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261007153046';</script>
-<script src="update.js?v=20261007153046"></script>
+<script>window.WO2_VERSION='20261011155324';</script>
+<script src="update.js?v=20261011155324"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Oswald:wght@600;700&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#f4f1ea; --surface:#ffffff; --surface-2:#eceae2; --surface-3:#d9d6cb;
@@ -23,14 +23,14 @@
     --yellow-deep:#c99a2e; --ok:#2f7dc4; --red:#c14a3a; --warn:#c99a2e;
   }
   *{box-sizing:border-box;}
-  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--chalk); font-family:'Inter',system-ui,sans-serif; }
+  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--chalk); font-family:'Archivo',system-ui,sans-serif; }
   .wrap{ max-width:720px; margin:0 auto; padding:24px 18px 60px; }
-  h1{ font-family:'Oswald',sans-serif; font-weight:700; font-size:22px; text-transform:uppercase; margin:0 0 4px; }
+  h1{ font-family:ArchivoBlack,sans-serif; font-weight:700; font-size:22px; text-transform:uppercase; margin:0 0 4px; }
   .sub{ color:var(--muted); font-size:14px; margin:0 0 20px; }
   .card{ background:var(--surface); border:1px solid var(--surface-3); border-radius:14px; padding:20px; margin-bottom:16px; }
-  label{ display:block; font-family:'Oswald',sans-serif; font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.02em; margin-bottom:6px; color:var(--muted); }
+  label{ display:block; font-family:ArchivoBlack,sans-serif; font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.02em; margin-bottom:6px; color:var(--muted); }
   input{ width:100%; background:var(--surface-2); border:1px solid var(--surface-3); border-radius:10px; color:var(--chalk); font-size:15px; padding:12px; margin-bottom:14px; }
-  button{ width:100%; background:var(--chalk); color:#fff; border:none; border-radius:10px; font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; padding:14px; cursor:pointer; }
+  button{ width:100%; background:var(--chalk); color:#fff; border:none; border-radius:10px; font-family:ArchivoBlack,sans-serif; font-weight:700; font-size:15px; padding:14px; cursor:pointer; }
   button.secondary{ background:var(--surface-2); color:var(--chalk); border:1px solid var(--surface-3); }
   .msg{ font-size:13px; margin-top:10px; }
   .msg.err{ color:var(--red); } .msg.ok{ color:var(--ok); }
@@ -38,7 +38,7 @@
   .center{ text-align:center; }
   .row{ display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--surface-3); }
   .row:last-child{ border-bottom:none; }
-  .avatar{ width:38px; height:38px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-family:'Oswald',sans-serif; font-weight:700; font-size:13px; color:var(--muted); flex-shrink:0; }
+  .avatar{ width:38px; height:38px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-family:ArchivoBlack,sans-serif; font-weight:700; font-size:13px; color:var(--muted); flex-shrink:0; }
   .rinfo{ flex:1; min-width:0; }
   .rname{ font-size:14.5px; font-weight:600; }
   .rstatus{ font-size:12px; margin-top:2px; display:flex; align-items:center; gap:5px; }
@@ -61,30 +61,72 @@
   .athLegend{ font-size:13.5px; color:var(--muted); line-height:1.5; margin:-4px 0 10px; }
   .counts{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
   .count{ flex:1; min-width:92px; background:var(--surface-2); border-radius:12px; padding:12px 10px; }
-  .count .n{ font-family:'Oswald',sans-serif; font-weight:700; font-size:26px; }
+  .count .n{ font-family:ArchivoBlack,sans-serif; font-weight:700; font-size:26px; }
   .count .t{ font-size:13px; color:var(--muted); }
   .cardHead{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
   .smallBtn{ width:auto; padding:9px 14px; font-size:14px; border-radius:9px; }
   .inviteBox{ background:var(--surface-2); border-radius:12px; padding:14px; margin-bottom:16px; }
   .inviteBox input{ background:#fff; }
   .youTag{ display:inline-block; background:var(--chalk); color:#fff; font-size:11.5px; font-weight:700; letter-spacing:.04em; border-radius:6px; padding:2px 7px; margin-left:6px; vertical-align:middle; }
-  .infoBtn{ width:26px; height:26px; padding:0; border-radius:50%; background:var(--surface-2); color:var(--chalk); border:1px solid var(--surface-3); font-size:14px; font-weight:700; margin-left:6px; vertical-align:middle; font-family:Inter,sans-serif; }
+  .infoBtn{ width:26px; height:26px; padding:0; border-radius:50%; background:var(--surface-2); color:var(--chalk); border:1px solid var(--surface-3); font-size:14px; font-weight:700; margin-left:6px; vertical-align:middle; font-family:Archivo,sans-serif; }
   .myTrainBtn{ width:auto; padding:9px 13px; font-size:14px; border-radius:9px; flex-shrink:0; }
   .selfLink{ margin-top:14px; padding-top:12px; border-top:1px dashed var(--surface-3); font-size:14.5px; color:var(--muted); text-align:center; }
   .selfLink a{ color:var(--chalk); font-weight:700; cursor:pointer; text-decoration:underline; }
   .popBg{ position:fixed; inset:0; background:rgba(20,22,28,.55); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; }
   .pop{ background:#fff; border-radius:16px; padding:22px 20px; max-width:400px; width:100%; }
-  .popTitle{ font-family:'Oswald',sans-serif; font-weight:700; font-size:19px; text-transform:uppercase; margin-bottom:10px; }
+  .popTitle{ font-family:ArchivoBlack,sans-serif; font-weight:700; font-size:19px; text-transform:uppercase; margin-bottom:10px; }
   .popText{ font-size:16px; line-height:1.5; color:var(--muted); margin-bottom:16px; }
   /* franja de marca: fija arriba, a todo lo ancho */
   #brandStripContainer{ position:fixed; top:0; left:0; right:0; z-index:50; }
   body{ padding-top:92px; }
   .athActions{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-  .actBtn{ width:auto; margin:0; padding:9px 14px; font-family:Inter,sans-serif; font-weight:600; font-size:15px; border-radius:9px; cursor:pointer; background:var(--surface-2); color:var(--chalk); border:1px solid var(--surface-3); }
+  .actBtn{ width:auto; margin:0; padding:9px 14px; font-family:Archivo,sans-serif; font-weight:600; font-size:15px; border-radius:9px; cursor:pointer; background:var(--surface-2); color:var(--chalk); border:1px solid var(--surface-3); }
   .act-block{ background:#fbeae7; border-color:#f0c9c2; color:#9c3427; }
   .act-unblock{ background:#dff3e5; border-color:#b9e0c5; color:#1f6b39; }
   .act-del{ background:#fff; border-color:#f0c9c2; color:#9c3427; }
+  /* ---- Panel "Pista en oro" ---- */
+  body.dash .wrap{ max-width:1180px; padding:28px clamp(16px,3vw,40px) 60px; }
+  .dashHead{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:22px; }
+  .dashHead .kicker{ font-size:15px; font-weight:800; letter-spacing:.16em; color:var(--gold-2); text-transform:uppercase; }
+  .dashHead h1{ font-size:clamp(30px,4vw,42px) !important; margin:4px 0 0; text-transform:none; }
+  .dashHead .headBtns{ display:flex; gap:10px; align-items:center; }
+  .bigBtn{ width:auto; min-height:52px; padding:0 22px; font-size:18px; border-radius:14px; }
+  .filters{ display:flex; gap:10px; flex-wrap:wrap; margin:0 0 20px; }
+  .chip{ width:auto; min-height:46px; padding:0 18px; border-radius:999px; font-size:17px; font-weight:700; background:transparent !important; color:var(--chalk) !important; border:2px solid #3a352b !important; }
+  .chip.on{ background:var(--chalk) !important; color:var(--ink) !important; border-color:var(--chalk) !important; }
+  .chip.gold{ color:var(--gold-2) !important; border-color:var(--gold) !important; }
+  .chip.gold.on{ background:var(--gold) !important; color:var(--ink) !important; }
+  .athGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:18px; }
+  .athCard{ background:var(--surface); border:1px solid var(--surface-3); border-top:6px solid var(--band,#3a352b); border-radius:20px; padding:20px 22px; display:flex; flex-direction:column; gap:14px; cursor:pointer; transition:transform .15s ease, border-color .15s ease; }
+  .athCard:hover{ transform:translateY(-2px); }
+  .athCard .who{ display:flex; align-items:center; gap:14px; }
+  .athCard .avatar{ width:54px; height:54px; font-size:19px; }
+  .athCard .athName{ font-size:21px; font-weight:800; line-height:1.2; }
+  .athCard .athSub{ font-size:15.5px; margin-top:2px; }
+  .athCard .pct{ display:flex; align-items:baseline; gap:8px; }
+  .athCard .pct b{ font-family:ArchivoBlack,sans-serif; font-weight:400; font-size:44px; line-height:1; }
+  .athCard .pct span{ font-size:16px; color:var(--muted-2); }
+  .athCard .bar{ height:8px; border-radius:4px; background:#26231c; overflow:hidden; margin-top:-4px; }
+  .athCard .bar i{ display:block; height:100%; background:var(--gold); border-radius:4px; }
+  .athCard .pills{ margin-top:0; }
+  .athCard .athActions{ margin-top:0; padding-top:12px; border-top:1px solid var(--line); }
+  .athCard .actBtn{ min-height:44px; font-size:15px; padding:0 12px; }
+  .athCard .myTrainBtn{ width:100%; min-height:50px; font-size:17px; }
+  .counts{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:22px; }
+  .count{ padding:18px 20px !important; }
+  .count .n{ font-size:40px !important; }
+  .count .t{ font-size:16px !important; }
+  .count.hot{ background:#2a2316 !important; border-color:#5a4719 !important; }
+  .count.hot .n, .count.hot .t{ color:var(--gold-2) !important; }
+  @media (max-width:640px){
+    .counts{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+    .count{ padding:12px !important; min-width:0; }
+    .count .n{ font-size:30px !important; }
+    .count .t{ font-size:14px !important; line-height:1.25; }
+    .dashHead .headBtns{ width:100%; justify-content:space-between; }
+  }
 </style>
+<link rel="stylesheet" href="theme.css?v=2">
 </head>
 <body>
 <div id="brandStripContainer"></div>
@@ -137,30 +179,30 @@
   </div>
 
   <div id="dashView" class="hidden">
-    <div class="topbar">
+    <div class="dashHead">
       <div>
-        <h1 id="clubName">Mi club</h1>
-        <p class="sub" id="clubSub" style="margin:0;"></p>
+        <div class="kicker" id="clubName">Mi club</div>
+        <h1>Tus atletas</h1>
+        <p class="sub" id="clubSub" style="margin:4px 0 0;"></p>
       </div>
-      <button class="signout" id="signoutBtn">Salir</button>
+      <div class="headBtns">
+        <button class="bigBtn" id="toggleInvite">+ Invitar atleta</button>
+        <button class="signout" id="signoutBtn">Salir</button>
+      </div>
     </div>
-
-    <div class="card" id="athletesCard">
-      <div class="cardHead">
-        <label style="margin:0;">Mis atletas</label>
-        <button class="smallBtn" id="toggleInvite">+ Invitar atleta</button>
-      </div>
-      <div id="inviteBox" class="inviteBox hidden">
-        <input type="email" id="inviteEmail" placeholder="correo del atleta">
-        <input type="text" id="inviteName" placeholder="nombre del atleta">
-        <button id="inviteBtn">Enviar invitación</button>
-        <div id="inviteMsg" class="msg"></div>
-      </div>
-      <div id="athCounts" class="counts"></div>
-      <div id="athletesList"><div class="empty">Cargando…</div></div>
-      <div id="selfAthleteLink" class="selfLink hidden"></div>
-      <div id="selfAthleteMsg" class="msg"></div>
+    <div id="inviteBox" class="card inviteBox hidden" style="max-width:560px;">
+      <label for="inviteEmail">Correo del atleta</label>
+      <input type="email" id="inviteEmail" placeholder="correo del atleta">
+      <label for="inviteName">Nombre del atleta</label>
+      <input type="text" id="inviteName" placeholder="nombre del atleta">
+      <button id="inviteBtn">Enviar invitación</button>
+      <div id="inviteMsg" class="msg"></div>
     </div>
+    <div id="athCounts" class="counts"></div>
+    <div id="athFilters" class="filters"></div>
+    <div id="athletesList" class="athGrid"><div class="empty">Cargando…</div></div>
+    <div id="selfAthleteLink" class="selfLink hidden"></div>
+    <div id="selfAthleteMsg" class="msg"></div>
 
     <div id="infoPopup" class="popBg hidden">
       <div class="pop">
@@ -173,14 +215,14 @@
 
 </div>
 
-<script src="firebase-init.js?v=20261007153046"></script>
-<script src="branding.js?v=20261007153046"></script>
-<script src="status.js?v=20261007153046"></script>
+<script src="firebase-init.js?v=20261011155324"></script>
+<script src="branding.js?v=20261011155324"></script>
+<script src="status.js?v=20261011155324"></script>
 <script>
   document.getElementById('brandStripContainer').appendChild(renderBrandStrip(null, null));
 
   const views = ['loadingView','confirmEmailView','setPasswordView','loginView','blockedView','dashView'];
-  function show(id){ views.forEach(v=> document.getElementById(v).classList.toggle('hidden', v!==id)); }
+  function show(id){ views.forEach(v=> document.getElementById(v).classList.toggle('hidden', v!==id)); document.body.classList.toggle('dash', id==='dashView'); }
 
   const params = new URLSearchParams(window.location.search);
   const inviteIdFromLink = params.get('invite');
@@ -373,8 +415,8 @@
 
   function loadClub(club){
     loadSelfAthlete();
-    document.getElementById('clubName').textContent = club.name || 'Mi club';
-    document.getElementById('clubSub').textContent = 'Panel del entrenador';
+    document.getElementById('clubName').textContent = 'Panel del entrenador';
+    document.getElementById('clubSub').textContent = '';
     const stripContainer = document.getElementById('brandStripContainer');
     stripContainer.innerHTML = '';
     stripContainer.appendChild(renderBrandStrip(club.logoUrl, club.name));
@@ -385,7 +427,7 @@
     const countsEl = document.getElementById('athCounts');
     const snap = await db.collection('clubs').doc(currentClubId).collection('athletes').get();
     if (snap.empty){
-      countsEl.innerHTML = '';
+      countsEl.innerHTML = ''; document.getElementById('athFilters').innerHTML = '';
       listEl.innerHTML = '<div class="empty">Todavía no has invitado a ningún atleta.</div>';
       return;
     }
@@ -397,14 +439,34 @@
       try{ st = await computeAthleteStatus(doc.ref, a); }catch(e){ st = null; }
       return { doc, a, st };
     }));
-    const nPendProg = rows.filter(r=>r.st && r.st.program.key==='pending' && !r.a.blocked).length;
-    const nToReview = rows.filter(r=>r.st && r.st.results.key==='new' && !r.a.blocked).length;
+    ATH_ROWS = rows;
+    renderAthletes();
+  }
+  let ATH_ROWS = [], ATH_FILTER = 'all';
+  function athGroup(r){
+    if (r.a.blocked) return 'blocked';
+    if (r.st && r.st.results.key === 'new') return 'review';
+    if (r.st && r.st.program.key === 'pending') return 'program';
+    return 'ok';
+  }
+  function renderAthletes(){
+    const rows = ATH_ROWS;
+    const listEl = document.getElementById('athletesList');
+    const countsEl = document.getElementById('athCounts');
+    const filtEl = document.getElementById('athFilters');
+    const n = { all: rows.length, review:0, program:0, blocked:0 };
+    rows.forEach(r=>{ const g = athGroup(r); if (n[g] !== undefined) n[g]++; });
     countsEl.innerHTML =
-      '<div class="count"><div class="n">' + rows.length + '</div><div class="t">Atletas</div></div>' +
-      '<div class="count"><div class="n" style="color:#8a6512;">' + nToReview + '</div><div class="t">Resultados sin revisar</div></div>' +
-      '<div class="count"><div class="n" style="color:#5a5e68;">' + nPendProg + '</div><div class="t">Programación pendiente</div></div>';
+      '<div class="count"><div class="n">' + rows.filter(r=>!r.a.blocked).length + '</div><div class="t">Atletas activos</div></div>' +
+      '<div class="count' + (n.review ? ' hot' : '') + '"><div class="n">' + n.review + '</div><div class="t">Resultados por revisar</div></div>' +
+      '<div class="count"><div class="n">' + n.program + '</div><div class="t">Necesitan semana nueva</div></div>';
+    const F = [['all','Todos',''],['review','Por revisar','gold'],['program','Sin semana',''],['blocked','Bloqueados','']];
+    filtEl.innerHTML = F.filter(f=> f[0]==='all' || n[f[0]]).map(f=>
+      '<button class="chip ' + f[2] + (ATH_FILTER===f[0] ? ' on' : '') + '" data-f="' + f[0] + '">' + f[1] + ' · ' + n[f[0]] + '</button>').join('');
+    filtEl.querySelectorAll('.chip').forEach(b=> b.onclick = ()=>{ ATH_FILTER = b.dataset.f; renderAthletes(); });
+    const BAND = { review:'#c99a2e', program:'#6f695e', blocked:'#b5503f', ok:'#3a352b', done:'#3f9a62' };
     listEl.innerHTML = '';
-    rows.forEach(({doc, a, st})=>{
+    rows.filter(r=> ATH_FILTER==='all' || athGroup(r)===ATH_FILTER).forEach(({doc, a, st})=>{
       const initials = (a.name||a.email||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
       let pills = '';
       if (a.blocked) pills += statusPill('Acceso', { key:'bad', text:'Bloqueado' });
@@ -415,23 +477,27 @@
         pills += statusPill('Estado', { key:'pending', text:'No disponible' });
       }
       const sub = st ? [st.program.detail, st.lastActivity ? ('última actividad ' + new Date(st.lastActivity).toLocaleDateString('es-ES')) : ''].filter(Boolean).join(' · ') : (a.email || '');
+      const pct = (st && st.daysTotal) ? Math.round(st.daysDone / st.daysTotal * 100) : null;
       const isMe = (signedInUser || auth.currentUser) && doc.id === (signedInUser || auth.currentUser).uid;
       const row = document.createElement('div');
-      row.className = 'athRow';
+      row.className = 'athCard';
+      const grp = athGroup({a, st}); row.style.setProperty('--band', BAND[(grp==='ok' && st && st.results.key==='ok') ? 'done' : grp]);
       row.innerHTML = `
-        <div class="avatar">${initials}</div>
-        <div class="athMain">
-          <div class="athName">${a.name || a.email}${isMe ? '<span class="youTag">TÚ</span><button class="infoBtn" title="Información">i</button>' : ''}</div>
-          <div class="athSub">${sub}</div>
-          <div class="pills">${pills}</div>
-          ${isMe ? '<button class="myTrainBtn" style="margin-top:10px;">🏋️ Mi entreno</button>' : ''}
-          <div class="athActions">
-            <button class="actBtn act-edit">✏️ Editar</button>
-            ${a.blocked ? '<button class="actBtn act-unblock">🔓 Desbloquear</button>' : '<button class="actBtn act-block">🔒 Bloquear</button>'}
-            <button class="actBtn act-del">🗑️ Eliminar</button>
+        <div class="who">
+          <div class="avatar">${initials}</div>
+          <div class="athMain">
+            <div class="athName">${a.name || a.email}${isMe ? '<span class="youTag">TÚ</span><button class="infoBtn" title="Información">i</button>' : ''}</div>
+            <div class="athSub">${sub}</div>
           </div>
         </div>
-        <span style="color:var(--muted-2);font-size:22px;">›</span>`;
+        ${pct === null ? '' : '<div class="pct"><b>' + pct + '%</b><span>de la semana · ' + st.daysDone + '/' + st.daysTotal + ' días</span></div><div class="bar"><i style="width:' + pct + '%"></i></div>'}
+        <div class="pills">${pills}</div>
+        ${isMe ? '<button class="myTrainBtn">Mi entreno</button>' : ''}
+        <div class="athActions">
+          <button class="actBtn act-edit">Editar</button>
+          ${a.blocked ? '<button class="actBtn act-unblock">Desbloquear</button>' : '<button class="actBtn act-block">Bloquear</button>'}
+          <button class="actBtn act-del">Eliminar</button>
+        </div>`;
       row.onclick = ()=>{ window.location.href = 'ficha-atleta.html?athlete=' + doc.id; };
       row.querySelector('.act-edit').onclick = (e)=>{ e.stopPropagation(); editAthlete(doc.ref, a); };
       const bBtn = row.querySelector('.act-block'), uBtn = row.querySelector('.act-unblock');
@@ -444,6 +510,7 @@
       }
       listEl.appendChild(row);
     });
+    if (!listEl.children.length) listEl.innerHTML = '<div class="empty">No hay atletas en este grupo.</div>';
   }
 
   // ===== Acciones sobre cada atleta: editar, bloquear, eliminar =====
