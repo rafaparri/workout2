@@ -7,30 +7,31 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261011213613';</script>
-<script src="update.js?v=20261011213613"></script>
+<script>window.WO2_VERSION='20261012095547';</script>
+<script src="update.js?v=20261012095547"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <meta name="theme-color" content="#0c0c0e">
-<link rel="stylesheet" href="theme.css?v=2">
+<link rel="stylesheet" href="palette.css?v=1">
+<link rel="stylesheet" href="theme.css?v=3">
 <style>
   *{ box-sizing:border-box; }
   body{ margin:0; min-height:100vh; display:flex; flex-direction:column; }
-  .top{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px clamp(16px,4vw,56px); background:#121114; border-bottom:1px solid var(--line); }
+  .top{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px clamp(16px,4vw,56px); background:var(--t-bg2); border-bottom:1px solid var(--line); }
   .brand{ display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--chalk); }
-  .brand img{ width:64px; height:auto; }
+  .brand .wo2-fig{ width:64px; }
   .brand span{ font-family:ArchivoBlack,sans-serif; font-size:22px; }
   .brand b{ color:var(--gold); font-weight:400; }
   .topNote{ font-size:15px; color:var(--muted-2); text-align:right; }
   .hero{ position:relative; overflow:hidden; background:var(--surface); border-bottom:1px solid var(--line); padding:clamp(36px,6vw,64px) clamp(16px,4vw,56px) 120px; }
-  .slash{ position:absolute; right:-90px; top:-60px; width:min(520px,62vw); height:calc(100% + 120px); background:var(--gold); transform:skewX(-18deg); }
-  .heroFig{ position:absolute; right:clamp(10px,5vw,80px); top:50%; transform:translateY(-62%); width:min(430px,42vw); filter:brightness(0); }
+  .heroArt{ position:absolute; right:0; top:0; bottom:0; width:min(560px,46vw); background:var(--t-accent); clip-path:polygon(28% 0,100% 0,100% 100%,0 100%); display:flex; align-items:center; justify-content:flex-end; padding:0 clamp(20px,4vw,64px) 60px 0; }
+  .heroArt .wo2-fig{ width:min(400px,34vw); background:var(--t-ink); }
   .heroText{ position:relative; max-width:620px; display:flex; flex-direction:column; gap:18px; }
   .kicker{ font-size:16px; font-weight:800; letter-spacing:.16em; color:var(--gold-2); }
   .hero h1{ margin:0; font-size:clamp(40px,7vw,76px) !important; line-height:.98; }
   .hero p{ margin:0; font-size:clamp(18px,2.2vw,22px); line-height:1.45; color:var(--muted); max-width:540px; }
   .roles{ position:relative; margin-top:-72px; padding:0 clamp(16px,4vw,56px) 40px; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; }
-  .role{ display:flex; flex-direction:column; gap:12px; padding:28px; border-radius:20px; text-decoration:none; background:#1d1b20; border:1px solid var(--surface-3); color:var(--chalk); box-shadow:0 14px 30px rgba(0,0,0,.5); min-height:200px; transition:transform .15s ease, border-color .15s ease; }
+  .role{ display:flex; flex-direction:column; gap:12px; padding:28px; border-radius:20px; text-decoration:none; background:var(--t-surface2); border:1px solid var(--surface-3); color:var(--chalk); box-shadow:0 14px 30px rgba(0,0,0,.18); min-height:200px; transition:transform .15s ease, border-color .15s ease; }
   .role:hover{ transform:translateY(-3px); border-color:var(--gold); }
   .role.main{ background:var(--gold); color:var(--ink); border-color:var(--gold); }
   .role svg{ width:44px; height:44px; stroke:var(--gold); }
@@ -42,21 +43,20 @@
   @media (max-width:640px){
     .topNote{ display:none; }
     .hero{ padding-top:24px; }
-    .slash{ right:-120px; width:66vw; height:180px; top:0; }
-    .heroFig{ top:22px; right:10px; transform:none; width:46vw; }
-    .heroText{ margin-top:150px; }
+    .hero{ display:flex; flex-direction:column; gap:22px; }
+    .heroArt{ position:relative; width:auto; height:170px; border-radius:20px; clip-path:polygon(14% 0,100% 0,100% 100%,0 100%); justify-content:center; padding:0 0 0 30px; order:-1; }
+    .heroArt .wo2-fig{ width:min(250px,64vw); }
     .role{ min-height:0; }
   }
 </style>
 </head>
 <body>
   <div class="top">
-    <a class="brand" href="./"><img src="static/figura-oro.png" alt=""><span>WORKOUT<b> 2.0</b></span></a>
+    <a class="brand" href="./"><span class="wo2-fig" aria-hidden="true"></span><span>WORKOUT<b> 2.0</b></span></a>
     <div class="topNote">con tecnología de RPT</div>
   </div>
   <section class="hero">
-    <div class="slash" aria-hidden="true"></div>
-    <img class="heroFig" src="static/figura-oro.png" alt="" aria-hidden="true">
+    <div class="heroArt" aria-hidden="true"><span class="wo2-fig"></span></div>
     <div class="heroText">
       <span class="kicker">HALTEROFILIA · CLUBES</span>
       <h1>Cada kilo,<br>cada semana,<br>bajo control.</h1>

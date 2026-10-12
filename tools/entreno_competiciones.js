@@ -21,18 +21,18 @@ function wo2CompsOn(plan, d){
 }
 function wo2CompSummaryCard(c, onOpen){
   const card = el('div','ex-card');
-  card.style.cssText = 'border:2px solid var(--gold,#c99a2e) !important;cursor:pointer;';
+  card.style.cssText = 'border:2px solid var(--gold,var(--t-accent)) !important;cursor:pointer;';
   const t = WO2C.total(c.results), g = c.goals || {};
   const when = WO2C.when(c);
   card.innerHTML =
     '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">' +
-      '<div style="min-width:0;"><div style="font-size:14px;font-weight:800;letter-spacing:.12em;color:#e0b453;">🏆 ' + (when === 'today' ? 'HOY COMPITES' : when === 'next' ? 'COMPETICIÓN' : 'COMPETICIÓN') + '</div>' +
+      '<div style="min-width:0;"><div style="font-size:14px;font-weight:800;letter-spacing:.12em;color:var(--t-accent2);">🏆 ' + (when === 'today' ? 'HOY COMPITES' : when === 'next' ? 'COMPETICIÓN' : 'COMPETICIÓN') + '</div>' +
       '<div class="ex-name" style="margin-top:4px;">' + WO2C.esc(c.name || 'Competición') + '</div>' +
       '<div class="ex-sub" style="margin-top:4px;">' + WO2C.esc([WO2C.fmt(c.day || c.startDate, { weekday:'long', day:'numeric', month:'long' }), c.place, c.category].filter(Boolean).join(' · ')) + '</div></div>' +
-      (t !== null ? '<div style="text-align:right;flex-shrink:0;"><div style="font-family:ArchivoBlack,sans-serif;font-size:28px;color:#e0b453;">' + t + ' kg</div><div class="ex-sub">total</div></div>' : '') +
+      (t !== null ? '<div style="text-align:right;flex-shrink:0;"><div style="font-family:ArchivoBlack,sans-serif;font-size:28px;color:var(--t-accent2);">' + t + ' kg</div><div class="ex-sub">total</div></div>' : '') +
     '</div>' +
     '<div style="font-size:16px;color:var(--muted);margin-top:10px;">Objetivo: arrancada <b style="color:var(--chalk)">' + (g.sn || '—') + '</b> · 2T <b style="color:var(--chalk)">' + (g.cj || '—') + '</b> · total <b style="color:var(--chalk)">' + (g.total || '—') + '</b></div>' +
-    '<div style="margin-top:12px;"><span style="display:inline-flex;align-items:center;min-height:48px;padding:0 16px;border-radius:12px;background:#c99a2e;color:#0c0c0e;font-weight:800;font-size:16px;">' + (WO2C.hasResults(c.results) ? 'Ver resultados' : 'Anotar resultados') + ' ›</span></div>';
+    '<div style="margin-top:12px;"><span style="display:inline-flex;align-items:center;min-height:48px;padding:0 16px;border-radius:12px;background:var(--t-accent);color:var(--t-ink);font-weight:800;font-size:16px;">' + (WO2C.hasResults(c.results) ? 'Ver resultados' : 'Anotar resultados') + ' ›</span></div>';
   card.onclick = onOpen;
   return card;
 }

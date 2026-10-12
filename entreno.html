@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261011213613';</script>
-<script src="update.js?v=20261011213613"></script>
+<script>window.WO2_VERSION='20261012095547';</script>
+<script src="update.js?v=20261012095547"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -17,8 +17,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261011213613"></script>
-<script src="branding.js?v=20261011213613"></script>
+<script src="firebase-init.js?v=20261012095547"></script>
+<script src="branding.js?v=20261012095547"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
@@ -533,7 +533,8 @@ input[type=file]{display:none;}
   cursor:pointer;
 }
 </style>
-<link rel="stylesheet" href="theme-entreno.css?v=3">
+<link rel="stylesheet" href="palette.css?v=1">
+<link rel="stylesheet" href="theme-entreno.css?v=4">
 <meta name="theme-color" content="#0c0c0e">
 </head>
 <body>
@@ -1393,8 +1394,8 @@ function ratingInfo(value){ return SET_RATING_LEVELS.find(l=>l.value===value) ||
 // por dolor, lesión o cansancio, o al revés) en naranja, y añadidos (por
 // verse muy bien) en verde. Así se distinguen de un vistazo.
 const SET_CHANGE_STYLES = {
-  edited: { bg:'#2d1c0f', border:'#e07b39', label:'✏️ Cambiado respecto a lo programado' },
-  added:  { bg:'#13261a', border:'#3f9a62', label:'➕ Añadido a lo programado' }
+  edited: { bg:'var(--t-chg-bg)', border:'var(--t-chg)', label:'✏️ Cambiado respecto a lo programado' },
+  added:  { bg:'var(--t-good-bg)', border:'var(--t-good)', label:'➕ Añadido a lo programado' }
 };
 function setChangeStyle(s){
   if (!s) return null;
@@ -6302,18 +6303,18 @@ function wo2CompsOn(plan, d){
 }
 function wo2CompSummaryCard(c, onOpen){
   const card = el('div','ex-card');
-  card.style.cssText = 'border:2px solid var(--gold,#c99a2e) !important;cursor:pointer;';
+  card.style.cssText = 'border:2px solid var(--gold,var(--t-accent)) !important;cursor:pointer;';
   const t = WO2C.total(c.results), g = c.goals || {};
   const when = WO2C.when(c);
   card.innerHTML =
     '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">' +
-      '<div style="min-width:0;"><div style="font-size:14px;font-weight:800;letter-spacing:.12em;color:#e0b453;">🏆 ' + (when === 'today' ? 'HOY COMPITES' : when === 'next' ? 'COMPETICIÓN' : 'COMPETICIÓN') + '</div>' +
+      '<div style="min-width:0;"><div style="font-size:14px;font-weight:800;letter-spacing:.12em;color:var(--t-accent2);">🏆 ' + (when === 'today' ? 'HOY COMPITES' : when === 'next' ? 'COMPETICIÓN' : 'COMPETICIÓN') + '</div>' +
       '<div class="ex-name" style="margin-top:4px;">' + WO2C.esc(c.name || 'Competición') + '</div>' +
       '<div class="ex-sub" style="margin-top:4px;">' + WO2C.esc([WO2C.fmt(c.day || c.startDate, { weekday:'long', day:'numeric', month:'long' }), c.place, c.category].filter(Boolean).join(' · ')) + '</div></div>' +
-      (t !== null ? '<div style="text-align:right;flex-shrink:0;"><div style="font-family:ArchivoBlack,sans-serif;font-size:28px;color:#e0b453;">' + t + ' kg</div><div class="ex-sub">total</div></div>' : '') +
+      (t !== null ? '<div style="text-align:right;flex-shrink:0;"><div style="font-family:ArchivoBlack,sans-serif;font-size:28px;color:var(--t-accent2);">' + t + ' kg</div><div class="ex-sub">total</div></div>' : '') +
     '</div>' +
     '<div style="font-size:16px;color:var(--muted);margin-top:10px;">Objetivo: arrancada <b style="color:var(--chalk)">' + (g.sn || '—') + '</b> · 2T <b style="color:var(--chalk)">' + (g.cj || '—') + '</b> · total <b style="color:var(--chalk)">' + (g.total || '—') + '</b></div>' +
-    '<div style="margin-top:12px;"><span style="display:inline-flex;align-items:center;min-height:48px;padding:0 16px;border-radius:12px;background:#c99a2e;color:#0c0c0e;font-weight:800;font-size:16px;">' + (WO2C.hasResults(c.results) ? 'Ver resultados' : 'Anotar resultados') + ' ›</span></div>';
+    '<div style="margin-top:12px;"><span style="display:inline-flex;align-items:center;min-height:48px;padding:0 16px;border-radius:12px;background:var(--t-accent);color:var(--t-ink);font-weight:800;font-size:16px;">' + (WO2C.hasResults(c.results) ? 'Ver resultados' : 'Anotar resultados') + ' ›</span></div>';
   card.onclick = onOpen;
   return card;
 }

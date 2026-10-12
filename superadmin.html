@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261011213613';</script>
-<script src="update.js?v=20261011213613"></script>
+<script>window.WO2_VERSION='20261012095547';</script>
+<script src="update.js?v=20261012095547"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -85,7 +85,8 @@
   .shareChips{ display:inline-flex; gap:8px; flex-wrap:wrap; }
   .shareRow{ margin-top:-8px; }
 </style>
-<link rel="stylesheet" href="theme.css?v=2">
+<link rel="stylesheet" href="palette.css?v=1">
+<link rel="stylesheet" href="theme.css?v=3">
 </head>
 <body>
 <header>
@@ -175,14 +176,14 @@
   </div>
 </main>
 
-<script src="firebase-init.js?v=20261011213613"></script>
-<script src="branding.js?v=20261011213613"></script>
+<script src="firebase-init.js?v=20261012095547"></script>
+<script src="branding.js?v=20261012095547"></script>
 <script>
   document.getElementById('rptLogo').src = 'data:image/png;base64,' + RPT_LOGO_B64;
 
   function esc(t){ return String(t==null?'':t).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
   function pill(label, value, kind){
-    const c = { ok:['#16261c','#7fd19a','#3f9a62'], bad:['#2b1614','#f08a7c','#b5503f'], off:['#211f1a','#bdb6a6','#6f695e'], info:['#2a2316','#e0b453','#c99a2e'] }[kind] || ['#211f1a','#bdb6a6','#6f695e'];
+    const c = { ok:['var(--t-good-bg)','var(--t-good-fg)','var(--t-good)'], bad:['var(--t-bad-bg)','var(--t-bad-fg)','var(--t-bad)'], off:['var(--t-chip)','var(--t-muted)','var(--t-muted3)'], info:['var(--t-accent-soft)','var(--t-accent2)','var(--t-accent)'] }[kind] || ['var(--t-chip)','var(--t-muted)','var(--t-muted3)'];
     return '<span class="pill" style="background:'+c[0]+';color:'+c[1]+';"><span class="pdot" style="background:'+c[2]+';"></span>'+label+': <b>'+value+'</b></span>';
   }
   // Suscripción: si el club no tiene el dato (clubes antiguos), cuenta como activa.

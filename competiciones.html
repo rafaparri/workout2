@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261011213613';</script>
-<script src="update.js?v=20261011213613"></script>
+<script>window.WO2_VERSION='20261012095547';</script>
+<script src="update.js?v=20261012095547"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <meta name="theme-color" content="#0c0c0e">
@@ -26,17 +26,17 @@
   .head h1{ font-size:clamp(30px,4vw,42px) !important; margin:4px 0 0; }
   .btns{ display:flex; gap:10px; flex-wrap:wrap; }
   .btn{ width:auto; min-height:52px; padding:0 20px; font-size:17px; border-radius:14px; border:none; cursor:pointer; }
-  .btn.ghost{ background:transparent !important; color:var(--chalk) !important; border:2px solid #3a352b !important; }
-  .btn.danger{ background:transparent !important; color:#f08a7c !important; border:2px solid #5e2a22 !important; }
+  .btn.ghost{ background:transparent !important; color:var(--chalk) !important; border:2px solid var(--t-edge) !important; }
+  .btn.danger{ background:transparent !important; color:var(--t-bad-fg) !important; border:2px solid var(--t-bad-edge) !important; }
   .secTitle{ font-size:15px; font-weight:800; letter-spacing:.14em; color:var(--muted-2); text-transform:uppercase; margin:26px 0 12px; }
   .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
-  .comp{ background:var(--surface); border:1px solid var(--surface-3); border-top:6px solid var(--band,#3a352b); border-radius:20px; padding:20px; display:flex; flex-direction:column; gap:10px; cursor:pointer; text-align:left; color:var(--chalk); font:inherit; min-height:0; width:100%; }
+  .comp{ background:var(--surface); border:1px solid var(--surface-3); border-top:6px solid var(--band,var(--t-edge)); border-radius:20px; padding:20px; display:flex; flex-direction:column; gap:10px; cursor:pointer; text-align:left; color:var(--chalk); font:inherit; min-height:0; width:100%; }
   .comp:hover{ border-color:var(--gold); filter:none; }
   .comp .d{ font-size:15px; font-weight:800; letter-spacing:.08em; color:var(--gold-2); text-transform:uppercase; }
   .comp .n{ font-family:ArchivoBlack,sans-serif; font-size:23px; line-height:1.2; }
   .comp .p{ font-size:16px; color:var(--muted); }
   .chips{ display:flex; flex-wrap:wrap; gap:6px; }
-  .chip{ background:#26231c; color:var(--chalk); border-radius:999px; padding:5px 12px; font-size:14.5px; font-weight:700; }
+  .chip{ background:var(--t-chip); color:var(--chalk); border-radius:999px; padding:5px 12px; font-size:14.5px; font-weight:700; }
   .card{ padding:20px; margin-bottom:16px; }
   .form label{ display:block; margin:12px 0 6px; }
   .form input, .form textarea, .form select{ width:100%; padding:12px; min-height:50px; }
@@ -62,7 +62,8 @@
   .msg{ font-size:15px; margin-top:10px; }
   @media (max-width:560px){ .row2, .entTools{ grid-template-columns:1fr; } }
 </style>
-<link rel="stylesheet" href="theme.css?v=2">
+<link rel="stylesheet" href="palette.css?v=1">
+<link rel="stylesheet" href="theme.css?v=3">
 </head>
 <body>
 <div id="brandStripContainer"></div>
@@ -130,8 +131,8 @@
   </div>
 </div>
 
-<script src="firebase-init.js?v=20261011213613"></script>
-<script src="branding.js?v=20261011213613"></script>
+<script src="firebase-init.js?v=20261012095547"></script>
+<script src="branding.js?v=20261012095547"></script>
 <script src="competicion.js?v=0"></script>
 <script>
   const W = WO2C;
@@ -181,7 +182,7 @@
       const uids = c.athleteUids || [];
       const names = uids.map(u=> (ATHLETES.find(a=>a.uid===u) || {}).name).filter(Boolean);
       const t = W.today();
-      b.style.setProperty('--band', (c.startDate <= t && (c.endDate||c.startDate) >= t) ? '#3f9a62' : ((c.endDate||c.startDate) < t ? '#3a352b' : '#c99a2e'));
+      b.style.setProperty('--band', (c.startDate <= t && (c.endDate||c.startDate) >= t) ? 'var(--t-good)' : ((c.endDate||c.startDate) < t ? 'var(--t-edge)' : 'var(--t-accent)'));
       b.innerHTML = '<span class="d">' + W.esc(W.range(c.startDate, c.endDate)) + '</span>' +
         '<span class="n">' + W.esc(c.name || 'Competición') + '</span>' +
         (c.place ? '<span class="p">' + W.esc(c.place) + '</span>' : '') +

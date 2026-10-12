@@ -438,7 +438,7 @@ function wo2ShowBootError(msg){
 
 # ===== Aspecto "Pista en oro" (negro y oro, letra Archivo) =====
 # Hoja de estilos propia, cargada después de la de la app original.
-patch('</head>', '<link rel="stylesheet" href="theme-entreno.css?v=3">\n<meta name="theme-color" content="#0c0c0e">\n</head>')
+patch('</head>', '<link rel="stylesheet" href="palette.css?v=1">\n<link rel="stylesheet" href="theme-entreno.css?v=4">\n<meta name="theme-color" content="#0c0c0e">\n</head>')
 # Letra: Oswald/Inter de la original pasan a ArchivoBlack/Archivo (nombres sin espacios: van dentro de textos JS).
 html = html.replace("'Oswald'", "ArchivoBlack").replace('Oswald,', 'ArchivoBlack,').replace("'Inter'", "Archivo").replace('Inter,', 'Archivo,')
 # Botones pequeños (Notas, Informe, Añadir vídeo…): más grandes para el dedo.
@@ -484,8 +484,8 @@ patch("    } else {\n      plate.textContent = '+';\n    }\n",
 COMP_JS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_competiciones.js'), encoding='utf-8').read()
 patch("<script>\n// WorkOut 2.0: fechas de la semana", '<script src="competicion.js?v=1"></script>\n<script>\n' + COMP_JS + "\n</script>\n<script>\n// WorkOut 2.0: fechas de la semana")
 # Cambios del atleta: fondos oscuros.
-patch("  edited: { bg:'#fde9da', border:'#e07b39',", "  edited: { bg:'#2d1c0f', border:'#e07b39',")
-patch("  added:  { bg:'#dff3e5', border:'#2e9a52',", "  added:  { bg:'#13261a', border:'#3f9a62',")
+patch("  edited: { bg:'#fde9da', border:'#e07b39',", "  edited: { bg:'var(--t-chg-bg)', border:'var(--t-chg)',")
+patch("  added:  { bg:'#dff3e5', border:'#2e9a52',", "  added:  { bg:'var(--t-good-bg)', border:'var(--t-good)',")
 
 patch('\ninitApp();\n</script>', '\n' + ADAPTER + '\n</script>')
 

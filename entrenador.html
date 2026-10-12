@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261011213613';</script>
-<script src="update.js?v=20261011213613"></script>
+<script>window.WO2_VERSION='20261012095547';</script>
+<script src="update.js?v=20261012095547"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -92,12 +92,12 @@
   .dashHead .headBtns{ display:flex; gap:10px; align-items:center; }
   .bigBtn{ width:auto; min-height:52px; padding:0 22px; font-size:18px; border-radius:14px; }
   .filters{ display:flex; gap:10px; flex-wrap:wrap; margin:0 0 20px; }
-  .chip{ width:auto; min-height:46px; padding:0 18px; border-radius:999px; font-size:17px; font-weight:700; background:transparent !important; color:var(--chalk) !important; border:2px solid #3a352b !important; }
+  .chip{ width:auto; min-height:46px; padding:0 18px; border-radius:999px; font-size:17px; font-weight:700; background:transparent !important; color:var(--chalk) !important; border:2px solid var(--t-edge) !important; }
   .chip.on{ background:var(--chalk) !important; color:var(--ink) !important; border-color:var(--chalk) !important; }
   .chip.gold{ color:var(--gold-2) !important; border-color:var(--gold) !important; }
   .chip.gold.on{ background:var(--gold) !important; color:var(--ink) !important; }
   .athGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:18px; }
-  .athCard{ background:var(--surface); border:1px solid var(--surface-3); border-top:6px solid var(--band,#3a352b); border-radius:20px; padding:20px 22px; display:flex; flex-direction:column; gap:14px; cursor:pointer; transition:transform .15s ease, border-color .15s ease; }
+  .athCard{ background:var(--surface); border:1px solid var(--surface-3); border-top:6px solid var(--band,var(--t-edge)); border-radius:20px; padding:20px 22px; display:flex; flex-direction:column; gap:14px; cursor:pointer; transition:transform .15s ease, border-color .15s ease; }
   .athCard:hover{ transform:translateY(-2px); }
   .athCard .who{ display:flex; align-items:center; gap:14px; }
   .athCard .avatar{ width:54px; height:54px; font-size:19px; }
@@ -106,7 +106,7 @@
   .athCard .pct{ display:flex; align-items:baseline; gap:8px; }
   .athCard .pct b{ font-family:ArchivoBlack,sans-serif; font-weight:400; font-size:44px; line-height:1; }
   .athCard .pct span{ font-size:16px; color:var(--muted-2); }
-  .athCard .bar{ height:8px; border-radius:4px; background:#26231c; overflow:hidden; margin-top:-4px; }
+  .athCard .bar{ height:8px; border-radius:4px; background:var(--t-chip); overflow:hidden; margin-top:-4px; }
   .athCard .bar i{ display:block; height:100%; background:var(--gold); border-radius:4px; }
   .athCard .pills{ margin-top:0; }
   .athCard .athActions{ margin-top:0; padding-top:12px; border-top:1px solid var(--line); }
@@ -116,7 +116,7 @@
   .count{ padding:18px 20px !important; }
   .count .n{ font-size:40px !important; }
   .count .t{ font-size:16px !important; }
-  .count.hot{ background:#2a2316 !important; border-color:#5a4719 !important; }
+  .count.hot{ background:var(--t-accent-soft) !important; border-color:var(--t-accent-edge) !important; }
   .count.hot .n, .count.hot .t{ color:var(--gold-2) !important; }
   @media (max-width:640px){
     .counts{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
@@ -126,7 +126,8 @@
     .dashHead .headBtns{ width:100%; justify-content:space-between; }
   }
 </style>
-<link rel="stylesheet" href="theme.css?v=2">
+<link rel="stylesheet" href="palette.css?v=1">
+<link rel="stylesheet" href="theme.css?v=3">
 </head>
 <body>
 <div id="brandStripContainer"></div>
@@ -186,7 +187,7 @@
         <p class="sub" id="clubSub" style="margin:4px 0 0;"></p>
       </div>
       <div class="headBtns">
-        <a class="bigBtn" href="competiciones.html" style="display:inline-flex;align-items:center;text-decoration:none;font-weight:800;background:transparent;color:var(--chalk);border:2px solid #3a352b;">🏆 Competiciones</a>
+        <a class="bigBtn" href="competiciones.html" style="display:inline-flex;align-items:center;text-decoration:none;font-weight:800;background:transparent;color:var(--chalk);border:2px solid var(--t-edge);">🏆 Competiciones</a>
         <button class="bigBtn" id="toggleInvite">+ Invitar atleta</button>
         <button class="signout" id="signoutBtn">Salir</button>
       </div>
@@ -216,9 +217,9 @@
 
 </div>
 
-<script src="firebase-init.js?v=20261011213613"></script>
-<script src="branding.js?v=20261011213613"></script>
-<script src="status.js?v=20261011213613"></script>
+<script src="firebase-init.js?v=20261012095547"></script>
+<script src="branding.js?v=20261012095547"></script>
+<script src="status.js?v=20261012095547"></script>
 <script>
   document.getElementById('brandStripContainer').appendChild(renderBrandStrip(null, null));
 
@@ -465,7 +466,7 @@
     filtEl.innerHTML = F.filter(f=> f[0]==='all' || n[f[0]]).map(f=>
       '<button class="chip ' + f[2] + (ATH_FILTER===f[0] ? ' on' : '') + '" data-f="' + f[0] + '">' + f[1] + ' · ' + n[f[0]] + '</button>').join('');
     filtEl.querySelectorAll('.chip').forEach(b=> b.onclick = ()=>{ ATH_FILTER = b.dataset.f; renderAthletes(); });
-    const BAND = { review:'#c99a2e', program:'#6f695e', blocked:'#b5503f', ok:'#3a352b', done:'#3f9a62' };
+    const BAND = { review:'var(--t-accent)', program:'var(--t-muted3)', blocked:'var(--t-bad)', ok:'var(--t-edge)', done:'var(--t-good)' };
     listEl.innerHTML = '';
     rows.filter(r=> ATH_FILTER==='all' || athGroup(r)===ATH_FILTER).forEach(({doc, a, st})=>{
       const initials = (a.name||a.email||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();

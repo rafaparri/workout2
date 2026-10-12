@@ -53,10 +53,10 @@ async function computeAthleteStatus(athleteRef, a){
 // Píldora de estado con color
 function statusPill(label, st){
   const colors = {
-    ok:      { bg:'#16261c', fg:'#7fd19a', dot:'#3f9a62' },
-    new:     { bg:'#2a2316', fg:'#e0b453', dot:'#c99a2e' },
-    pending: { bg:'#211f1a', fg:'#bdb6a6', dot:'#6f695e' },
-    bad:     { bg:'#2b1614', fg:'#f08a7c', dot:'#b5503f' }
+    ok:      { bg:'var(--t-good-bg)', fg:'var(--t-good-fg)', dot:'var(--t-good)' },
+    new:     { bg:'var(--t-accent-soft)', fg:'var(--t-accent2)', dot:'var(--t-accent)' },
+    pending: { bg:'var(--t-chip)', fg:'var(--t-muted)', dot:'var(--t-muted3)' },
+    bad:     { bg:'var(--t-bad-bg)', fg:'var(--t-bad-fg)', dot:'var(--t-bad)' }
   };
   const c = colors[st.key] || colors.pending;
   return '<span class="pill" style="background:' + c.bg + ';color:' + c.fg + ';">' +

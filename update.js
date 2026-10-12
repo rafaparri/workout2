@@ -21,10 +21,10 @@
     if (shown || !document.body) return; shown = true;
     var b = document.createElement('div');
     b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:99999;' +
-      'background:#17161a;color:#f4f1ea;border:1px solid #2e2a22;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;' +
+      'background:var(--t-surface);color:var(--t-text);border:1px solid var(--t-line);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;' +
       'box-shadow:0 8px 28px rgba(0,0,0,.35);font:600 17px/1.3 Archivo,system-ui,sans-serif;max-width:560px;margin:0 auto;';
     b.innerHTML = '<span style="flex:1;">✨ Hay una versión nueva de WorkOut 2.0</span>' +
-      '<button style="background:#c99a2e;color:#0c0c0e;border:none;border-radius:12px;padding:12px 16px;font:800 17px Archivo,sans-serif;cursor:pointer;">Actualizar</button>';
+      '<button style="background:var(--t-accent);color:var(--t-ink);border:none;border-radius:12px;padding:12px 16px;font:800 17px Archivo,sans-serif;cursor:pointer;">Actualizar</button>';
     b.querySelector('button').onclick = function(){ irA(v); };
     document.body.appendChild(b);
   }
