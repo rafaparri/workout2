@@ -505,6 +505,8 @@ patch("@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600
 # Los extras (día no entrenado, pesos no hechos, traspasos y tabla de códigos) vienen ya
 # en la app original: se añadieron con tools/patch_original_extras.py.
 
+# Cambiar de perfil (administración / entrenador / atleta) sin volver a entrar
+patch('<script src="branding.js"></script>\n', '<script src="branding.js"></script>\n<script src="roles.js"></script>\n')
 # ===== Competiciones (calendario que crea el entrenador) =====
 patch("  sheet.appendChild(menuItem('📈', 'Análisis', ()=>{ state.showAnalytics=true; state.showMenu=false; render(); }));",
       "  sheet.appendChild(menuItem('📈', 'Análisis', ()=>{ state.showAnalytics=true; state.showMenu=false; render(); }));\n  sheet.appendChild(menuItem('🏆', 'Competiciones', ()=>{ state.showComps=true; state.compOpen=null; state.showMenu=false; render(); }));")
