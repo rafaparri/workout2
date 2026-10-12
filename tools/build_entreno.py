@@ -470,6 +470,36 @@ function wo2WeekRange(start){
 }
 </script>
 </body>""")
+
+# ===== Carga rápida en el móvil =====
+# Las librerías pesadas (leer Excel/PDF, reconocer texto, crear PDF) solo hacen
+# falta al subir archivos o generar informes: se descargan después de abrir.
+for tag in ['<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>\n',
+            '<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.6.82/pdf.min.js"></script>\n',
+            '<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js"></script>\n',
+            '<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>\n']:
+    patch(tag, '')
+patch("</body>", """<script>
+// WorkOut 2.0: librerías pesadas en segundo plano, cuando la app ya se ve
+(function(){
+  var LIBS = ['https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+              'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.6.82/pdf.min.js',
+              'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js',
+              'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
+  function go(){
+    LIBS.forEach(function(src){
+      var s = document.createElement('script'); s.src = src; s.async = true;
+      if (src.indexOf('pdf.min.js') > 0) s.onload = function(){ if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.6.82/pdf.worker.min.js'; };
+      document.head.appendChild(s);
+    });
+  }
+  window.addEventListener('load', function(){ setTimeout(go, 1500); });
+})();
+</script>
+</body>""")
+
+# Fuentes de la app original (Oswald/Inter) ya no se usan: fuera la descarga que bloquea la carga.
+patch("@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');\n", "")
 # ===== Competiciones (calendario que crea el entrenador) =====
 patch("  sheet.appendChild(menuItem('📈', 'Análisis', ()=>{ state.showAnalytics=true; state.showMenu=false; render(); }));",
       "  sheet.appendChild(menuItem('📈', 'Análisis', ()=>{ state.showAnalytics=true; state.showMenu=false; render(); }));\n  sheet.appendChild(menuItem('🏆', 'Competiciones', ()=>{ state.showComps=true; state.compOpen=null; state.showMenu=false; render(); }));")

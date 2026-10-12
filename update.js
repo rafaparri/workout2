@@ -2,9 +2,8 @@
 // Cada página lleva su número de versión (window.WO2_VERSION). Al abrirla, y cada
 // vez que se vuelve a la app, se pregunta al servidor cuál es la última versión
 // (version.json, sin caché). Si hay una más nueva:
-//  - al abrir la página: se recarga sola con la versión nueva;
-//  - si ya estabas dentro: aparece un aviso con el botón "Actualizar", para no
-//    perder lo que estés escribiendo.
+// aparece un aviso con el botón "Actualizar" (no recarga sola, para no cortar
+// la conexión de la app ni perder lo que estés escribiendo).
 (function(){
   var V = window.WO2_VERSION || '';
   var shown = false;
@@ -34,18 +33,15 @@
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(d){
         if (!d || !d.v || d.v === V) return;
-        if (alAbrir && !enLogin()){
-          // Evita recargar en bucle si el servidor todavía no sirve la versión nueva
-          var k = 'wo2_upd_' + d.v;
-          try{ if (sessionStorage.getItem(k)) { aviso(d.v); return; } sessionStorage.setItem(k, '1'); }catch(e){}
-          irA(d.v);
-        } else {
-          if (document.body) aviso(d.v); else document.addEventListener('DOMContentLoaded', function(){ aviso(d.v); });
-        }
+        // Ya no se recarga sola al abrir: recargar justo mientras la app se
+        // conecta (sesión y datos) la dejaba atascada en algunos móviles.
+        // Se muestra el aviso y se actualiza al pulsar «Actualizar».
+        if (document.body) aviso(d.v); else document.addEventListener('DOMContentLoaded', function(){ aviso(d.v); });
       })
       .catch(function(){});
   }
-  comprobar(true);
+  // Se comprueba un poco después de abrir, cuando la app ya ha cargado.
+  window.addEventListener('load', function(){ setTimeout(function(){ comprobar(true); }, 3000); });
   document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'visible') comprobar(false); });
   window.addEventListener('pageshow', function(e){ if (e.persisted) comprobar(false); });
 })();
