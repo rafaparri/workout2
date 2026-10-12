@@ -152,7 +152,7 @@ function wo2PlateMark(plan, d, plate){
   if (wo2DayOff(plan, d)){ plate.classList.add('plate-off'); plate.textContent = '✕'; return; }
   if (wo2MovedInto(plan, d).length){
     plate.classList.add('plate-in');
-    if (!plan.days[d]){ plate.classList.remove('plate-empty'); plate.textContent = d; }
+    if (!plan.days[d]){ plate.classList.remove('plate-empty'); plate.textContent = d; plate.style.background = 'var(--t-accent)'; plate.style.color = 'var(--t-ink)'; plate.style.border = 'none'; plate.style.width = plate.style.width || '44px'; plate.style.height = plate.style.height || '44px'; }
   }
 }
 
