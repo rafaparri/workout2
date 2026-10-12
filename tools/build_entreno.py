@@ -160,6 +160,7 @@ async function wo2PushProgressNow(){
       checks: state.checks || {},
       notes: state.notes || {},
       seriesProgress: state.seriesProgress || {},
+      wo2x: state.wo2x || {},
       dayDates,
       updatedAt: Date.now()
     });
@@ -419,6 +420,7 @@ function wo2ShowBootError(msg){
       state.checks = main.checks || {};
       state.notes = main.notes || {};
       state.seriesProgress = main.seriesProgress || {};
+      state.wo2x = main.wo2x || {};
       userDataCache[u.id] = { plans: state.plans, checks: state.checks, notes: state.notes, seriesProgress: state.seriesProgress };
       const sorted = [...state.plans].sort((a,b)=>a.uploadedAt-b.uploadedAt);
       state.activePlanId = sorted.length ? sorted[sorted.length-1].id : null;
@@ -500,17 +502,35 @@ patch("</body>", """<script>
 
 # Fuentes de la app original (Oswald/Inter) ya no se usan: fuera la descarga que bloquea la carga.
 patch("@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');\n", "")
+# ===== Extras: día no entrenado, pesos no hechos, traspaso de días y tabla de códigos =====
+EXTRAS_JS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_extras.js'), encoding='utf-8').read()
+patch("      if (state.checks[checkKey(plan,day,exIdx,setIdx)]) checkedSets++;",
+      "      if (state.checks[checkKey(plan,day,exIdx,setIdx)] || wo2SetOff(checkKey(plan,day,exIdx,setIdx))) checkedSets++;")
+patch("  } else {\n    if (entries.length === 0){",
+      "  } else {\n    wo2DayTools(section, plan, state.activeDay);\n    if (entries.length === 0 && !wo2MovedInto(plan, state.activeDay).length){")
+patch("    entries.forEach((entry, idx)=>{\n      if (entry.type === 'rest'){",
+      "    (wo2DayHidden(plan, state.activeDay) ? [] : entries).forEach((entry, idx)=>{\n      if (entry.type === 'rest'){")
+patch("      section.appendChild(renderExerciseCard(plan, state.activeDay, entry, idx));\n    });\n  }\n",
+      "      section.appendChild(renderExerciseCard(plan, state.activeDay, entry, idx));\n    });\n    wo2MovedBlock(section, plan, state.activeDay);\n  }\n")
+patch("    chip.onclick = (e)=>{ e.stopPropagation(); openFlashcards(day, idx, si); };\n    chips.appendChild(chip);",
+      "    chip.onclick = (e)=>{ e.stopPropagation(); openFlashcards(day, idx, si); };\n    wo2ChipOff(chip, plan, day, idx, si);\n    chips.appendChild(chip);")
+patch("    card.appendChild(markRow);\n\n    const stopBtn",
+      "    card.appendChild(markRow);\n    wo2SetOffButton(card, plan, day, exIdx, cardIdx, s);\n\n    const stopBtn")
+patch("  actions.appendChild(menuBtn);\n  top.appendChild(actions);\n  wrap.appendChild(top);\n  if (WO2_ATHLETE) wo2CoachNoteBanner",
+      "  actions.appendChild(menuBtn);\n  const codesBtn = el('button','tb-btn','📖 Códigos');\n  codesBtn.onclick = ()=> wo2ShowCodes();\n  actions.appendChild(codesBtn);\n  top.appendChild(actions);\n  wrap.appendChild(top);\n  if (WO2_ATHLETE) wo2CoachNoteBanner")
+patch("<script>\n// WorkOut 2.0: fechas de la semana", "<script>\n" + EXTRAS_JS + "\n</script>\n<script>\n// WorkOut 2.0: fechas de la semana")
+
 # ===== Competiciones (calendario que crea el entrenador) =====
 patch("  sheet.appendChild(menuItem('📈', 'Análisis', ()=>{ state.showAnalytics=true; state.showMenu=false; render(); }));",
       "  sheet.appendChild(menuItem('📈', 'Análisis', ()=>{ state.showAnalytics=true; state.showMenu=false; render(); }));\n  sheet.appendChild(menuItem('🏆', 'Competiciones', ()=>{ state.showComps=true; state.compOpen=null; state.showMenu=false; render(); }));")
 patch("  if (state.showAnalytics){\n",
       "  if (state.showComps){\n    root.appendChild(wo2RenderCompsScreen());\n    return;\n  }\n  if (state.showAnalytics){\n")
 patch("  if (!state.activeDay || !activePlan.days[state.activeDay]){",
-      "  if (!state.activeDay || (!activePlan.days[state.activeDay] && !wo2CompsOn(activePlan, state.activeDay).length)){")
+      "  if (!state.activeDay || (!activePlan.days[state.activeDay] && !wo2CompsOn(activePlan, state.activeDay).length && !wo2MovedInto(activePlan, state.activeDay).length)){")
 patch("  // day section\n  const section = el('div','day-section');\n",
       "  // day section\n  const section = el('div','day-section');\n  wo2CompDayBlock(section, plan, state.activeDay);\n")
 patch("    } else {\n      plate.textContent = '+';\n    }\n",
-      "    } else {\n      plate.textContent = wo2CompsOn(plan, d).length ? '🏆' : '+';\n    }\n    if (wo2CompsOn(plan, d).length) plate.classList.add('plate-comp');\n")
+      "    } else {\n      plate.textContent = wo2CompsOn(plan, d).length ? '🏆' : '+';\n    }\n    if (wo2CompsOn(plan, d).length) plate.classList.add('plate-comp');\n    wo2PlateMark(plan, d, plate);\n")
 COMP_JS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_competiciones.js'), encoding='utf-8').read()
 patch("<script>\n// WorkOut 2.0: fechas de la semana", '<script src="competicion.js?v=1"></script>\n<script>\n' + COMP_JS + "\n</script>\n<script>\n// WorkOut 2.0: fechas de la semana")
 # Cambios del atleta: fondos oscuros.

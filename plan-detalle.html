@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261012102030';</script>
-<script src="update.js?v=20261012102030"></script>
+<script>window.WO2_VERSION='20261012103222';</script>
+<script src="update.js?v=20261012103222"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -103,7 +103,7 @@
   </div>
 </div>
 
-<script src="firebase-init.js?v=20261012102030"></script>
+<script src="firebase-init.js?v=20261012103222"></script>
 <script>
   const DAY_NAMES = { L:'Lunes', M:'Martes', X:'Miércoles', J:'Jueves', V:'Viernes', S:'Sábado', D:'Domingo' };
   const DAY_ORDER = ['L','M','X','J','V','S','D'];
@@ -154,6 +154,7 @@
         .collection('progress').doc('main').get();
       athleteChecks = (progSnap.exists && progSnap.data().checks) || {};
       athleteNotes = (progSnap.exists && progSnap.data().notes) || {};
+      athleteX = (progSnap.exists && progSnap.data().wo2x) || {};
       try{
         const cn = await db.collection('clubs').doc(currentClubId).collection('athletes').doc(athleteUid)
           .collection('coachNotes').doc('comments').get();
@@ -199,6 +200,16 @@
     });
     for (let k = ptr; k < coachSets.length; k++) items.push({ type:'deleted', ci:k });
     return items;
+  }
+  let athleteX = {};
+  const OFF_DAY = { L:'Lunes', M:'Martes', X:'Miércoles', J:'Jueves', V:'Viernes', S:'Sábado', D:'Domingo' };
+  function xReason(o){ return [o && o.reason, o && o.text].filter(Boolean).join(' · ') || 'sin motivo'; }
+  function xOffLabel(o){ return !o || o.mode === 'all' ? 'No lo hizo' : o.mode === 'series' ? (o.series + ' serie' + (o.series == 1 ? '' : 's') + ' sin hacer') : ('Menos repeticiones: ' + o.reps + ' por serie'); }
+  function xBanner(cls, title, sub){
+    const b = document.createElement('div');
+    b.style.cssText = 'border-radius:12px;padding:10px 12px;margin:0 0 10px;font-size:16px;line-height:1.4;' + (cls === 'off' ? 'background:var(--t-bad-bg);border:1.5px solid var(--t-bad-edge);' : 'background:var(--t-accent-soft);border:1.5px solid var(--t-accent-edge);');
+    b.innerHTML = '<b style="color:' + (cls === 'off' ? 'var(--t-bad-fg)' : 'var(--t-accent2)') + ';">' + title + '</b>' + (sub ? '<div>' + sub.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) + '</div>' : '');
+    return b;
   }
   function ratingFor(day, exIdx, ai){ return ai == null ? null : ratingInfo(athleteChecks[checkKey(planIdParam, day, exIdx, ai)] || null); }
   function ratingBadge(rinfo){
@@ -310,6 +321,11 @@
       h.className = 'dayName';
       h.textContent = DAY_NAMES[day];
       card.appendChild(h);
+      { const X = athleteX || {}, k = planIdParam + '|' + day;
+        if (X.dayOff && X.dayOff[k]) card.appendChild(xBanner('off', '🚫 No entrenó este día', xReason(X.dayOff[k])));
+        if (X.moves && X.moves[k]) card.appendChild(xBanner('moved', '↪ Lo pasó al ' + OFF_DAY[X.moves[k]].toLowerCase(), ''));
+        Object.keys(X.moves || {}).forEach(mk=>{ if (mk.indexOf(planIdParam + '|') === 0 && X.moves[mk] === day) card.appendChild(xBanner('moved', '↪ Aquí hizo también el entreno del ' + OFF_DAY[mk.split('|').pop()].toLowerCase(), '')); });
+      }
       const dayNote = athleteNoteBox(planIdParam + '|' + day);
       if (dayNote) card.appendChild(dayNote);
 
@@ -335,6 +351,10 @@
           card.appendChild(coachRow(day, exIdx, it.ci, s, badge));
           if (it.type === 'edited') card.appendChild(athLine('edited', 'Hizo', it.a, ratingFor(day, exIdx, it.ai)));
           if (it.type === 'deleted') card.appendChild(athLine('deleted', 'No lo hizo', null, null));
+          if (it.ai != null && athleteX.setOff && athleteX.setOff[checkKey(planIdParam, day, exIdx, it.ai)]){
+            const so = athleteX.setOff[checkKey(planIdParam, day, exIdx, it.ai)];
+            card.appendChild(athLine('deleted', ('✕ ' + xOffLabel(so) + ' — ' + xReason(so)).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])), null, null));
+          }
         });
         const exNote = athleteNoteBox(planIdParam + '|' + day + '|' + exIdx);
         if (exNote) card.appendChild(exNote);

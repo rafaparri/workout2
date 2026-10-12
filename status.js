@@ -29,8 +29,11 @@ async function computeAthleteStatus(athleteRef, a){
     const days = latest.days || {};
     const trainingDays = WO2_DAY_ORDER.filter(d=>(days[d]||[]).some(e=>e.type==='exercise'));
     const dates = (main.dayDates && main.dayDates[latest.id]) || {};
-    const done = trainingDays.length > 0 && trainingDays.every(d=>!!dates[d]);
-    var daysTotal = trainingDays.length, daysDone = trainingDays.filter(d=>!!dates[d]).length;
+    // Un día cuenta como resuelto si se entrenó, se marcó «no entrenado» o se pasó a otro día que ya se entrenó.
+    const X = main.wo2x || {}, pk = latest.id + '|';
+    const dayDone = d=> !!dates[d] || !!(X.dayOff && X.dayOff[pk + d]) || !!(X.moves && X.moves[pk + d] && dates[X.moves[pk + d]]);
+    const done = trainingDays.length > 0 && trainingDays.every(dayDone);
+    var daysTotal = trainingDays.length, daysDone = trainingDays.filter(dayDone).length;
     program = done
       ? { key:'pending', text:'Pendiente', detail: weekLabel + ' terminada' }
       : { key:'ok', text:'Subida', detail: weekLabel };
