@@ -10,9 +10,10 @@ function injectBrandStyles(){
     .brandStrip{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 18px; min-height:68px; background:var(--t-bg2); border-bottom:1px solid var(--t-chip); box-shadow:0 2px 14px rgba(0,0,0,.5); }
     .brandStrip .clubSide{ display:flex; align-items:center; gap:12px; min-width:0; }
     .brandStrip .clubLogoImg{ height:48px; max-width:150px; object-fit:contain; border-radius:6px; }
-    .brandStrip .clubNameText{ color:var(--t-text); font-family:ArchivoBlack,sans-serif; font-weight:400; font-size:19px; letter-spacing:.01em; line-height:1.15; overflow-wrap:anywhere; }
+    .brandStrip .clubNameText{ color:var(--t-text); font-family:ArchivoBlack,sans-serif; font-weight:400; font-size:19px; letter-spacing:.01em; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
     .brandStrip .poweredBy{ display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0; }
     .brandStrip .poweredByText{ color:var(--t-muted2); font-size:11px; font-family:Archivo,sans-serif; white-space:nowrap; }
+    @media (max-width:480px){ .brandStrip{ padding:8px 12px; gap:8px; } .brandStrip .clubLogoImg{ height:42px; max-width:56px; } .brandStrip .clubNameText{ font-size:17px; } .brandStrip .poweredByText{ display:none; } }
     .brandStrip .rptMarkImg{ height:34px; width:auto; border-radius:3px; }
   `;
   document.head.appendChild(style);

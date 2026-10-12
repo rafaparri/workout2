@@ -198,7 +198,7 @@ function wo2MemoWithComments(memo, key){
 }
 function wo2CoachCommentBlock(key){
   const wrap = el('div');
-  wrap.style.cssText = 'margin-top:18px;padding:16px;border-radius:12px;background:#fdf6e3;border:2px solid var(--yellow-deep);';
+  wrap.style.cssText = 'margin-top:18px;padding:16px;border-radius:12px;background:var(--t-accent-soft);color:var(--t-text);border:2px solid var(--yellow-deep);';
   const title = el('div', null, '💬 COMENTARIOS DEL ENTRENADOR');
   title.style.cssText = 'font-family:Oswald,sans-serif;font-weight:700;font-size:16px;color:var(--chalk);letter-spacing:.03em;margin-bottom:10px;';
   wrap.appendChild(title);
@@ -239,7 +239,7 @@ function wo2CoachNoteBanner(parent, key, label){
   const text = (WO2.coachComments[key] || '').trim();
   if (!text) return;
   const b = el('div');
-  b.style.cssText = 'margin:10px 0 12px;padding:12px 14px;border-radius:12px;background:#fdf6e3;border-left:5px solid var(--yellow-deep);font-family:Inter,sans-serif;';
+  b.style.cssText = 'margin:10px 0 12px;padding:12px 14px;border-radius:12px;background:var(--t-accent-soft);color:var(--t-text);border-left:5px solid var(--yellow-deep);font-family:Inter,sans-serif;';
   b.onclick = (e)=> e.stopPropagation();
   const l = el('div', null, '💬 ' + label);
   l.style.cssText = 'font-size:13.5px;font-weight:700;color:#8a6512;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;';
@@ -261,7 +261,7 @@ function wo2Toast(text){
 }
 function wo2CoachBanner(name){
   const b = document.createElement('div');
-  b.style.cssText = 'background:#fdf6e3;border-bottom:2px solid var(--yellow-deep);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-family:Inter,sans-serif;font-size:15.5px;color:var(--chalk);';
+  b.style.cssText = 'background:var(--t-accent-soft);color:var(--t-text);border-bottom:2px solid var(--yellow-deep);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-family:Inter,sans-serif;font-size:15.5px;color:var(--chalk);';
   b.innerHTML = '<span>👁 <b>Vista del entrenador</b> · entreno de <b></b> · solo lectura</span>';
   b.querySelectorAll('b')[1].textContent = name;
   const back = document.createElement('a');
