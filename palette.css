@@ -3,8 +3,8 @@
    indique <html data-palette="...">; si no indica ninguna, la de :root.
    Todos los colores de la app salen de aquí (variables --t-…). */
 
-/* ---------- Negro y oro (la actual) ---------- */
-:root, html[data-palette="oro"]{
+/* ---------- Negro y oro (la anterior) ---------- */
+html[data-palette="oro"]{
   --t-bg:#0c0c0e; --t-bg2:#121114; --t-surface:#17161a; --t-surface2:#1d1b20;
   --t-chip:#26231c; --t-line:#2e2a22; --t-edge:#3a352b;
   --t-text:#f4f1ea; --t-muted:#bdb6a6; --t-muted2:#8f887a; --t-muted3:#6f695e;
@@ -45,8 +45,8 @@ html[data-palette="pista"]{
   --t-scheme:light;
 }
 
-/* ---------- 3 · Azul noche y cian (oscuro, técnico) ---------- */
-html[data-palette="cian"]{
+/* ---------- Azul noche y cian (LA QUE USA LA APP) ---------- */
+:root, html[data-palette="cian"]{
   --t-bg:#0d1117; --t-bg2:#11171f; --t-surface:#161d27; --t-surface2:#1b2430;
   --t-chip:#212c3a; --t-line:#263242; --t-edge:#33435a;
   --t-text:#e8eef4; --t-muted:#b2bfcc; --t-muted2:#8494a6; --t-muted3:#5b6b7e;

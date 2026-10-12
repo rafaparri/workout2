@@ -438,7 +438,7 @@ function wo2ShowBootError(msg){
 
 # ===== Aspecto "Pista en oro" (negro y oro, letra Archivo) =====
 # Hoja de estilos propia, cargada después de la de la app original.
-patch('</head>', '<link rel="stylesheet" href="palette.css?v=1">\n<link rel="stylesheet" href="theme-entreno.css?v=4">\n<meta name="theme-color" content="#0c0c0e">\n</head>')
+patch('</head>', '<link rel="stylesheet" href="palette.css?v=2">\n<link rel="stylesheet" href="theme-entreno.css?v=4">\n<meta name="theme-color" content="#0d1117">\n</head>')
 # Letra: Oswald/Inter de la original pasan a ArchivoBlack/Archivo (nombres sin espacios: van dentro de textos JS).
 html = html.replace("'Oswald'", "ArchivoBlack").replace('Oswald,', 'ArchivoBlack,').replace("'Inter'", "Archivo").replace('Inter,', 'Archivo,')
 # Botones pequeños (Notas, Informe, Añadir vídeo…): más grandes para el dedo.

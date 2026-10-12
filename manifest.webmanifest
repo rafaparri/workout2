@@ -3,8 +3,8 @@
   "short_name": "WorkOut 2.0",
   "lang": "es",
   "display": "standalone",
-  "background_color": "#0c0c0e",
-  "theme_color": "#0c0c0e",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
   "scope": "./",
   "icons": [
     {
