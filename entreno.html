@@ -7,15 +7,15 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261012103835';</script>
-<script src="update.js?v=20261012103835"></script>
+<script>window.WO2_VERSION='20261012104237';</script>
+<script src="update.js?v=20261012104237"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261012103835"></script>
-<script src="branding.js?v=20261012103835"></script>
+<script src="firebase-init.js?v=20261012104237"></script>
+<script src="branding.js?v=20261012104237"></script>
 <style>
 
 :root{
@@ -852,6 +852,18 @@ function wo2ShowCodes(){
   bg._onClose = ()=>{ if (meta && oldVp) meta.setAttribute('content', oldVp); };
 }
 
+</script>
+<script>
+// Códigos de la tabla de origen junto al nombre: «Nombre (9+53)»
+function wo2CodeLabel(entry){
+  if (!entry) return '';
+  if (entry.parts && entry.parts.length) return entry.parts.map(p=> p.code).filter(c=> c !== null && c !== undefined).join('+');
+  return (entry.code !== null && entry.code !== undefined) ? String(entry.code) : '';
+}
+function wo2WithCode(name, entry){
+  const c = wo2CodeLabel(entry);
+  return c ? name + ' (' + c + ')' : name;
+}
 </script>
 <link rel="stylesheet" href="palette.css?v=2">
 <link rel="stylesheet" href="theme-entreno.css?v=4">
@@ -2859,7 +2871,7 @@ function renderExerciseCard(plan, day, entry, idx){
   top.appendChild(el('div','ex-code', String(entry.code)));
   const info = el('div','ex-info');
   const nameText = entry.name || ('Código ' + entry.code + ' (sin identificar)');
-  info.appendChild(el('div','ex-name' + (entry.name?'':' unknown'), nameText));
+  info.appendChild(el('div','ex-name' + (entry.name?'':' unknown'), entry.name ? wo2WithCode(nameText, entry) : nameText));
   const ratings = entry.sets.map((s,si)=>normalizeCheck(state.checks[checkKey(plan,day,idx,si)])).filter(r=>r!==null);
   const subBits = [entry.sets.length + (entry.sets.length===1? ' peso':' pesos')];
   if (ratings.length){
@@ -3356,7 +3368,7 @@ function renderFlashcardOverlay(plan){
 
   const topBar = el('div','fc-top');
   const titleWrap = el('div');
-  titleWrap.appendChild(el('div','fc-name', entry.name || ('Código '+entry.code)));
+  titleWrap.appendChild(el('div','fc-name', entry.name ? wo2WithCode(entry.name, entry) : ('Código '+entry.code)));
   titleWrap.appendChild(el('div','fc-progress', (cardIdx+1)+' / '+totalCards));
   topBar.appendChild(titleWrap);
 
@@ -3860,7 +3872,7 @@ function renderAnalyticsScreen(){
     const top2 = el('div','ex-top');
     top2.appendChild(el('div','ex-code', code));
     const info = el('div','ex-info');
-    info.appendChild(el('div','ex-name', data.name || ('Código '+code)));
+    info.appendChild(el('div','ex-name', data.name ? data.name + ' (' + code + ')' : ('Código '+code)));
     const totalOk = data.points.reduce((a,p)=>a+p.ok,0);
     const totalBad = data.points.reduce((a,p)=>a+p.bad,0);
     const totalMarked = totalOk+totalBad;
@@ -4494,7 +4506,7 @@ function renderProfileScreen(){
     const top2 = el('div','ex-top');
     top2.appendChild(el('div','ex-code', code));
     const info = el('div','ex-info');
-    info.appendChild(el('div','ex-name', DICT[code] || ('Código '+code)));
+    info.appendChild(el('div','ex-name', DICT[code] ? DICT[code] + ' (' + code + ')' : ('Código '+code)));
     const latest = entries[entries.length-1];
     info.appendChild(el('div','ex-sub', 'RM actual: ' + latest.value + ' kg · ' + new Date(latest.date).toLocaleDateString('es-ES')));
     top2.appendChild(info);
