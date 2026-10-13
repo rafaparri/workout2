@@ -7,16 +7,16 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261013155836';</script>
-<script src="update.js?v=20261013155836"></script>
+<script>window.WO2_VERSION='20261013211108';</script>
+<script src="update.js?v=20261013211108"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261013155836"></script>
-<script src="branding.js?v=20261013155836"></script>
-<script src="roles.js?v=20261013155836"></script>
+<script src="firebase-init.js?v=20261013211108"></script>
+<script src="branding.js?v=20261013211108"></script>
+<script src="roles.js?v=20261013211108"></script>
 <style>
 
 :root{
@@ -867,18 +867,18 @@ function wo2WithCode(name, entry){
 }
 </script>
 <style>
-/* Colores por resultado: no hecho rojo · 1-2 naranja · 3-4 azul · 5 verde fosforito */
+/* Colores por resultado: no hecho rojo · 1-2 naranja · 3-4 azul · 5 verde oliva */
 .set-chips .chip.wo2-rate.wo2-roff{ background:#e5484d !important; border:2px solid #e5484d !important; color:#fff !important; }
 .set-chips .chip.wo2-rate.wo2-rlow{ background:#f28c28 !important; border:2px solid #f28c28 !important; color:#1a1206 !important; }
 .set-chips .chip.wo2-rate.wo2-rmid{ background:#2f6fe4 !important; border:2px solid #2f6fe4 !important; color:#fff !important; }
-.set-chips .chip.wo2-rate.wo2-rtop{ background:#39ff14 !important; border:2px solid #39ff14 !important; color:#041a00 !important; }
+.set-chips .chip.wo2-rate.wo2-rtop{ background:#5f7f1f !important; border:2px solid #5f7f1f !important; color:#fff !important; }
 .set-chips .chip.wo2-rate.wo2-roff b, .set-chips .chip.wo2-rate.wo2-rmid b{ color:#fff !important; }
 .set-chips .chip.wo2-rate.wo2-rlow b{ color:#1a1206 !important; }
-.set-chips .chip.wo2-rate.wo2-rtop b{ color:#041a00 !important; }
+.set-chips .chip.wo2-rate.wo2-rtop b{ color:#fff !important; }
 .set-chips .chip.wo2-rate .wo2-chipoff{ color:inherit !important; opacity:.95; }
 .fc-card.wo2-rate{ box-shadow:inset 0 0 0 6px var(--wo2-rc) !important; border-radius:18px; }
 .fc-card.wo2-roff{ --wo2-rc:#e5484d; } .fc-card.wo2-rlow{ --wo2-rc:#f28c28; }
-.fc-card.wo2-rmid{ --wo2-rc:#2f6fe4; } .fc-card.wo2-rtop{ --wo2-rc:#39ff14; }
+.fc-card.wo2-rmid{ --wo2-rc:#2f6fe4; } .fc-card.wo2-rtop{ --wo2-rc:#5f7f1f; }
 </style>
 <script>
 function wo2RateMark(node, rating, off){
@@ -1734,7 +1734,7 @@ const SET_RATING_LEVELS = [
   { value:2, icon:'😞', color:'#f28c28' }, // mal
   { value:3, icon:'😐', color:'#2f6fe4' }, // regular
   { value:4, icon:'🙂', color:'#4a86f0' }, // bien
-  { value:5, icon:'💪', color:'#39ff14' }  // muy bien
+  { value:5, icon:'💪', color:'#5f7f1f' }  // muy bien
 ];
 function normalizeCheck(raw){
   if (raw === 'ok') return 4;
@@ -6677,7 +6677,7 @@ function wo2ShowBootError(msg){
 })();
 
 </script>
-<script src="competicion.js?v=20261013155836"></script>
+<script src="competicion.js?v=20261013211108"></script>
 <script>
 // WorkOut 2.0 · Competiciones en la app del atleta (lo inserta build_entreno.py).
 // Lee sus fichas de competición en  WO2.base/competitions/{compId}  y las
