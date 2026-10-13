@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261013150455';</script>
-<script src="update.js?v=20261013150455"></script>
+<script>window.WO2_VERSION='20261013154651';</script>
+<script src="update.js?v=20261013154651"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <meta name="theme-color" content="#0d1117">
@@ -60,7 +60,18 @@
   .entTools input, .entTools select{ width:100%; padding:10px; min-height:50px; }
   .empty{ color:var(--muted-2); font-size:16px; padding:18px 0; }
   .msg{ font-size:15px; margin-top:10px; }
-  @media (max-width:560px){ .row2, .entTools{ grid-template-columns:1fr; } }
+  .filters{ display:flex; flex-direction:column; gap:12px; margin-bottom:8px; }
+  .fRow{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .fRow .lbl{ font-size:15px; font-weight:800; color:var(--muted-2); min-width:96px; }
+  .fBtn{ min-height:46px; padding:0 16px; border-radius:999px; border:2px solid var(--t-edge); background:transparent; color:var(--chalk); font:800 16px Archivo,sans-serif; cursor:pointer; width:auto; margin:0; }
+  .fBtn.on{ background:var(--t-accent); border-color:var(--t-accent); color:var(--ink); }
+  .ofi{ cursor:default; }
+  .ofi .tags{ display:flex; flex-wrap:wrap; gap:6px; }
+  .tag{ border-radius:999px; padding:4px 11px; font-size:14px; font-weight:800; border:1.5px solid var(--t-edge); color:var(--chalk); }
+  .tag.cat{ background:var(--t-accent-soft); border-color:var(--t-accent); }
+  .ofi .btn{ margin-top:6px; width:100%; }
+  .srcNote{ font-size:15px; color:var(--muted-2); line-height:1.5; margin-top:20px; }
+  @media (max-width:560px){ .row2, .entTools{ grid-template-columns:1fr; } .fRow .lbl{ min-width:100%; } }
 </style>
 <link rel="stylesheet" href="palette.css?v=2">
 <link rel="stylesheet" href="theme.css?v=3">
@@ -76,11 +87,29 @@
       <div><div class="kicker">Panel del entrenador</div><h1>Competiciones</h1></div>
       <div class="btns">
         <a class="btn ghost" href="entrenador.html" style="display:inline-flex;align-items:center;text-decoration:none;font-weight:800;">← Atletas</a>
-        <button class="btn" id="newBtn">+ Nueva competición</button>
+        <button class="btn ghost" id="ofiBtn">📅 Calendario oficial</button>
+        <button class="btn" id="newBtn">+ Nueva a mano</button>
       </div>
     </div>
     <div id="nextList"></div>
     <div id="pastList"></div>
+  </div>
+
+  <!-- Calendario oficial -->
+  <div id="oficialView" class="hidden">
+    <div class="head">
+      <div><div class="kicker">Competiciones</div><h1>Calendario oficial</h1></div>
+      <div class="btns">
+        <button class="btn ghost" id="oBack">← Mis competiciones</button>
+      </div>
+    </div>
+    <div class="filters">
+      <div class="fRow" id="fCat"><span class="lbl">Categoría</span></div>
+      <div class="fRow" id="fSex"><span class="lbl">Sexo</span></div>
+      <div class="fRow" id="fScope"><span class="lbl">Dónde</span></div>
+    </div>
+    <div id="oList"></div>
+    <div class="srcNote" id="oSrc"></div>
   </div>
 
   <!-- Formulario (crear / editar) -->
@@ -131,15 +160,16 @@
   </div>
 </div>
 
-<script src="firebase-init.js?v=20261013150455"></script>
-<script src="branding.js?v=20261013150455"></script>
-<script src="competicion.js?v=20261013150455"></script>
-<script src="roles.js?v=20261013150455"></script>
+<script src="firebase-init.js?v=20261013154651"></script>
+<script src="branding.js?v=20261013154651"></script>
+<script src="calendario-oficial.js?v=20261013154651"></script>
+<script src="competicion.js?v=20261013154651"></script>
+<script src="roles.js?v=20261013154651"></script>
 <script>
   const W = WO2C;
   let CLUB = null, ME = null, MYNAME = '', ATHLETES = [], COMPS = [], CUR = null, OPEN = null;
   const $ = (id)=> document.getElementById(id);
-  function show(id){ ['loading','listView','formView','detailView'].forEach(v=> $(v).classList.toggle('hidden', v !== id)); window.scrollTo(0,0); }
+  function show(id){ ['loading','listView','formView','detailView','oficialView'].forEach(v=> $(v).classList.toggle('hidden', v !== id)); window.scrollTo(0,0); }
   const compsRef = ()=> db.collection('clubs').doc(CLUB).collection('competitions');
   const athRef = (uid)=> db.collection('clubs').doc(CLUB).collection('athletes').doc(uid);
 
@@ -169,7 +199,7 @@
     const t = W.today();
     const next = COMPS.filter(c=> (c.endDate || c.startDate) >= t).sort((a,b)=> a.startDate < b.startDate ? -1 : 1);
     const past = COMPS.filter(c=> (c.endDate || c.startDate) < t).sort((a,b)=> a.startDate > b.startDate ? -1 : 1);
-    drawGroup($('nextList'), 'Próximas', next, 'Todavía no hay competiciones próximas. Crea la primera con «+ Nueva competición».');
+    drawGroup($('nextList'), 'Próximas', next, 'Todavía no hay competiciones próximas. Elige una del «📅 Calendario oficial» o crea una con «+ Nueva a mano».');
     drawGroup($('pastList'), 'Pasadas', past, null);
   }
   function drawGroup(el, title, list, emptyText){
@@ -194,6 +224,64 @@
     el.appendChild(g);
   }
   $('newBtn').onclick = ()=> openForm(null);
+
+  // ---------- Calendario oficial ----------
+  const OF = { cat:'all', sex:'all', scope:'all' };
+  const CAT_TXT = { junior:'Júnior', sub23:'Sub-23', absoluto:'Absoluto', master:'Máster' };
+  const SEX_TXT = { FM:'Femenino y masculino', F:'Femenino', M:'Masculino' };
+  function filterRow(id, key, opts){
+    const row = $(id); row.querySelectorAll('.fBtn').forEach(b=> b.remove());
+    opts.forEach(([v, t])=>{
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'fBtn' + (OF[key] === v ? ' on' : ''); b.textContent = t;
+      b.setAttribute('aria-pressed', OF[key] === v ? 'true' : 'false');
+      b.onclick = ()=>{ OF[key] = v; drawOficial(); };
+      row.appendChild(b);
+    });
+  }
+  function drawOficial(){
+    filterRow('fCat', 'cat', [['all','Todas'],['junior','Júnior / Sub-23'],['absoluto','Absoluto'],['master','Máster']]);
+    filterRow('fSex', 'sex', [['all','Todos'],['F','Femenino'],['M','Masculino']]);
+    filterRow('fScope', 'scope', [['all','Todas'],['es','España'],['int','Internacional']]);
+    const t = W.today();
+    const list = (window.WO2_OFICIAL || []).filter(o=>
+      (o.endDate || o.startDate) >= t &&
+      (OF.cat === 'all' || o.cats.includes(OF.cat) || (OF.cat === 'junior' && o.cats.includes('sub23'))) &&
+      (OF.sex === 'all' || o.sex.indexOf(OF.sex) >= 0) &&
+      (OF.scope === 'all' || o.scope === OF.scope)
+    ).sort((a,b)=> a.startDate < b.startDate ? -1 : 1);
+    const box = $('oList'); box.innerHTML = '';
+    if (!list.length){ box.appendChild(Object.assign(document.createElement('div'), { className:'empty', textContent:'No hay competiciones con esos filtros. Prueba con «Todas» o crea una a mano.' })); }
+    const g = document.createElement('div'); g.className = 'grid';
+    list.forEach(o=>{
+      const mine = COMPS.find(c=> c.officialId === o.id);
+      const c = document.createElement('div'); c.className = 'comp ofi';
+      c.style.setProperty('--band', o.scope === 'es' ? 'var(--t-accent)' : 'var(--t-good)');
+      c.innerHTML = '<span class="d">' + W.esc(W.range(o.startDate, o.endDate)) + (o.note ? ' · ' + W.esc(o.note) : '') + '</span>' +
+        '<span class="n">' + W.esc(o.name) + '</span>' +
+        '<span class="p">' + W.esc(o.place) + ' · ' + (o.scope === 'es' ? 'España' : 'Internacional') + ' (' + W.esc(o.org) + ')</span>' +
+        '<span class="tags">' + o.cats.map(k=> '<span class="tag cat">' + CAT_TXT[k] + '</span>').join('') + '<span class="tag">' + SEX_TXT[o.sex] + '</span></span>';
+      const b = document.createElement('button'); b.type = 'button';
+      if (mine){ b.className = 'btn ghost'; b.textContent = '✓ Ya está en tus competiciones · Abrir'; b.onclick = ()=> openDetail(mine.id); }
+      else { b.className = 'btn'; b.textContent = '+ Añadir y apuntar atletas'; b.onclick = ()=> addOficial(o, b); }
+      c.appendChild(b);
+      g.appendChild(c);
+    });
+    box.appendChild(g);
+    $('oSrc').textContent = 'Datos de los calendarios de la Federación Española (RFEH), el Comité Español de Halterofilia Máster, la Federación Europea (EWF) y la Internacional (IWF), revisados el ' + (window.WO2_OFICIAL_ACTUALIZADO || '') + '. Las fechas pueden cambiar: compruébalas antes de viajar. Si falta alguna, añádela con «+ Nueva a mano».';
+  }
+  async function addOficial(o, b){
+    b.disabled = true; b.textContent = 'Añadiendo…';
+    try{
+      const r = compsRef().doc();
+      await r.set({ name:o.name, place:o.place, startDate:o.startDate, endDate:o.endDate || o.startDate,
+        notes:'Calendario oficial (' + o.org + ')' + (o.note ? ' · ' + o.note : ''), officialId:o.id,
+        athleteUids:[], createdAt:Date.now(), updatedAt:Date.now() });
+      await loadList();
+      openDetail(r.id);
+    }catch(e){ b.disabled = false; b.textContent = '+ Añadir y apuntar atletas'; alert('No se ha podido añadir: ' + (e.message || e.code)); }
+  }
+  $('ofiBtn').onclick = ()=>{ drawOficial(); show('oficialView'); };
+  $('oBack').onclick = ()=> show('listView');
 
   // ---------- Formulario ----------
   let EDITING = null;

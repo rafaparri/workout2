@@ -68,6 +68,8 @@
     css();
     const strip = document.querySelector('#brandStripContainer .brandStrip');
     if (strip){
+      // Si se puso antes en el contenido (la franja aún no estaba), se quita de ahí
+      document.querySelectorAll('.wo2-role-row').forEach(r=> r.remove());
       if (strip.querySelector('.wo2-role-btn')) return;
       const b = button();
       const pw = strip.querySelector('.poweredBy');
