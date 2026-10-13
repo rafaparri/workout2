@@ -15,7 +15,15 @@ function wo2LoadComps(force){
 // Competiciones de ese día de la semana (según las fechas de la semana)
 function wo2CompsOn(plan, d){
   wo2LoadComps();
-  const x = wo2DayDate(plan, d); if (!x) return [];
+  let x = wo2DayDate(plan, d);
+  // Semana sin fechas: si es la última semana subida, se supone que es la semana actual
+  if (!x && plan && state.plans && state.plans.length){
+    const last = state.plans.slice().sort((a,b)=> (a.uploadedAt||0) - (b.uploadedAt||0)).pop();
+    if (last && last.id === plan.id){
+      const t = new Date(); t.setHours(12,0,0,0); t.setDate(t.getDate() - ((t.getDay() + 6) % 7) + DAY_ORDER.indexOf(d)); x = t;
+    }
+  }
+  if (!x) return [];
   const iso = WO2C.iso(x);
   return WO2_COMPS.list.filter(c=> (c.day || c.startDate) === iso);
 }

@@ -512,8 +512,6 @@ patch("  sheet.appendChild(menuItem('📈', 'Análisis', ()=>{ state.showAnalyti
       "  sheet.appendChild(menuItem('📈', 'Análisis', ()=>{ state.showAnalytics=true; state.showMenu=false; render(); }));\n  sheet.appendChild(menuItem('🏆', 'Competiciones', ()=>{ state.showComps=true; state.compOpen=null; state.showMenu=false; render(); }));")
 patch("  if (state.showAnalytics){\n",
       "  if (state.showComps){\n    root.appendChild(wo2RenderCompsScreen());\n    return;\n  }\n  if (state.showAnalytics){\n")
-patch("  if (!state.activeDay || (!activePlan.days[state.activeDay] && !wo2MovedInto(activePlan, state.activeDay).length)){",
-      "  if (!state.activeDay || (!activePlan.days[state.activeDay] && !wo2CompsOn(activePlan, state.activeDay).length && !wo2MovedInto(activePlan, state.activeDay).length)){")
 patch("  // day section\n  const section = el('div','day-section');\n",
       "  // day section\n  const section = el('div','day-section');\n  wo2CompDayBlock(section, plan, state.activeDay);\n")
 patch("    } else {\n      plate.textContent = '+';\n    }\n",
