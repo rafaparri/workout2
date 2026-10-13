@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261013154651';</script>
-<script src="update.js?v=20261013154651"></script>
+<script>window.WO2_VERSION='20261013155836';</script>
+<script src="update.js?v=20261013155836"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <meta name="theme-color" content="#0d1117">
@@ -70,8 +70,25 @@
   .tag{ border-radius:999px; padding:4px 11px; font-size:14px; font-weight:800; border:1.5px solid var(--t-edge); color:var(--chalk); }
   .tag.cat{ background:var(--t-accent-soft); border-color:var(--t-accent); }
   .ofi .btn{ margin-top:6px; width:100%; }
+  .catPick{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+  .catPick label{ margin:12px 0 6px; display:block; }
+  .catPick select{ width:100%; padding:10px; min-height:50px; }
+  .catWarn{ grid-column:1/-1; font-size:15px; font-weight:700; color:var(--t-warn-fg,#f0b25a); }
+  .catWarn:empty{ display:none; }
+  .entTools .catCell{ grid-column:1/-1; }
+  .entTools .catCell .catPick label{ margin-top:0; }
+  .oldCat{ color:var(--t-warn-fg,#f0b25a); font-weight:800; }
+  .newsBox{ background:var(--t-accent-soft); border:2px solid var(--t-accent); border-radius:18px; padding:16px 18px; margin:0 0 18px; color:var(--chalk); }
+  .newsBox h3{ margin:0 0 6px; font:400 20px ArchivoBlack,sans-serif; }
+  .newsBox p{ margin:0 0 12px; font-size:16px; line-height:1.5; }
+  .newsBox .btn{ min-height:46px; }
+  details.cats{ background:var(--surface); border:1px solid var(--surface-3); border-radius:18px; padding:14px 18px; margin:0 0 18px; }
+  details.cats summary{ cursor:pointer; font-weight:800; font-size:18px; min-height:36px; display:flex; align-items:center; }
+  .catTbl{ width:100%; border-collapse:collapse; margin-top:10px; font-size:16px; }
+  .catTbl th, .catTbl td{ text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .catTbl th{ color:var(--muted-2); font-size:14px; letter-spacing:.06em; text-transform:uppercase; }
   .srcNote{ font-size:15px; color:var(--muted-2); line-height:1.5; margin-top:20px; }
-  @media (max-width:560px){ .row2, .entTools{ grid-template-columns:1fr; } .fRow .lbl{ min-width:100%; } }
+  @media (max-width:560px){ .row2, .entTools, .catPick{ grid-template-columns:1fr; } .fRow .lbl{ min-width:100%; } }
 </style>
 <link rel="stylesheet" href="palette.css?v=2">
 <link rel="stylesheet" href="theme.css?v=3">
@@ -91,6 +108,7 @@
         <button class="btn" id="newBtn">+ Nueva a mano</button>
       </div>
     </div>
+    <div id="newsList"></div>
     <div id="nextList"></div>
     <div id="pastList"></div>
   </div>
@@ -103,6 +121,8 @@
         <button class="btn ghost" id="oBack">← Mis competiciones</button>
       </div>
     </div>
+    <div id="newsOfi"></div>
+    <details class="cats" id="catsBox"></details>
     <div class="filters">
       <div class="fRow" id="fCat"><span class="lbl">Categoría</span></div>
       <div class="fRow" id="fSex"><span class="lbl">Sexo</span></div>
@@ -150,21 +170,20 @@
     <div class="card form" id="addBox">
       <label for="aAth" style="margin-top:0;">Apuntar a un atleta</label>
       <select id="aAth"></select>
-      <div class="row2">
-        <div><label for="aDay">Día que compite</label><select id="aDay"></select></div>
-        <div><label for="aCat">Categoría</label><input type="text" id="aCat" placeholder="p. ej. Máster M50 · 94 kg"></div>
-      </div>
+      <div id="aDayWrap"><label for="aDay">Día que compite</label><select id="aDay"></select></div>
+      <div id="aCatBox"></div>
       <button class="btn" id="aBtn" style="margin-top:14px;">+ Apuntar</button>
       <div id="aMsg" class="msg"></div>
     </div>
   </div>
 </div>
 
-<script src="firebase-init.js?v=20261013154651"></script>
-<script src="branding.js?v=20261013154651"></script>
-<script src="calendario-oficial.js?v=20261013154651"></script>
-<script src="competicion.js?v=20261013154651"></script>
-<script src="roles.js?v=20261013154651"></script>
+<script src="firebase-init.js?v=20261013155836"></script>
+<script src="branding.js?v=20261013155836"></script>
+<script src="categorias-oficiales.js?v=20261013155836"></script>
+<script src="calendario-oficial.js?v=20261013155836"></script>
+<script src="competicion.js?v=20261013155836"></script>
+<script src="roles.js?v=20261013155836"></script>
 <script>
   const W = WO2C;
   let CLUB = null, ME = null, MYNAME = '', ATHLETES = [], COMPS = [], CUR = null, OPEN = null;
@@ -280,7 +299,36 @@
       openDetail(r.id);
     }catch(e){ b.disabled = false; b.textContent = '+ Añadir y apuntar atletas'; alert('No se ha podido añadir: ' + (e.message || e.code)); }
   }
-  $('ofiBtn').onclick = ()=>{ drawOficial(); show('oficialView'); };
+  // ---------- Categorías oficiales y avisos de cambios ----------
+  function seenChanges(){ try{ return JSON.parse(localStorage.getItem('wo2_seen_changes') || '[]'); }catch(e){ return []; } }
+  function drawNews(){
+    const seen = seenChanges();
+    const all = (WO2CAT.CHANGES || []).map(c=> Object.assign({ kind:'Categorías' }, c))
+      .concat((window.WO2_OFICIAL_CAMBIOS || []).map(c=> Object.assign({ kind:'Calendario' }, c)));
+    const fresh = all.filter(c=> seen.indexOf(c.id) < 0);
+    ['newsList','newsOfi'].forEach(id=>{
+      const box = $(id); box.innerHTML = '';
+      fresh.forEach(c=>{
+        const d = document.createElement('div'); d.className = 'newsBox';
+        d.innerHTML = '<div class="kicker">Cambio oficial · ' + W.esc(c.kind) + ' · ' + W.esc(c.date) + '</div><h3>' + W.esc(c.title) + '</h3><p>' + W.esc(c.text) + '</p>';
+        const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Entendido';
+        b.onclick = ()=>{ const s = seenChanges(); s.push(c.id); try{ localStorage.setItem('wo2_seen_changes', JSON.stringify(s)); }catch(e){} drawNews(); };
+        d.appendChild(b); box.appendChild(d);
+      });
+    });
+  }
+  function drawCats(){
+    const W8 = WO2CAT.WEIGHTS, kg = (l)=> l.map(w=> w + ' kg').join(' · ');
+    $('catsBox').innerHTML = '<summary>📋 Categorías oficiales (vigentes desde el ' + W.esc(WO2CAT.VIGENTE_DESDE) + ')</summary>' +
+      '<table class="catTbl"><tr><th>Edad</th><th>Masculino</th><th>Femenino</th></tr>' +
+      '<tr><td><b>Absoluto, Júnior (Sub-20), Sub-23 y Máster</b></td><td>' + kg(W8.senior.M) + '</td><td>' + kg(W8.senior.F) + '</td></tr>' +
+      '<tr><td><b>Sub-17</b></td><td>' + kg(W8.youth17.M) + '</td><td>' + kg(W8.youth17.F) + '</td></tr>' +
+      '<tr><td><b>Sub-15</b></td><td>' + kg(W8.youth15.M) + '</td><td>' + kg(W8.youth15.F) + '</td></tr></table>' +
+      '<p style="font-size:16px;line-height:1.5;margin:12px 0 4px;"><b>Grupos máster</b> (por edad, de 5 en 5 años): M35/W35, M40/W40, M45/W45, M50/W50, M55/W55, M60/W60, M65/W65, M70/W70, M75/W75, M80/W80, M85/W85 y M90+/W90+.</p>' +
+      '<p class="srcNote" style="margin-top:6px;">Fuentes: IWF, IMWA (máster) y RFEH. Revisado el ' + W.esc(WO2CAT.ACTUALIZADO) + '.</p>';
+  }
+  drawNews();
+  $('ofiBtn').onclick = ()=>{ drawCats(); drawOficial(); show('oficialView'); };
   $('oBack').onclick = ()=> show('listView');
 
   // ---------- Formulario ----------
@@ -370,7 +418,7 @@
       const head = document.createElement('div'); head.className = 'entHead';
       head.innerHTML = '<div class="avatar">' + W.esc(ini) + '</div>' +
         '<div class="entMain"><div class="entName">' + W.esc(a.name||'') + '</div>' +
-        '<div class="entSub">' + W.esc([W.fmt(e.day, { weekday:'long', day:'numeric', month:'short' }), e.category].filter(Boolean).join(' · ')) + '</div>' +
+        '<div class="entSub">' + W.esc([W.fmt(e.day, { weekday:'long', day:'numeric', month:'short' }), e.category].filter(Boolean).join(' · ')) + (e.category && WO2CAT.outdated(e.category) && (CUR.endDate || CUR.startDate) >= W.today() ? ' <span class="oldCat">⚠ categoría antigua</span>' : '') + '</div>' +
         '<div class="entSub">Objetivo: ' + (g.sn ? g.sn : '—') + ' + ' + (g.cj ? g.cj : '—') + ' = ' + (g.total ? g.total + ' kg' : '—') + '</div></div>' +
         '<div class="entTot">' + (t !== null ? '<b>' + t + ' kg</b><span>total</span>' : (W.hasResults(e.results) ? '<span>con resultados</span>' : '<span>sin resultados</span>')) + '</div>';
       const body = document.createElement('div'); body.className = 'entBody' + (OPEN === uid ? '' : ' hidden');
@@ -382,8 +430,9 @@
       const tools = document.createElement('div'); tools.className = 'entTools';
       const days = compDays(CUR);
       tools.innerHTML = '<div' + (days.length < 2 ? ' class="hidden"' : '') + '><label>Día que compite</label><select class="eDay">' + days.map(d=>'<option value="' + d + '"' + (d===e.day?' selected':'') + '>' + W.esc(W.fmt(d, { weekday:'long', day:'numeric', month:'long' })) + '</option>').join('') + '</select></div>' +
-        '<div><label>Categoría</label><input type="text" class="eCat" value="' + W.esc(e.category||'') + '" placeholder="p. ej. Máster M50 · 94 kg"></div>';
+        '<div class="catCell"></div>';
       body.appendChild(tools);
+      const ePick = WO2CAT.picker(tools.querySelector('.catCell'), e.category || '');
       const ed = document.createElement('div'); body.appendChild(ed);
       const rm = document.createElement('button'); rm.className = 'btn danger'; rm.textContent = 'Quitar de esta competición'; rm.style.marginTop = '14px';
       rm.onclick = async ()=>{
@@ -398,7 +447,8 @@
         coach: true,
         onSave: async (ne)=>{
           ne.day = tools.querySelector('.eDay').value || ne.day;
-          ne.category = tools.querySelector('.eCat').value.trim();
+          ne.category = ePick.get();
+          if (ne.category) try{ localStorage.setItem('wo2_lastcat_' + uid, ne.category); }catch(err){}
           ne.updatedBy = { name: MYNAME, role:'coach', uid: ME.uid }; ne.updatedAt = Date.now();
           await athRef(uid).collection('competitions').doc(CUR.id).set({ day:ne.day, category:ne.category, goals:ne.goals, plan:ne.plan, results:ne.results, updatedBy:ne.updatedBy, updatedAt:ne.updatedAt }, { merge:true });
           setTimeout(()=> drawEntries(), 1200);
@@ -420,7 +470,15 @@
     const free = ATHLETES.filter(a=> !(CUR.athleteUids||[]).includes(a.uid));
     $('addBox').classList.toggle('hidden', !free.length);
     $('aAth').innerHTML = free.map(a=>'<option value="' + a.uid + '">' + W.esc(a.name || a.email) + '</option>').join('');
+    newPick();
   }
+  // Selector de categoría oficial al apuntar (recuerda la última de cada atleta)
+  let aPick = null;
+  function newPick(){
+    let last = ''; try{ last = localStorage.getItem('wo2_lastcat_' + $('aAth').value) || ''; }catch(e){}
+    aPick = WO2CAT.picker($('aCatBox'), last);
+  }
+  $('aAth').onchange = newPick;
 
   $('aBtn').onclick = async ()=>{
     const uid = $('aAth').value; if (!uid) return;
@@ -429,11 +487,11 @@
     try{
       await athRef(uid).collection('competitions').doc(CUR.id).set({
         compId: CUR.id, name: CUR.name, place: CUR.place || '', startDate: CUR.startDate, endDate: CUR.endDate || CUR.startDate, notes: CUR.notes || '',
-        day, category: $('aCat').value.trim(), goals:{}, plan:{ sn:[null,null,null], cj:[null,null,null] }, results: W.emptyResults(), createdAt: Date.now()
+        day, category: aPick ? aPick.get() : '', goals:{}, plan:{ sn:[null,null,null], cj:[null,null,null] }, results: W.emptyResults(), createdAt: Date.now()
       });
       CUR.athleteUids = (CUR.athleteUids || []).concat([uid]);
       await compsRef().doc(CUR.id).update({ athleteUids: CUR.athleteUids });
-      $('aCat').value = '';
+      try{ const cat = aPick && aPick.get(); if (cat) localStorage.setItem('wo2_lastcat_' + uid, cat); }catch(e){}
       OPEN = uid;
       drawEntries();
     }catch(e){ m.textContent = 'No se ha podido apuntar: ' + (e.message || e.code); m.className = 'msg err'; }

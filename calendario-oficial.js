@@ -7,6 +7,8 @@
 //   sex:  'FM' (femenino y masculino), 'F' o 'M'
 //   scope: 'es' (España) o 'int' (internacional)
 window.WO2_OFICIAL_ACTUALIZADO = '13 de octubre de 2026';
+// Cambios del calendario oficial (la app avisa al entrenador): { id, date, title, text }
+window.WO2_OFICIAL_CAMBIOS = [];
 window.WO2_OFICIAL = [
   { id:'2026-eu-jun-u23', name:'Campeonato de Europa Júnior y Sub-23', place:'Durrës (Albania)', startDate:'2026-10-12', endDate:'2026-10-19', scope:'int', org:'EWF', cats:['junior','sub23'], sex:'FM' },
   { id:'2026-gp-gandia', name:'Gran Prix Internacional Femenino · Trofeo Ciudad de Gandía', place:'Gandía (Valencia)', startDate:'2026-10-16', endDate:'2026-10-18', scope:'es', org:'RFEH', cats:['absoluto'], sex:'F' },
