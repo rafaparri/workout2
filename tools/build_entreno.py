@@ -331,7 +331,15 @@ function wo2ShowBootError(msg){
 
 (function wo2Boot(){
   root.innerHTML = '';
-  root.appendChild(renderBootLoading());
+  const bootEl = renderBootLoading();
+  root.appendChild(bootEl);
+  // Qué está haciendo y cuánto lleva (si tarda, se ve en qué paso se queda)
+  const bootT0 = Date.now();
+  let bootStep = 'comprobando tu sesión';
+  const bootTick = ()=>{ const s = Math.round((Date.now()-bootT0)/1000); bootEl.textContent = 'Cargando tus datos… ' + bootStep + (s >= 2 ? ' · ' + s + ' s' : ''); };
+  const bootStage = (t)=>{ bootStep = t; bootTick(); };
+  const bootTimer = setInterval(bootTick, 1000);
+  bootTick();
   const strip = document.getElementById('brandStripContainer');
   strip.appendChild(renderBrandStrip(null, null));
 
@@ -340,6 +348,16 @@ function wo2ShowBootError(msg){
     if (started) return;
     started = true;
     if (!user){ window.location.replace('atleta.html'); return; }
+    // Todas las lecturas a la vez (antes iban en tres tandas seguidas)
+    const loadAll = ()=> Promise.all([
+      db.collection('clubs').doc(WO2.clubId).get().catch(()=>null),
+      WO2.base.get(),
+      WO2.coachView ? Promise.resolve(null) : db.collection('users').doc(user.uid).get().catch(()=>null),
+      WO2.base.collection('coachNotes').doc('comments').get().catch(()=>null),
+      WO2.base.collection('plans').get(),
+      WO2.base.collection('progress').get()
+    ]);
+    let dataP = null;
     try{
       const viewAthlete = new URLSearchParams(window.location.search).get('athlete');
       if (viewAthlete && viewAthlete !== user.uid){
@@ -352,36 +370,46 @@ function wo2ShowBootError(msg){
         WO2.uid = viewAthlete;
         WO2.clubId = cg.data().clubId;
         WO2.base = db.collection('clubs').doc(WO2.clubId).collection('athletes').doc(viewAthlete);
+        bootStage('leyendo la semana');
+        dataP = loadAll();
         openFlashcards = function(){ wo2Toast('Vista del entrenador: aquí solo se consulta; el atleta es quien marca sus series.'); };
       } else {
-        const grantSnap = await db.collection('users').doc(user.uid).collection('roleGrants').doc('athlete').get();
-        if (!grantSnap.exists){ window.location.replace('atleta.html'); return; }
+        // El club se recuerda en este móvil: así se piden el permiso y los datos a la vez
+        const ck = 'wo2_club_' + user.uid;
+        let cached = null; try{ cached = localStorage.getItem(ck); }catch(e){}
         WO2.uid = user.uid;
-        WO2.clubId = grantSnap.data().clubId;
-        WO2.base = db.collection('clubs').doc(WO2.clubId).collection('athletes').doc(user.uid);
+        const grantP = db.collection('users').doc(user.uid).collection('roleGrants').doc('athlete').get();
+        if (cached){
+          WO2.clubId = cached;
+          WO2.base = db.collection('clubs').doc(cached).collection('athletes').doc(user.uid);
+          dataP = loadAll(); dataP.catch(()=>{});
+          bootStage('leyendo tu semana');
+        }
+        const grantSnap = await grantP;
+        if (!grantSnap.exists){ try{ localStorage.removeItem(ck); }catch(e){} window.location.replace('atleta.html'); return; }
+        const cid = grantSnap.data().clubId;
+        try{ localStorage.setItem(ck, cid); }catch(e){}
+        if (cid !== cached){
+          WO2.clubId = cid;
+          WO2.base = db.collection('clubs').doc(cid).collection('athletes').doc(user.uid);
+          dataP = loadAll();
+          bootStage('leyendo tu semana');
+        }
       }
 
       db.collection('users').doc(user.uid).collection('roleGrants').doc('coach').get()
         .then(c=>{ WO2.isCoach = c.exists; }).catch(()=>{});
-      const [clubSnap, athSnap, idSnap, notesSnap] = await Promise.all([
-        db.collection('clubs').doc(WO2.clubId).get().catch(()=>null),
-        WO2.base.get(),
-        WO2.coachView ? Promise.resolve(null) : db.collection('users').doc(user.uid).get().catch(()=>null),
-        WO2.base.collection('coachNotes').doc('comments').get().catch(()=>null)
-      ]);
+      const [clubSnap, athSnap, idSnap, notesSnap, plansSnap, progSnap] = await dataP;
+      bootStage('preparando la pantalla');
       const club = (clubSnap && clubSnap.exists) ? clubSnap.data() : {};
       if (WO2.coachView && !athSnap.exists){ wo2ShowBootError('Este atleta no pertenece a tu club.'); return; }
       const ath = athSnap.exists ? athSnap.data() : {};
-      if (!WO2.coachView && (club.blocked || ath.blocked)){ window.location.replace('atleta.html'); return; }
+      if (!WO2.coachView && (club.blocked || ath.blocked)){ window.location.replace('atleta.html?check=1'); return; }
       WO2.coachComments = (notesSnap && notesSnap.exists && notesSnap.data().comments) || {};
       strip.innerHTML = '';
       strip.appendChild(renderBrandStrip(club.logoUrl, club.name));
       if (WO2.coachView) strip.appendChild(wo2CoachBanner(ath.name || ath.email || 'atleta'));
 
-      const [plansSnap, progSnap] = await Promise.all([
-        WO2.base.collection('plans').get(),
-        WO2.base.collection('progress').get()
-      ]);
       const progDocs = {};
       progSnap.docs.forEach(d=>{ progDocs[d.id] = d.data(); });
       const main = progDocs['main'] || {};
@@ -429,8 +457,10 @@ function wo2ShowBootError(msg){
       try{ preferredVoiceURI = await storageGet(PREFERRED_VOICE_KEY); }catch(e){ preferredVoiceURI = null; }
       try{ restTimerMuted = (await storageGet(REST_TIMER_MUTED_KEY)) === '1'; }catch(e){ restTimerMuted = false; }
 
+      clearInterval(bootTimer);
       render();
     }catch(e){
+      clearInterval(bootTimer);
       console.error(e);
       wo2ShowBootError('No se han podido cargar tus datos (' + (e.message || e.code || e) + ').');
     }
