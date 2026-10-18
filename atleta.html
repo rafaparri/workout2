@@ -169,6 +169,7 @@
 
 <script src="firebase-init.js?v=20261013211108"></script>
 <script src="branding.js?v=20261013211108"></script>
+<script src="puente-nutricion.js"></script>
 <script>
   document.getElementById('brandStripContainer').appendChild(renderBrandStrip(null, null));
 
@@ -465,6 +466,12 @@
     reportBtn.textContent = '📄 Informe semanal';
     reportBtn.onclick = ()=> openWeekReport(plan);
     container.appendChild(reportBtn);
+
+    const nutriBtn = document.createElement('button');
+    nutriBtn.className = 'reportBtn';
+    nutriBtn.textContent = '🥗 Abrir en Nutrición';
+    nutriBtn.onclick = ()=> window.PuenteNutricion.abrir((signedInUser && (signedInUser.displayName || (signedInUser.email||'').split('@')[0])) || 'Atleta', plan);
+    container.appendChild(nutriBtn);
 
     const grid = document.createElement('div');
     grid.className = 'dayGrid';
