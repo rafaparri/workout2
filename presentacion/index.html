@@ -224,7 +224,7 @@ function speakFrom(i){
 // Narración grabada: una pista por pantalla (audio/01.mp3 … audio/19.mp3)
 const aud = new Audio(); aud.preload = 'auto'; aud.setAttribute('playsinline','');
 let audSlide = -1;
-const trackFor = (i)=> 'audio/' + String(i+1).padStart(2,'0') + '.mp3';
+const trackFor = (i)=> 'audio/' + String(i+1).padStart(2,'0') + '.mp3?v=2';
 function playCur(){
   if (audSlide !== cur){ aud.src = trackFor(cur); audSlide = cur; }
   aud.playbackRate = Number($('rate').value);
