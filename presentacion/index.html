@@ -104,9 +104,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--f-body);font-size:
     <button class="btn" id="next" aria-label="Diapositiva siguiente">›</button>
   </div>
   <div class="opts">
-    <label for="voice">Voz</label><select id="voice"></select>
     <label for="rate">Velocidad</label>
-    <select id="rate"><option value="0.9">Lenta</option><option value="1" selected>Normal</option><option value="1.1">Rápida</option></select>
+    <select id="rate"><option value="0.9">Lenta</option><option value="1" selected>Normal</option><option value="1.15">Rápida</option></select>
   </div>
 </div>
 
@@ -153,7 +152,7 @@ const S = [
    n:'Y cada club tiene sus datos separados. El atleta solo ve lo suyo, el entrenador solo a su club, y la administración gestiona los accesos sin ver programaciones ni resultados.' },
  { eb:'WorkOut 2.0', t:'Probadla en vuestro club',
    html:'<div class="contact"><div class="big">Hecha por un levantador, <b>para el día a día del club.</b></div><span class="pill solid">Rafa Parrilla</span><span class="pill line">rafa.parri@gmail.com</span><a class="pill line" href="https://wa.me/34624633595" target="_blank" rel="noopener" style="text-decoration:none">WhatsApp · 624 633 595</a></div>',
-   n:'WorkOut 2.0. Hecha por un levantador, para el día a día del club. Probadla en vuestro club. Escribid a Rafa Parrilla, a rafa.parri arroba gmail punto com, o por WhatsApp al seis dos cuatro, seis tres tres, cinco nueve cinco.' }
+   n:'WorkOut 2.0. Hecha por un levantador, para el día a día del club. Probadla en vuestro club. Escribid a Rafa Parrilla, a rafa.parri@gmail.com, o por WhatsApp al 624 633 595.' }
 ];
 
 const $ = (id)=> document.getElementById(id);
@@ -180,56 +179,47 @@ function render(){
 }
 function startCard(){
   const c = document.createElement('div'); c.className = 'start';
-  c.innerHTML = '<div class="eyebrow">Presentación narrada</div><div class="big">WorkOut <b>2.0</b></div><p>Pulsa «Reproducir» para escuchar la presentación con la voz de tu dispositivo. Dura unos cuatro minutos. Sube el volumen y quita el modo silencio.</p>';
+  c.innerHTML = '<div class="eyebrow">Presentación narrada</div><div class="big">WorkOut <b>2.0</b></div><p>Pulsa «Reproducir» para escuchar la presentación. Dura unos cuatro minutos. Sube el volumen.</p>';
   return c;
 }
 function hi(i){ document.querySelectorAll('.sub .s').forEach(s=> s.classList.toggle('on', Number(s.dataset.i) === i)); }
 
-function pickVoices(){
-  if (!synth) return;
-  voices = synth.getVoices().filter(v=> /^es/i.test(v.lang));
-  const pref = ['Mónica','Monica','Jorge','Marisol','Paulina','Elvira','Alvaro','Álvaro','Google español','Lucía','Lucia','Sergio','Enrique','Conchita'];
-  const score = (v)=> (/es[-_]ES/i.test(v.lang) ? 10 : 0) + (pref.findIndex(p=> v.name.indexOf(p) >= 0) >= 0 ? 20 - pref.findIndex(p=> v.name.indexOf(p) >= 0) : 0) + (/premium|enhanced|mejorad|natural|neural/i.test(v.name) ? 15 : 0);
-  voices.sort((a,b)=> score(b) - score(a));
-  const sel = $('voice'); const keepV = sel.value;
-  sel.innerHTML = voices.length ? voices.map((v,i)=> '<option value="' + i + '">' + v.name.replace(/\(.*?\)/g,'').trim() + ' · ' + v.lang + '</option>').join('') : '<option value="">Sin voz en español</option>';
-  if (keepV && sel.querySelector('option[value="' + keepV + '"]')) sel.value = keepV;
-  try{ const saved = localStorage.getItem('wo2n_voice'); const k = voices.findIndex(v=> v.name === saved); if (k >= 0) sel.value = String(k); }catch(e){}
+// Narración grabada: una pista por pantalla (audio/01.mp3 … audio/19.mp3)
+const aud = new Audio(); aud.preload = 'auto'; aud.setAttribute('playsinline','');
+let audSlide = -1;
+const trackFor = (i)=> 'audio/' + String(i+1).padStart(2,'0') + '.mp3';
+function stopAll(){ clearTimeout(timer); try{ aud.pause(); }catch(e){} }
+function playCur(){
+  if (audSlide !== cur){ aud.src = trackFor(cur); audSlide = cur; }
+  aud.playbackRate = Number($('rate').value);
+  const pr = aud.play();
+  if (pr && pr.catch) pr.catch(()=>{ playing = false; setPlay(); });
+  const nx = cur + 1; if (nx < S.length){ const pre = new Audio(); pre.preload = 'auto'; pre.src = trackFor(nx); }
 }
-if (synth){ pickVoices(); synth.onvoiceschanged = pickVoices; }
-
-function stopAll(){ clearTimeout(timer); if (synth) synth.cancel(); }
-function speakFrom(i){
-  const list = sentences(S[cur].n);
-  if (i >= list.length){ fill(1); if (playing){ timer = setTimeout(()=>{ if (cur < S.length-1){ cur++; sent = 0; render(); speakFrom(0); } else { playing = false; setPlay(); } }, 700); } return; }
-  sent = i; hi(i); fill(i / list.length);
-  const text = list[i];
-  const v = voices[Number($('voice').value)];
-  if (synth && v){
-    const u = new SpeechSynthesisUtterance(text);
-    u.voice = v; u.lang = v.lang; u.rate = Number($('rate').value);
-    let doneOnce = false;
-    const go = ()=>{ if (doneOnce) return; doneOnce = true; if (playing) speakFrom(i+1); };
-    u.onend = go; u.onerror = (e)=>{ if (e.error !== 'interrupted' && e.error !== 'canceled') go(); };
-    keep = [u]; synth.speak(u);
-  } else {
-    // Sin voz disponible: avanza al ritmo de lectura, con subtítulos
-    timer = setTimeout(()=>{ if (playing) speakFrom(i+1); }, Math.max(1800, text.split(/\s+/).length * 380 / Number($('rate').value)));
-  }
-}
+aud.addEventListener('timeupdate', ()=>{
+  if (!aud.duration || audSlide !== cur) return;
+  const p = aud.currentTime / aud.duration; fill(p);
+  const L = sentences(S[cur].n).map(x=> x.length); const tot = L.reduce((x,y)=> x+y, 0);
+  let acc = 0, k = 0; for (; k < L.length; k++){ acc += L[k]; if (tot*p <= acc) break; }
+  hi(Math.min(k, L.length-1));
+});
+aud.addEventListener('ended', ()=>{
+  fill(1);
+  if (!playing) return;
+  timer = setTimeout(()=>{ if (cur < S.length-1){ cur++; render(); playCur(); } else { playing = false; setPlay(); } }, 450);
+});
 function setPlay(){ $('play').textContent = playing ? '❚❚ Pausa' : (started ? '▶ Seguir' : '▶ Reproducir'); }
-function go(n){ stopAll(); cur = Math.max(0, Math.min(S.length-1, n)); sent = 0; render(); hi(-1); if (playing) speakFrom(0); }
+function go(n){ stopAll(); cur = Math.max(0, Math.min(S.length-1, n)); audSlide = -1; render(); hi(-1); if (playing) playCur(); }
 
 $('play').onclick = ()=>{
   if (!started){ started = true; const c = document.querySelector('.start'); if (c) c.remove(); }
   playing = !playing; setPlay();
-  if (playing){ stopAll(); speakFrom(sent); } else { stopAll(); }
+  if (playing){ playCur(); } else { stopAll(); }
   try{ navigator.wakeLock && navigator.wakeLock.request('screen').catch(()=>{}); }catch(e){}
 };
 $('prev').onclick = ()=> go(cur-1);
 $('next').onclick = ()=> go(cur+1);
-$('voice').onchange = ()=>{ try{ const v = voices[Number($('voice').value)]; if (v) localStorage.setItem('wo2n_voice', v.name); }catch(e){} if (playing){ stopAll(); speakFrom(sent); } };
-$('rate').onchange = ()=>{ if (playing){ stopAll(); speakFrom(sent); } };
+$('rate').onchange = ()=>{ aud.playbackRate = Number($('rate').value); };
 document.addEventListener('keydown', (e)=>{ if (e.key === 'ArrowRight') go(cur+1); else if (e.key === 'ArrowLeft') go(cur-1); else if (e.key === ' ' && e.target === document.body){ e.preventDefault(); $('play').click(); } });
 let tx = null;
 $('stage').addEventListener('touchstart', (e)=>{ tx = e.touches[0].clientX; }, { passive:true });
