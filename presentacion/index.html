@@ -104,6 +104,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--f-body);font-size:
     <button class="btn" id="next" aria-label="Diapositiva siguiente">›</button>
   </div>
   <div class="opts">
+    <label for="voice">Voz</label><select id="voice"></select>
     <label for="rate">Velocidad</label>
     <select id="rate"><option value="0.9">Lenta</option><option value="1" selected>Normal</option><option value="1.15">Rápida</option></select>
   </div>
@@ -152,14 +153,15 @@ const S = [
    n:'Y cada club tiene sus datos separados. El atleta solo ve lo suyo, el entrenador solo a su club, y la administración gestiona los accesos sin ver programaciones ni resultados.' },
  { eb:'WorkOut 2.0', t:'Probadla en vuestro club',
    html:'<div class="contact"><div class="big">Hecha por un levantador, <b>para el día a día del club.</b></div><span class="pill solid">Rafa Parrilla</span><span class="pill line">rafa.parri@gmail.com</span><a class="pill line" href="https://wa.me/34624633595" target="_blank" rel="noopener" style="text-decoration:none">WhatsApp · 624 633 595</a></div>',
-   n:'WorkOut 2.0. Hecha por un levantador, para el día a día del club. Probadla en vuestro club. Escribid a Rafa Parrilla, a rafa.parri@gmail.com, o por WhatsApp al 624 633 595.' }
+   n:'WorkOut 2.0. Hecha por un levantador, para el día a día del club. Probadla en vuestro club. Escribid a Rafa Parrilla, a rafa.parri@gmail.com, o por WhatsApp al 624 633 595.',
+   say:'WorkOut 2.0. Hecha por un levantador, para el día a día del club. Probadla en vuestro club. Escribid a Rafa Parrilla, a rafa punto parri arroba gmail punto com, o por WhatsApp al seis dos cuatro, seis tres tres, cinco nueve cinco.' }
 ];
 
 const $ = (id)=> document.getElementById(id);
 const synth = window.speechSynthesis || null;
 let cur = 0, playing = false, sent = 0, timer = null, keep = [], voices = [], started = false;
 
-function sentences(t){ return t.match(/[^.!?]+[.!?]+|[^.!?]+$/g).map(s=> s.trim()).filter(Boolean); }
+function sentences(t){ return t.split(/(?<=[.!?])\s+/).map(s=> s.trim()).filter(Boolean); }
 function bars(){
   const b = $('bars'); b.innerHTML = '';
   S.forEach((_, i)=>{ const s = document.createElement('span'); if (i < cur) s.className = 'done'; const f = document.createElement('i'); s.appendChild(f); b.appendChild(s); });
@@ -184,11 +186,44 @@ function startCard(){
 }
 function hi(i){ document.querySelectorAll('.sub .s').forEach(s=> s.classList.toggle('on', Number(s.dataset.i) === i)); }
 
+// Dos voces posibles: la grabada (MP3) o una voz del navegador (en Chrome, «Google español»)
+let mode = 'rec';
+function pickVoices(){
+  if (!synth) return;
+  voices = synth.getVoices().filter(v=> /^es/i.test(v.lang));
+  const score = (v)=> (/google/i.test(v.name) ? 40 : 0) + (/es[-_]ES/i.test(v.lang) ? 10 : 0) + (/natural|neural|online|premium|enhanced|mejorad/i.test(v.name) ? 15 : 0);
+  voices.sort((x,y)=> score(y) - score(x));
+  const sel = $('voice');
+  sel.innerHTML = '<option value="rec">Voz grabada</option>' + voices.map((v,i)=> '<option value="' + i + '">' + v.name.replace(/\(.*?\)/g,'').trim() + '</option>').join('');
+  let want = null; try{ want = localStorage.getItem('wo2n_voice2'); }catch(e){}
+  let k = want === 'rec' ? -2 : voices.findIndex(v=> v.name === want);
+  // En ordenador (Chrome), «Google español» por defecto; en el móvil, la voz grabada
+  const mobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+  if (k === -1 && !mobile) k = voices.findIndex(v=> /google/i.test(v.name));
+  mode = k >= 0 ? String(k) : 'rec';
+  sel.value = mode;
+}
+if (synth){ pickVoices(); synth.onvoiceschanged = pickVoices; }
+function stopAll(){ clearTimeout(timer); try{ aud.pause(); }catch(e){} try{ if (synth) synth.cancel(); }catch(e){} }
+function playNow(){ if (mode === 'rec') playCur(); else speakFrom(sent); }
+function spoken(){ return sentences(S[cur].say || S[cur].n); }
+function speakFrom(i){
+  const list = spoken();
+  if (i >= list.length){ fill(1); if (playing){ timer = setTimeout(()=>{ if (cur < S.length-1){ cur++; sent = 0; render(); speakFrom(0); } else { playing = false; setPlay(); } }, 600); } return; }
+  sent = i; hi(i); fill(i / list.length);
+  const v = voices[Number(mode)];
+  if (!v){ mode = 'rec'; playCur(); return; }
+  const u = new SpeechSynthesisUtterance(list[i]);
+  u.voice = v; u.lang = v.lang; u.rate = Number($('rate').value);
+  let done = false;
+  const next = ()=>{ if (done) return; done = true; if (playing && mode !== 'rec') speakFrom(i+1); };
+  u.onend = next; u.onerror = (e)=>{ if (e.error !== 'interrupted' && e.error !== 'canceled') next(); };
+  keep = [u]; synth.speak(u);
+}
 // Narración grabada: una pista por pantalla (audio/01.mp3 … audio/19.mp3)
 const aud = new Audio(); aud.preload = 'auto'; aud.setAttribute('playsinline','');
 let audSlide = -1;
 const trackFor = (i)=> 'audio/' + String(i+1).padStart(2,'0') + '.mp3';
-function stopAll(){ clearTimeout(timer); try{ aud.pause(); }catch(e){} }
 function playCur(){
   if (audSlide !== cur){ aud.src = trackFor(cur); audSlide = cur; }
   aud.playbackRate = Number($('rate').value);
@@ -197,7 +232,7 @@ function playCur(){
   const nx = cur + 1; if (nx < S.length){ const pre = new Audio(); pre.preload = 'auto'; pre.src = trackFor(nx); }
 }
 aud.addEventListener('timeupdate', ()=>{
-  if (!aud.duration || audSlide !== cur) return;
+  if (!aud.duration || audSlide !== cur || mode !== 'rec') return;
   const p = aud.currentTime / aud.duration; fill(p);
   const L = sentences(S[cur].n).map(x=> x.length); const tot = L.reduce((x,y)=> x+y, 0);
   let acc = 0, k = 0; for (; k < L.length; k++){ acc += L[k]; if (tot*p <= acc) break; }
@@ -205,21 +240,22 @@ aud.addEventListener('timeupdate', ()=>{
 });
 aud.addEventListener('ended', ()=>{
   fill(1);
-  if (!playing) return;
-  timer = setTimeout(()=>{ if (cur < S.length-1){ cur++; render(); playCur(); } else { playing = false; setPlay(); } }, 450);
+  if (!playing || mode !== 'rec') return;
+  timer = setTimeout(()=>{ if (cur < S.length-1){ cur++; render(); playNow(); } else { playing = false; setPlay(); } }, 450);
 });
 function setPlay(){ $('play').textContent = playing ? '❚❚ Pausa' : (started ? '▶ Seguir' : '▶ Reproducir'); }
-function go(n){ stopAll(); cur = Math.max(0, Math.min(S.length-1, n)); audSlide = -1; render(); hi(-1); if (playing) playCur(); }
+function go(n){ stopAll(); cur = Math.max(0, Math.min(S.length-1, n)); audSlide = -1; sent = 0; render(); hi(-1); if (playing) playNow(); }
 
 $('play').onclick = ()=>{
   if (!started){ started = true; const c = document.querySelector('.start'); if (c) c.remove(); }
   playing = !playing; setPlay();
-  if (playing){ playCur(); } else { stopAll(); }
+  if (playing){ playNow(); } else { stopAll(); }
   try{ navigator.wakeLock && navigator.wakeLock.request('screen').catch(()=>{}); }catch(e){}
 };
 $('prev').onclick = ()=> go(cur-1);
 $('next').onclick = ()=> go(cur+1);
-$('rate').onchange = ()=>{ aud.playbackRate = Number($('rate').value); };
+$('rate').onchange = ()=>{ aud.playbackRate = Number($('rate').value); if (playing && mode !== 'rec'){ stopAll(); speakFrom(sent); } };
+$('voice').onchange = ()=>{ stopAll(); mode = $('voice').value; try{ localStorage.setItem('wo2n_voice2', mode === 'rec' ? 'rec' : voices[Number(mode)].name); }catch(e){} audSlide = -1; sent = 0; hi(-1); if (playing) playNow(); };
 document.addEventListener('keydown', (e)=>{ if (e.key === 'ArrowRight') go(cur+1); else if (e.key === 'ArrowLeft') go(cur-1); else if (e.key === ' ' && e.target === document.body){ e.preventDefault(); $('play').click(); } });
 let tx = null;
 $('stage').addEventListener('touchstart', (e)=>{ tx = e.touches[0].clientX; }, { passive:true });
