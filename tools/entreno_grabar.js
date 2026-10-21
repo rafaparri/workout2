@@ -153,6 +153,8 @@ function wo2RecDone(){
   const name = 'serie-' + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0') + '-' + String(d.getHours()).padStart(2,'0') + String(d.getMinutes()).padStart(2,'0') + String(d.getSeconds()).padStart(2,'0') + '.' + ext;
   const file = new File([blob], name, { type });
   const url = URL.createObjectURL(blob);
+  // WorkOut 2.0: se sube a Google Drive para que lo vea el entrenador
+  try{ if (typeof wo2DriveQueue === 'function'){ const c0 = WO2REC.ctx || {}; wo2DriveQueue(file, { day: c0.day, exIdx: c0.idx, label: c0.label }); } }catch(e){}
   // Se añade a los vídeos del ejercicio (si se abrió desde uno)
   try{
     const c = WO2REC.ctx;

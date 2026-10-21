@@ -12,7 +12,7 @@ for f in glob.glob('*.html'):
         s = s[:m.end()] + '\n' + (SNIP % (V, V)) + s[m.end():]
     s = re.sub(r"window\.WO2_VERSION='[^']*'", "window.WO2_VERSION='%s'" % V, s)
     # Los archivos propios se piden con la versión, para que no se queden viejos
-    s = re.sub(r'src="(update|branding|status|firebase-init|roles|competicion|calendario-oficial|categorias-oficiales)\.js(\?v=[^"]*)?"', r'src="\1.js?v=%s"' % V, s)
+    s = re.sub(r'src="(update|branding|status|firebase-init|roles|competicion|calendario-oficial|categorias-oficiales|google-config)\.js(\?v=[^"]*)?"', r'src="\1.js?v=%s"' % V, s)
     open(f, 'w', encoding='utf-8').write(s)
 json.dump({'v': V}, open('version.json', 'w'))
 print('Versión', V)

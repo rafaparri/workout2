@@ -414,6 +414,7 @@ function wo2ShowBootError(msg){
       progSnap.docs.forEach(d=>{ progDocs[d.id] = d.data(); });
       const main = progDocs['main'] || {};
       const prof = progDocs['profile'] || {};
+      WO2.videos = (progDocs['videos'] && progDocs['videos'].list) || [];
       const dayDates = main.dayDates || {};
       const plans = plansSnap.docs.map(d=>{
         const p = d.data();
@@ -551,6 +552,37 @@ patch("<script>\n// WorkOut 2.0: fechas de la semana", '<script src="competicion
 # Cambios del atleta: fondos oscuros.
 patch("  edited: { bg:'#fde9da', border:'#e07b39',", "  edited: { bg:'var(--t-chg-bg)', border:'var(--t-chg)',")
 patch("  added:  { bg:'#dff3e5', border:'#2e9a52',", "  added:  { bg:'var(--t-good-bg)', border:'var(--t-good)',")
+
+# ===== Vídeos de las series en Google Drive (los ve el entrenador y salen en el PDF) =====
+DRIVE_JS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_drive.js'), encoding='utf-8').read()
+patch("<script>\n// WorkOut 2.0: fechas de la semana",
+      '<script src="google-config.js?v=1"></script>\n<script src="https://accounts.google.com/gsi/client" async defer></script>\n<script>\n' + DRIVE_JS + "\n</script>\n<script>\n// WorkOut 2.0: fechas de la semana")
+# Análisis con IA: desactivado en WorkOut hasta tener un servidor con la clave
+patch("      vActions.appendChild(analyzeBtn); vActions.appendChild(delVBtn);", "      vActions.appendChild(delVBtn);")
+patch("  videoSection.appendChild(videoHeading);\n",
+      "  videoSection.appendChild(videoHeading);\n  wo2DriveCardList(videoSection, plan, day, idx);\n")
+patch("      videos.push({ id: 'v'+Date.now()+Math.random().toString(36).slice(2,6), name:file.name, url, analysis:null, formatWarning: looksLikeHevcMov });\n",
+      "      videos.push({ id: 'v'+Date.now()+Math.random().toString(36).slice(2,6), name:file.name, url, analysis:null, formatWarning: looksLikeHevcMov });\n      wo2DriveQueue(file, { planId: plan.id, day, exIdx: idx, label: entry.name || ('Código ' + entry.code) });\n")
+patch("function generateDayReport(plan, day){\n", "function generateDayReport(plan, day){\n  wo2ReportCtx = { planId: plan.id, day };\n")
+patch("function generateWeekReport(plan){\n", "function generateWeekReport(plan){\n  wo2ReportCtx = { planId: plan.id, day: null };\n")
+PDF_VIDEOS = """  { const vids = wo2VideosForPdf();
+    if (vids.length){
+      checkPageBreak(14);
+      sectionTitle('VIDEOS DE LAS SERIES', [201,154,46]);
+      doc.setFont('helvetica','normal'); doc.setFontSize(10);
+      vids.forEach(v=>{
+        checkPageBreak(7);
+        const lbl = stripEmojiForPDF(v.text);
+        doc.setTextColor(40,40,40); doc.text(lbl, marginX, y);
+        const x2 = Math.min(marginX + doc.getTextWidth(lbl) + 4, marginX + contentW - 22);
+        doc.setTextColor(30,100,200); doc.textWithLink('Ver video', x2, y, { url: v.link });
+        y += 6.5;
+      });
+      y += 3;
+    } }
+
+  const pageCount = doc.internal.getNumberOfPages();"""
+patch("  const pageCount = doc.internal.getNumberOfPages();", PDF_VIDEOS, 2)
 
 patch('\ninitApp();\n</script>', '\n' + ADAPTER + '\n</script>')
 
