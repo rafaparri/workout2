@@ -46,36 +46,48 @@ async function wo2DriveQueue(file, meta){
 
 // ---------- Permiso de Google (token de acceso) ----------
 function wo2TokenValid(){ return WO2D.token && Date.now() < WO2D.exp - 60000; }
-function wo2GetToken(){
-  return new Promise((resolve, reject)=>{
-    if (wo2TokenValid()) return resolve(WO2D.token);
-    if (!wo2DriveReady()) return reject(new Error('Google Drive aún no está configurado.'));
-    if (!(window.google && google.accounts && google.accounts.oauth2)) return reject(new Error('No se ha podido cargar el acceso de Google. Revisa la conexión.'));
-    if (!WO2D.client){
-      WO2D.client = google.accounts.oauth2.initTokenClient({
-        client_id: window.WO2_GOOGLE_CLIENT_ID,
-        scope: 'https://www.googleapis.com/auth/drive.file',
-        callback: ()=>{}
-      });
-    }
-    WO2D.client.callback = (r)=>{
-      if (r && r.access_token){
-        WO2D.token = r.access_token; WO2D.exp = Date.now() + (Number(r.expires_in) || 3600) * 1000;
-        try{ sessionStorage.setItem('wo2_gtok', JSON.stringify({ t:WO2D.token, e:WO2D.exp })); localStorage.setItem('wo2_gdrive_ok', '1'); }catch(e){}
-        resolve(WO2D.token);
-      } else reject(new Error((r && r.error_description) || 'No se ha dado permiso a Google Drive.'));
-    };
-    WO2D.client.error_callback = (e)=> reject(new Error(e && e.type === 'popup_closed' ? 'Se cerró la ventana de Google sin dar permiso.' : 'No se ha podido abrir la ventana de Google.'));
-    let ok = false; try{ ok = localStorage.getItem('wo2_gdrive_ok') === '1'; }catch(e){}
-    WO2D.client.requestAccessToken({ prompt: ok ? '' : 'consent' });
+// Permiso de Google sin ventana emergente: la app va a la página de Google y
+// vuelve sola con el permiso (así funciona en el iPhone con la app instalada).
+// Los vídeos pendientes no se pierden: esperan en la cola del móvil.
+function wo2DriveLogin(){
+  if (!wo2DriveReady()) return;
+  const st = Math.random().toString(36).slice(2);
+  try{ sessionStorage.setItem('wo2_gstate', st); localStorage.setItem('wo2_gstate', st); }catch(e){}
+  let ok = false; try{ ok = localStorage.getItem('wo2_gdrive_ok') === '1'; }catch(e){}
+  const q = new URLSearchParams({
+    client_id: window.WO2_GOOGLE_CLIENT_ID,
+    redirect_uri: location.origin + location.pathname,
+    response_type: 'token',
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    include_granted_scopes: 'true',
+    state: st
   });
+  if (!ok) q.set('prompt', 'consent');
+  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + q.toString();
 }
+function wo2GetToken(){
+  if (wo2TokenValid()) return Promise.resolve(WO2D.token);
+  return Promise.reject(new Error('Hay que dar permiso a Google Drive.'));
+}
+// Vuelta de Google: el permiso llega en la dirección (#access_token=…)
+(function(){
+  const h = location.hash || '';
+  if (h.indexOf('access_token=') < 0 && h.indexOf('error=') < 0) return;
+  const p = new URLSearchParams(h.slice(1));
+  let st = null; try{ st = sessionStorage.getItem('wo2_gstate') || localStorage.getItem('wo2_gstate'); }catch(e){}
+  try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+  if (p.get('error')){ WO2D.msg = p.get('error') === 'access_denied' ? 'No se dio permiso a Google Drive. Pulsa «Subir ahora» para intentarlo de nuevo.' : 'Google respondió: ' + p.get('error'); return; }
+  if (st && p.get('state') !== st){ WO2D.msg = 'La respuesta de Google no coincide. Inténtalo de nuevo.'; return; }
+  WO2D.token = p.get('access_token');
+  WO2D.exp = Date.now() + (Number(p.get('expires_in')) || 3600) * 1000;
+  try{ sessionStorage.setItem('wo2_gtok', JSON.stringify({ t:WO2D.token, e:WO2D.exp })); localStorage.setItem('wo2_gdrive_ok', '1'); localStorage.removeItem('wo2_gstate'); }catch(e){}
+})();
 try{ const s = JSON.parse(sessionStorage.getItem('wo2_gtok') || 'null'); if (s && s.e > Date.now()){ WO2D.token = s.t; WO2D.exp = s.e; } }catch(e){}
 
 async function wo2Api(url, opts){
   opts = opts || {}; opts.headers = Object.assign({ Authorization: 'Bearer ' + WO2D.token }, opts.headers || {});
   const r = await fetch(url, opts);
-  if (r.status === 401){ WO2D.token = null; throw new Error('Hay que volver a dar permiso a Google Drive.'); }
+  if (r.status === 401){ WO2D.token = null; try{ sessionStorage.removeItem('wo2_gtok'); }catch(e){} throw new Error('El permiso de Google Drive ha caducado. Pulsa «Subir ahora».'); }
   if (!r.ok){ let d = ''; try{ const j = await r.json(); d = j.error && j.error.message; }catch(e){} throw new Error('Google Drive respondió ' + r.status + (d ? ': ' + d : '')); }
   return r;
 }
@@ -131,6 +143,7 @@ async function wo2DriveKick(fromTap){
   if (!list.length){ wo2DriveBadge(); return; }
   if (!wo2DriveReady()){ WO2D.msg = 'Vídeos guardados en el móvil. La subida a Google Drive aún no está activada.'; wo2DriveBadge(); return; }
   if (!wo2TokenValid() && !fromTap){ WO2D.msg = ''; wo2DriveBadge(); return; }   // hace falta un toque para pedir permiso
+  if (!wo2TokenValid()){ wo2DriveLogin(); return; }
   WO2D.busy = true; WO2D.msg = '';
   try{
     await wo2GetToken();

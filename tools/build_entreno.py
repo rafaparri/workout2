@@ -556,7 +556,7 @@ patch("  added:  { bg:'#dff3e5', border:'#2e9a52',", "  added:  { bg:'var(--t-go
 # ===== Vídeos de las series en Google Drive (los ve el entrenador y salen en el PDF) =====
 DRIVE_JS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_drive.js'), encoding='utf-8').read()
 patch("<script>\n// WorkOut 2.0: fechas de la semana",
-      '<script src="google-config.js?v=1"></script>\n<script src="https://accounts.google.com/gsi/client" async defer></script>\n<script>\n' + DRIVE_JS + "\n</script>\n<script>\n// WorkOut 2.0: fechas de la semana")
+      '<script src="google-config.js?v=1"></script>\n<script>\n' + DRIVE_JS + "\n</script>\n<script>\n// WorkOut 2.0: fechas de la semana")
 # Análisis con IA: desactivado en WorkOut hasta tener un servidor con la clave
 patch("      vActions.appendChild(analyzeBtn); vActions.appendChild(delVBtn);", "      vActions.appendChild(delVBtn);")
 patch("  videoSection.appendChild(videoHeading);\n",
