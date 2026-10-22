@@ -7,16 +7,16 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261022211651';</script>
-<script src="update.js?v=20261022211651"></script>
+<script>window.WO2_VERSION='20261022212921';</script>
+<script src="update.js?v=20261022212921"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261022211651"></script>
-<script src="branding.js?v=20261022211651"></script>
-<script src="roles.js?v=20261022211651"></script>
+<script src="firebase-init.js?v=20261022212921"></script>
+<script src="branding.js?v=20261022212921"></script>
+<script src="roles.js?v=20261022212921"></script>
 <style>
 
 :root{
@@ -6976,7 +6976,7 @@ function wo2ShowBootError(msg){
 })();
 
 </script>
-<script src="competicion.js?v=20261022211651"></script>
+<script src="competicion.js?v=20261022212921"></script>
 <script>
 // WorkOut 2.0 · Competiciones en la app del atleta (lo inserta build_entreno.py).
 // Lee sus fichas de competición en  WO2.base/competitions/{compId}  y las
@@ -7100,7 +7100,7 @@ function wo2RenderCompsScreen(){
 }
 
 </script>
-<script src="google-config.js?v=20261022211651"></script>
+<script src="google-config.js?v=20261022212921"></script>
 <script>
 // ===== WorkOut 2.0 · Vídeos de las series en Google Drive =====
 // Cada vídeo grabado (o añadido) se guarda primero en el móvil, en una cola,
@@ -7301,6 +7301,12 @@ function wo2DriveBadge(){
   }
 }
 
+// Página propia que reproduce el archivo original (sin esperar a que Drive lo procese)
+function wo2VideoPage(v, title){
+  const d = new Date(v.createdAt || Date.now());
+  const q = new URLSearchParams({ id: v.id, t: title || v.label || 'Vídeo de la serie', d: d.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' }) + ' · ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }) });
+  return new URL('video.html', location.href).href.split('?')[0] + '?' + q.toString();
+}
 // ---------- Lista de vídeos subidos en la tarjeta del ejercicio ----------
 function wo2DriveVideosFor(planId, day, exIdx){
   return (typeof WO2 !== 'undefined' && WO2.videos || []).filter(v=> v.planId === planId && v.day === day && (exIdx == null || v.exIdx === exIdx || v.exIdx == null));
@@ -7311,9 +7317,9 @@ function wo2DriveCardList(section, plan, day, idx){
   const box = document.createElement('div');
   box.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin:0 0 12px;';
   list.forEach(v=>{
-    const a = document.createElement('a'); a.href = v.link; a.target = '_blank'; a.rel = 'noopener';
+    const a = document.createElement('a'); a.href = wo2VideoPage(v); a.target = '_blank'; a.rel = 'noopener';
     const d = new Date(v.createdAt || Date.now());
-    a.textContent = '▶ Ver vídeo en Drive · ' + d.toLocaleDateString('es-ES', { day:'numeric', month:'short' }) + ' ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }) + (v.label ? ' · ' + v.label : '');
+    a.textContent = '▶ Ver vídeo · ' + d.toLocaleDateString('es-ES', { day:'numeric', month:'short' }) + ' ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }) + (v.label ? ' · ' + v.label : '');
     a.style.cssText = 'display:block;padding:12px 14px;border-radius:12px;border:1.5px solid var(--t-edge,#33435a);color:var(--t-accent,#34d1c4);font-weight:800;font-size:16px;text-decoration:none;';
     a.onclick = (e)=> e.stopPropagation();
     box.appendChild(a);
@@ -7330,7 +7336,7 @@ function wo2VideosForPdf(){
     const name = entry ? (entry.name || ('Código ' + entry.code)) : (v.label || 'Serie');
     const dn = (typeof DAY_NAMES !== 'undefined' && DAY_NAMES[v.day]) || v.day || '';
     const d = new Date(v.createdAt || Date.now());
-    return { text: (c.day ? '' : dn + ' · ') + name + ' · ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }), link: v.link };
+    return { text: (c.day ? '' : dn + ' · ') + name + ' · ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }), link: wo2VideoPage(v, name) };
   });
 }
 

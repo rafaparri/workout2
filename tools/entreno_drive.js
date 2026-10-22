@@ -197,6 +197,12 @@ function wo2DriveBadge(){
   }
 }
 
+// Página propia que reproduce el archivo original (sin esperar a que Drive lo procese)
+function wo2VideoPage(v, title){
+  const d = new Date(v.createdAt || Date.now());
+  const q = new URLSearchParams({ id: v.id, t: title || v.label || 'Vídeo de la serie', d: d.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' }) + ' · ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }) });
+  return new URL('video.html', location.href).href.split('?')[0] + '?' + q.toString();
+}
 // ---------- Lista de vídeos subidos en la tarjeta del ejercicio ----------
 function wo2DriveVideosFor(planId, day, exIdx){
   return (typeof WO2 !== 'undefined' && WO2.videos || []).filter(v=> v.planId === planId && v.day === day && (exIdx == null || v.exIdx === exIdx || v.exIdx == null));
@@ -207,9 +213,9 @@ function wo2DriveCardList(section, plan, day, idx){
   const box = document.createElement('div');
   box.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin:0 0 12px;';
   list.forEach(v=>{
-    const a = document.createElement('a'); a.href = v.link; a.target = '_blank'; a.rel = 'noopener';
+    const a = document.createElement('a'); a.href = wo2VideoPage(v); a.target = '_blank'; a.rel = 'noopener';
     const d = new Date(v.createdAt || Date.now());
-    a.textContent = '▶ Ver vídeo en Drive · ' + d.toLocaleDateString('es-ES', { day:'numeric', month:'short' }) + ' ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }) + (v.label ? ' · ' + v.label : '');
+    a.textContent = '▶ Ver vídeo · ' + d.toLocaleDateString('es-ES', { day:'numeric', month:'short' }) + ' ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }) + (v.label ? ' · ' + v.label : '');
     a.style.cssText = 'display:block;padding:12px 14px;border-radius:12px;border:1.5px solid var(--t-edge,#33435a);color:var(--t-accent,#34d1c4);font-weight:800;font-size:16px;text-decoration:none;';
     a.onclick = (e)=> e.stopPropagation();
     box.appendChild(a);
@@ -226,7 +232,7 @@ function wo2VideosForPdf(){
     const name = entry ? (entry.name || ('Código ' + entry.code)) : (v.label || 'Serie');
     const dn = (typeof DAY_NAMES !== 'undefined' && DAY_NAMES[v.day]) || v.day || '';
     const d = new Date(v.createdAt || Date.now());
-    return { text: (c.day ? '' : dn + ' · ') + name + ' · ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }), link: v.link };
+    return { text: (c.day ? '' : dn + ' · ') + name + ' · ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }), link: wo2VideoPage(v, name) };
   });
 }
 

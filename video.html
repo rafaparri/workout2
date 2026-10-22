@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>WorkOut 2.0 · Vídeo de la serie</title>
+<script>window.WO2_VERSION='20261022212921';</script>
+<script src="update.js?v=20261022212921"></script>
+<link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
+<link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
+<meta name="theme-color" content="#0d1117">
+<style>
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; background:#0d1117; color:#e8eef4; font-family:Archivo,system-ui,-apple-system,sans-serif; }
+  .wrap{ max-width:720px; margin:0 auto; padding:calc(16px + env(safe-area-inset-top,0px)) max(16px, env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px)); display:flex; flex-direction:column; gap:14px; }
+  .brand{ font-weight:900; font-size:18px; letter-spacing:.02em; }
+  .brand b{ color:#34d1c4; }
+  h1{ font-size:24px; margin:0; line-height:1.2; }
+  .sub{ color:#b2bfcc; font-size:16px; }
+  video{ width:100%; max-height:72vh; background:#000; border-radius:16px; border:1.5px solid #33435a; }
+  .msg{ background:#161d27; border:1.5px solid #33435a; border-radius:14px; padding:14px; font-size:16px; line-height:1.45; color:#b2bfcc; }
+  .msg[hidden]{ display:none; }
+  .btns{ display:flex; gap:10px; flex-wrap:wrap; }
+  a.btn{ display:inline-flex; align-items:center; justify-content:center; min-height:50px; padding:0 18px; border-radius:999px; text-decoration:none; font-weight:800; font-size:16px; }
+  a.main{ background:#34d1c4; color:#06201d; }
+  a.alt{ border:1.5px solid #33435a; color:#e8eef4; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">WORKOUT <b>2.0</b></div>
+  <h1 id="title">Vídeo de la serie</h1>
+  <div class="sub" id="sub"></div>
+  <video id="v" controls playsinline preload="metadata"></video>
+  <div class="msg" id="msg" hidden></div>
+  <div class="btns">
+    <a class="btn alt" id="drive" target="_blank" rel="noopener">Abrir en Google Drive</a>
+    <a class="btn alt" id="down" target="_blank" rel="noopener">Descargar el archivo</a>
+  </div>
+</div>
+<script>
+  const p = new URLSearchParams(location.search);
+  const id = (p.get('id') || '').replace(/[^A-Za-z0-9_-]/g, '');
+  const t = p.get('t') || '';
+  if (t) document.getElementById('title').textContent = t;
+  const sub = [p.get('d')].filter(Boolean).join(' · ');
+  document.getElementById('sub').textContent = sub;
+  const v = document.getElementById('v'), msg = document.getElementById('msg');
+  if (!id){
+    msg.hidden = false; msg.textContent = 'Este enlace no es válido.'; v.remove();
+  } else {
+    // Archivo original (disponible al momento, sin esperar a que Drive lo procese)
+    const direct = 'https://drive.usercontent.google.com/download?id=' + id + '&export=download';
+    const fallback = 'https://drive.google.com/uc?export=download&id=' + id;
+    document.getElementById('drive').href = 'https://drive.google.com/file/d/' + id + '/view';
+    document.getElementById('down').href = direct;
+    let tried = 0;
+    v.src = direct;
+    v.addEventListener('error', ()=>{
+      tried++;
+      if (tried === 1){ v.src = fallback; v.load(); return; }
+      msg.hidden = false;
+      msg.textContent = 'Este dispositivo no puede reproducir el vídeo aquí. Pulsa «Abrir en Google Drive» (puede tardar unos minutos si el vídeo es muy reciente) o «Descargar el archivo».';
+    });
+  }
+</script>
+</body>
+</html>
