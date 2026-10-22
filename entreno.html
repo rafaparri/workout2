@@ -7,16 +7,16 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261022212921';</script>
-<script src="update.js?v=20261022212921"></script>
+<script>window.WO2_VERSION='20261022214214';</script>
+<script src="update.js?v=20261022214214"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261022212921"></script>
-<script src="branding.js?v=20261022212921"></script>
-<script src="roles.js?v=20261022212921"></script>
+<script src="firebase-init.js?v=20261022214214"></script>
+<script src="branding.js?v=20261022214214"></script>
+<script src="roles.js?v=20261022214214"></script>
 <style>
 
 :root{
@@ -1116,13 +1116,48 @@ function wo2Cue(what){
   if (restTimerMuted) return;
   if (!wo2MusicMode){
     const say = { end:'Descanso terminado', s30:'Treinta segundos', s10:'Diez segundos' }[what];
-    speakText(say || String(what));
+    if (!wo2VozPlay(what)) speakText(say || String(what));
     return;
   }
   if (what === 'end') wo2Beeps(3, 1046, 260, 0.22);
   else if (what === 's30') wo2Beeps(2, 660, 260, 0.16);
   else if (what === 's10') wo2Beeps(3, 784, 220, 0.14);
   else wo2Beeps(1, 880, 0, 0.12);   // 5, 4, 3, 2, 1
+}
+</script>
+<script>
+// ===== Cuenta atrás con voz grabada =====
+const WO2VOZ = { buf:{}, loading:false };
+function wo2VozCtx(){
+  try{ if (navigator.audioSession) navigator.audioSession.type = 'ambient'; }catch(e){}
+  if (!restAudioCtx) restAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (restAudioCtx.state === 'suspended') restAudioCtx.resume();
+  return restAudioCtx;
+}
+// Se llama al empezar un descanso (tras un toque): desbloquea el sonido y carga los audios
+function wo2VozInit(){
+  let ctx; try{ ctx = wo2VozCtx(); }catch(e){ return; }
+  if (WO2VOZ.loading) return;
+  WO2VOZ.loading = true;
+  ['30','10','5','4','3','2','1','fin'].forEach(k=>{
+    fetch('voz/' + k + '.mp3?v=1').then(r=> r.ok ? r.arrayBuffer() : Promise.reject())
+      .then(ab=> new Promise((res, rej)=> ctx.decodeAudioData(ab, res, rej)))
+      .then(b=>{ WO2VOZ.buf[k] = b; }).catch(()=>{});
+  });
+}
+// Devuelve true si ha podido sonar la voz grabada
+function wo2VozPlay(what){
+  const k = what === 'end' ? 'fin' : what === 's30' ? '30' : what === 's10' ? '10' : String(what);
+  const b = WO2VOZ.buf[k];
+  if (!b) return false;
+  try{
+    const ctx = wo2VozCtx();
+    const src = ctx.createBufferSource(); src.buffer = b;
+    const g = ctx.createGain(); g.gain.value = 1;
+    src.connect(g); g.connect(ctx.destination);
+    src.start(ctx.currentTime + 0.02);
+    return true;
+  }catch(e){ return false; }
 }
 </script>
 <link rel="stylesheet" href="palette.css?v=2">
@@ -3490,6 +3525,7 @@ if (typeof document !== 'undefined'){
 }
 
 function startRestTimer(entry, kg, kind){
+  try{ wo2VozInit(); }catch(e){}
   const rm = entry ? estimatedRMFor(entry.code) : null;
   const pct = (rm && kg) ? (kg/rm) : null;
   const seconds = suggestRestSeconds(kind, pct);
@@ -6976,7 +7012,7 @@ function wo2ShowBootError(msg){
 })();
 
 </script>
-<script src="competicion.js?v=20261022212921"></script>
+<script src="competicion.js?v=20261022214214"></script>
 <script>
 // WorkOut 2.0 · Competiciones en la app del atleta (lo inserta build_entreno.py).
 // Lee sus fichas de competición en  WO2.base/competitions/{compId}  y las
@@ -7100,7 +7136,7 @@ function wo2RenderCompsScreen(){
 }
 
 </script>
-<script src="google-config.js?v=20261022212921"></script>
+<script src="google-config.js?v=20261022214214"></script>
 <script>
 // ===== WorkOut 2.0 · Vídeos de las series en Google Drive =====
 // Cada vídeo grabado (o añadido) se guarda primero en el móvil, en una cola,
