@@ -218,9 +218,47 @@ function wo2DriveCardList(section, plan, day, idx){
     a.textContent = '▶ Ver vídeo · ' + d.toLocaleDateString('es-ES', { day:'numeric', month:'short' }) + ' ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }) + (v.label ? ' · ' + v.label : '');
     a.style.cssText = 'display:block;padding:12px 14px;border-radius:12px;border:1.5px solid var(--t-edge,#33435a);color:var(--t-accent,#34d1c4);font-weight:800;font-size:16px;text-decoration:none;';
     a.onclick = (e)=> e.stopPropagation();
-    box.appendChild(a);
+    if (WO2.coachView){ box.appendChild(a); return; }
+    // El atleta puede borrar sus vídeos (de la app y de su Google Drive)
+    const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:8px;align-items:stretch;';
+    a.style.flex = '1'; a.style.minWidth = '0';
+    const del = document.createElement('button'); del.type = 'button'; del.textContent = '🗑';
+    del.setAttribute('aria-label', 'Borrar este vídeo');
+    del.style.cssText = 'min-width:52px;border-radius:12px;border:1.5px solid var(--t-bad-edge,#7a2f30);background:transparent;color:var(--t-bad-fg,#f08a8b);font-size:20px;cursor:pointer;';
+    del.onclick = (e)=>{ e.stopPropagation(); wo2DriveDelete(v); };
+    row.appendChild(a); row.appendChild(del);
+    box.appendChild(row);
   });
   section.appendChild(box);
+}
+// Borrar un vídeo: se quita de la app al momento y se borra de Google Drive
+// (si el permiso de Google ha caducado, se borra la próxima vez que haya permiso).
+async function wo2DriveDelete(v){
+  if (!confirm('¿Borrar este vídeo?\n\nSe quitará de la app, del informe y de tu Google Drive. No se puede deshacer.')) return;
+  WO2.videos = (WO2.videos || []).filter(x=> x.id !== v.id);
+  try{ await WO2.base.collection('progress').doc('videos').set({ list: WO2.videos, updatedAt: Date.now() }, { merge:true }); }
+  catch(e){ WO2D.msg = 'No se ha podido borrar: ' + (e.message || e.code); wo2DriveBadge(); return; }
+  try{ render(); }catch(e){}
+  wo2DrivePendingDeletes(v.id);
+  wo2DriveFlushDeletes();
+}
+function wo2DrivePendingDeletes(addId){
+  let l = []; try{ l = JSON.parse(localStorage.getItem('wo2_gdel') || '[]'); }catch(e){}
+  if (addId && l.indexOf(addId) < 0){ l.push(addId); try{ localStorage.setItem('wo2_gdel', JSON.stringify(l)); }catch(e){} }
+  return l;
+}
+async function wo2DriveFlushDeletes(){
+  if (!wo2TokenValid()) return;
+  const l = wo2DrivePendingDeletes();
+  const left = [];
+  for (const id of l){
+    try{
+      const r = await fetch('https://www.googleapis.com/drive/v3/files/' + id, { method:'DELETE', headers:{ Authorization: 'Bearer ' + WO2D.token } });
+      if (!(r.ok || r.status === 404)) left.push(id);
+    }catch(e){ left.push(id); }
+  }
+  try{ localStorage.setItem('wo2_gdel', JSON.stringify(left)); }catch(e){}
+  if (!left.length && l.length){ WO2D.msg = '✓ Vídeo borrado'; wo2DriveBadge(); setTimeout(()=>{ if (WO2D.msg === '✓ Vídeo borrado'){ WO2D.msg = ''; wo2DriveBadge(); } }, 3000); }
 }
 
 // ---------- Vídeos en los informes PDF ----------
@@ -236,5 +274,6 @@ function wo2VideosForPdf(){
   });
 }
 
-document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState === 'visible') wo2DriveKick(false); });
+document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState === 'visible'){ wo2DriveKick(false); wo2DriveFlushDeletes(); } });
+setTimeout(()=> wo2DriveFlushDeletes(), 5000);
 setTimeout(()=> wo2DriveKick(false), 4000);
