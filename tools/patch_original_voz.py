@@ -19,42 +19,47 @@ def patch(old, new, count=1):
 
 JS = r"""<script>
 // ===== Cuenta atrás con voz grabada =====
-const WO2VOZ = { buf:{}, loading:false };
-function wo2VozCtx(){
-  try{ if (navigator.audioSession) navigator.audioSession.type = 'ambient'; }catch(e){}
-  if (!restAudioCtx) restAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (restAudioCtx.state === 'suspended') restAudioCtx.resume();
-  return restAudioCtx;
-}
-// Se llama al empezar un descanso (tras un toque): desbloquea el sonido y carga los audios
+// Se reproduce con un elemento de audio normal (más fiable en el iPhone con
+// otra app sonando, como Spotify). Los audios se «desbloquean» al empezar un
+// descanso, que siempre viene de un toque. Si no pueden sonar, voz del móvil.
+const WO2VOZ = { el:{}, ready:{}, loading:false, last:'' };
 function wo2VozInit(){
-  let ctx; try{ ctx = wo2VozCtx(); }catch(e){ return; }
-  if (WO2VOZ.loading) return;
-  WO2VOZ.loading = true;
+  try{ if (navigator.audioSession) navigator.audioSession.type = 'ambient'; }catch(e){}
   ['30','10','5','4','3','2','1','fin'].forEach(k=>{
-    fetch('voz/' + k + '.mp3?v=1').then(r=> r.ok ? r.arrayBuffer() : Promise.reject())
-      .then(ab=> new Promise((res, rej)=> ctx.decodeAudioData(ab, res, rej)))
-      .then(b=>{ WO2VOZ.buf[k] = b; }).catch(()=>{});
+    let a = WO2VOZ.el[k];
+    if (!a){
+      a = new Audio('voz/' + k + '.mp3?v=1');
+      a.preload = 'auto'; a.setAttribute('playsinline', '');
+      WO2VOZ.el[k] = a;
+    }
+    if (WO2VOZ.ready[k]) return;
+    // Desbloqueo: se reproduce en silencio y se para al momento (dentro del toque)
+    try{
+      a.muted = true;
+      const pr = a.play();
+      const done = ()=>{ try{ a.pause(); a.currentTime = 0; }catch(e){} a.muted = false; };
+      if (pr && pr.then) pr.then(()=>{ done(); WO2VOZ.ready[k] = true; }).catch(()=>{ a.muted = false; });
+      else { done(); WO2VOZ.ready[k] = true; }
+    }catch(e){ a.muted = false; }
   });
 }
-// Devuelve true si ha podido sonar la voz grabada
-function wo2VozPlay(what){
+// Devuelve true si ha empezado a sonar la voz grabada
+function wo2VozPlay(what, fallbackText){
   const k = what === 'end' ? 'fin' : what === 's30' ? '30' : what === 's10' ? '10' : String(what);
-  const b = WO2VOZ.buf[k];
-  if (!b) return false;
+  const a = WO2VOZ.el[k];
+  if (!a || !WO2VOZ.ready[k]) return false;
   try{
-    const ctx = wo2VozCtx();
-    const src = ctx.createBufferSource(); src.buffer = b;
-    const g = ctx.createGain(); g.gain.value = 1;
-    src.connect(g); g.connect(ctx.destination);
-    src.start(ctx.currentTime + 0.02);
+    a.muted = false; a.volume = 1; a.currentTime = 0;
+    const pr = a.play();
+    if (pr && pr.catch) pr.catch((e)=>{ WO2VOZ.last = 'error ' + (e && e.name); if (fallbackText) speakText(fallbackText); });
+    WO2VOZ.last = 'ok ' + k;
     return true;
-  }catch(e){ return false; }
+  }catch(e){ WO2VOZ.last = 'error ' + e; return false; }
 }
 </script>
 </head>"""
 patch("</head>", JS)
-patch("    speakText(say || String(what));", "    if (!wo2VozPlay(what)) speakText(say || String(what));")
+patch("    speakText(say || String(what));", "    if (!wo2VozPlay(what, say || String(what))) speakText(say || String(what));")
 patch("function startRestTimer(entry, kg, kind){\n", "function startRestTimer(entry, kg, kind){\n  try{ wo2VozInit(); }catch(e){}\n")
 
 open(p_out, 'w', encoding='utf-8').write(h)
