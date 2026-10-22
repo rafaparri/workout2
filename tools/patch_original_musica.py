@@ -18,8 +18,7 @@ def patch(old, new, count=1):
 
 JS = r"""<script>
 // ===== Modo música: avisos solo con pitidos, sin voz =====
-let wo2MusicMode = false;
-try{ wo2MusicMode = localStorage.getItem('wo2_music_mode') === '1'; }catch(e){}
+let wo2MusicMode = false;   // siempre voz grabada (el botón Voz/Música se quitó)
 function wo2ToggleMusic(){
   wo2MusicMode = !wo2MusicMode;
   try{ localStorage.setItem('wo2_music_mode', wo2MusicMode ? '1' : '0'); }catch(e){}
@@ -56,16 +55,6 @@ patch("    if (!restTimerMuted) speakText(String(remaining));", "    wo2Cue(rema
 patch("    rt.thirtyBeeped = true;\n    playHorn();", "    rt.thirtyBeeped = true;\n    if (!wo2MusicMode) playHorn();")
 patch("    rt.tenBeeped = true;\n    playHorn();", "    rt.tenBeeped = true;\n    if (!wo2MusicMode) playHorn();")
 patch("    rt.lastSpokenSecond = 5;\n    playHorn();", "    rt.lastSpokenSecond = 5;\n    if (!wo2MusicMode) playHorn();")
-
-# Botón en la barra del descanso
-patch("  muteBtn.onclick = ()=> toggleRestTimerMute();\n  btns.appendChild(muteBtn);\n",
-      "  muteBtn.onclick = ()=> toggleRestTimerMute();\n  btns.appendChild(muteBtn);\n"
-      "  const musicBtn = el('button', null, wo2MusicMode ? '🎵 Música' : '🗣️ Voz');\n"
-      "  musicBtn.title = wo2MusicMode ? 'Modo música: solo pitidos, no corta tu música' : 'Avisos con voz (en iPhone corta la música)';\n"
-      "  musicBtn.setAttribute('aria-label', musicBtn.title);\n"
-      "  musicBtn.style.cssText = muteBtn.style.cssText + 'font-size:15px;font-weight:700;';\n"
-      "  musicBtn.onclick = ()=> wo2ToggleMusic();\n"
-      "  btns.appendChild(musicBtn);\n")
 
 # Los botones de la barra pasan a otra línea si no caben
 patch("  btns.style.cssText = 'display:flex;gap:8px;align-items:center;';",
