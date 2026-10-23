@@ -7,16 +7,16 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261023183443';</script>
-<script src="update.js?v=20261023183443"></script>
+<script>window.WO2_VERSION='20261023191009';</script>
+<script src="update.js?v=20261023191009"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261023183443"></script>
-<script src="branding.js?v=20261023183443"></script>
-<script src="roles.js?v=20261023183443"></script>
+<script src="firebase-init.js?v=20261023191009"></script>
+<script src="branding.js?v=20261023191009"></script>
+<script src="roles.js?v=20261023191009"></script>
 <style>
 
 :root{
@@ -1397,7 +1397,7 @@ function wo2WeekData(plan){
     const into = wo2MovedInto(plan, d);
     if (!own.length && !into.length) return;
     if (own.length) planned++;
-    const blocks = [];
+    const blocks = []; let dTon = 0; const dRat = [];
     const srcs = (moved ? [] : [d]).concat(into);
     srcs.forEach(sd=>{
       wo2ExIdxList(plan, sd).forEach(i=>{
@@ -1407,9 +1407,9 @@ function wo2WeekData(plan){
           const res = wo2SetResolved(plan, sd, i, si);
           if (res) sDone++;
           const r = normalizeCheck(state.checks[checkKey(plan, sd, i, si)]);
-          if (r) ratings.push(r);
+          if (r){ ratings.push(r); dRat.push(r); }
           const dn = wo2SetDone(plan, sd, i, si);
-          ton += dn.ton;
+          ton += dn.ton; dTon += dn.ton;
           const key = e.code != null ? 'c' + e.code : 'n' + (e.name || '');
           if (!byMove[key]) byMove[key] = { name: wo2ExName(e), series:0, reps:0, ton:0 };
           byMove[key].series += dn.series; byMove[key].reps += dn.reps; byMove[key].ton += dn.ton;
@@ -1431,7 +1431,7 @@ function wo2WeekData(plan){
     if (ms) dateStr = new Date(ms).toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric' });
     else if (typeof wo2DayDate === 'function'){ const x = wo2DayDate(plan, d); if (x) dateStr = x.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric' }); }
     const vids = (typeof WO2 !== 'undefined' && WO2.videos) ? WO2.videos.filter(v=> v.planId === plan.id && srcs.indexOf(v.day) >= 0) : [];
-    days.push({ d, name: DAY_NAMES[d], dateStr, blocks, off, movedTo: moved, note: n.text, rpe: n.rpe, feeling: n.feeling, dur: dd, vids });
+    days.push({ d, name: DAY_NAMES[d], dateStr, blocks, off, movedTo: moved, note: n.text, rpe: n.rpe, feeling: n.feeling, dur: dd, vids, ton: Math.round(dTon), avg: dRat.length ? dRat.reduce((a,b)=>a+b,0)/dRat.length : null });
   });
   const moves = Object.values(byMove).filter(m=> m.series > 0).sort((a,b)=> b.ton - a.ton);
   const avg = ratings.length ? ratings.reduce((a,b)=>a+b,0) / ratings.length : null;
@@ -1639,6 +1639,115 @@ function wo2WeekPDF(plan, memoText){
   const mrows = W.moves.map((m, n)=>({ group:n, cells:[ m.name, String(m.series), String(m.reps), Math.round(m.ton).toLocaleString('es-ES') + ' kg' ], styles:[ {bold:true}, {}, {}, {bold:true} ] }));
   mrows.push({ group:'t', cells:[ 'TOTAL', String(W.moves.reduce((a,m)=>a+m.series,0)), String(W.moves.reduce((a,m)=>a+m.reps,0)), W.ton.toLocaleString('es-ES') + ' kg' ], styles:[ {bold:true}, {bold:true}, {bold:true}, {bold:true, color:[201,154,46]} ] });
   table([ { t:'MOVIMIENTO', w:90 }, { t:'SERIES', w:28 }, { t:'REPETICIONES', w:32 }, { t:'TONELAJE', w:cW-150 } ], mrows);
+
+  // ---------- Gráficas ----------
+  function chartBox(x, yT, w, h, title, right){
+    doc.setDrawColor(222,224,228); doc.setLineWidth(0.3); doc.roundedRect(x, yT, w, h, 2, 2, 'S');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(35,35,35);
+    doc.text(T(title), x + 4, yT + 6.5);
+    if (right){ doc.setFontSize(9); doc.setTextColor(201,154,46); doc.text(T(right), x + w - 4, yT + 6.5, { align:'right' }); }
+  }
+  // Barras verticales: items = [{ label, value, txt, color }]
+  function barChart(x, yT, w, h, title, items, right){
+    chartBox(x, yT, w, h, title, right);
+    const top = yT + 15, bottom = yT + h - 8, ch = bottom - top;
+    const max = Math.max.apply(null, items.map(it=> it.value).concat([0])) || 1;
+    const n = items.length || 1, slot = (w - 8) / n, bw = Math.min(14, slot * 0.6);
+    doc.setDrawColor(200,200,205); doc.line(x + 4, bottom, x + w - 4, bottom);
+    items.forEach((it, k)=>{
+      const cx = x + 4 + slot * k + slot / 2;
+      const bh = it.value > 0 ? Math.max(0.8, ch * it.value / max) : 0;
+      if (bh){ doc.setFillColor.apply(doc, it.color || [201,154,46]); doc.rect(cx - bw/2, bottom - bh, bw, bh, 'F'); }
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.2); doc.setTextColor(40,40,40);
+      doc.text(T(it.txt), cx, bottom - bh - 1.5, { align:'center' });
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(110,110,110);
+      doc.text(T(it.label), cx, bottom + 4.5, { align:'center' });
+    });
+  }
+  const RCOL = (avg)=> avg == null ? [160,160,165] : RC[Math.round(avg)] || [160,160,165];
+  const tDays = W.days.filter(D=> !D.movedTo && D.blocks.length);
+  const short = (D)=> D.name.slice(0,3);
+  const graphs = tDays.length || W.moves.length;
+  if (graphs){
+    y += 4; brk(70);
+    doc.setFont('helvetica','bold'); doc.setFontSize(12.5); doc.setTextColor(201,154,46);
+    doc.text('GRÁFICAS DE LA SEMANA', mX, y); y += 4;
+    const gw = (cW - 6) / 2, gh = 56;
+    if (tDays.length){
+      brk(gh + 4);
+      barChart(mX, y, gw, gh, 'Tonelaje por día (kg)',
+        tDays.map(D=>({ label: short(D), value: D.ton, txt: D.ton ? D.ton.toLocaleString('es-ES') : (D.off ? 'no' : '0'), color:[201,154,46] })),
+        W.ton.toLocaleString('es-ES') + ' kg');
+      barChart(mX + gw + 6, y, gw, gh, 'Duración del entreno (min)',
+        tDays.map(D=>{ const m = D.dur && !D.dur.running ? Math.round(D.dur.ms / 60000) : 0; return { label: short(D), value: m, txt: m ? String(m) : '—', color:[63,111,159] }; }),
+        W.timeMs ? wo2Dur(W.timeMs) : '');
+      y += gh + 5;
+      brk(gh + 4);
+      barChart(mX, y, gw, gh, 'Valoración media por día (1-5)',
+        tDays.map(D=>({ label: short(D), value: D.avg || 0, txt: D.avg != null ? D.avg.toFixed(1) : '—', color: RCOL(D.avg) })),
+        W.avg != null ? W.avg.toFixed(1) + '/5' : '');
+      const rp = tDays.map(D=>({ label: short(D), value: D.rpe || 0, txt: D.rpe != null ? String(D.rpe) : '—', color: D.rpe == null ? [160,160,165] : D.rpe >= 9 ? [200,70,40] : D.rpe >= 7 ? [214,110,30] : [80,110,25] }));
+      barChart(mX + gw + 6, y, gw, gh, 'RPE por día (1-10)', rp, W.avgRpe != null ? 'media ' + W.avgRpe.toFixed(1) : '');
+      y += gh + 5;
+    }
+    // Tonelaje por movimiento: barras horizontales
+    if (W.moves.length){
+      const mv = W.moves.slice(0, 12), rowH = 6.2, hh = 14 + mv.length * rowH;
+      brk(hh + 4);
+      chartBox(mX, y, cW, hh, 'Tonelaje por movimiento (kg)', W.ton.toLocaleString('es-ES') + ' kg');
+      const lw = 62, bx = mX + 4 + lw, bwMax = cW - lw - 30;
+      const max = Math.max.apply(null, mv.map(m=> m.ton)) || 1;
+      mv.forEach((m, k)=>{
+        const yy = y + 12 + k * rowH;
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,50,50);
+        doc.text(doc.splitTextToSize(T(m.name), lw - 2)[0], mX + 4, yy + 3.6);
+        doc.setFillColor(201,154,46); doc.rect(bx, yy + 0.6, Math.max(0.8, bwMax * m.ton / max), rowH - 2, 'F');
+        doc.setFont('helvetica','bold'); doc.setTextColor(35,35,35);
+        doc.text(Math.round(m.ton).toLocaleString('es-ES') + ' kg', bx + Math.max(0.8, bwMax * m.ton / max) + 2, yy + 3.6);
+      });
+      y += hh + 5;
+    }
+  }
+  // Evolución de máximos de las últimas semanas (arrancada, dos tiempos…)
+  let mcs = [];
+  try{ mcs = typeof weekMovementCharts === 'function' ? weekMovementCharts() : []; }catch(e){ mcs = []; }
+  const wkLbl = plan.meta && plan.meta.week != null ? 'S' + plan.meta.week : null;
+  mcs = mcs.map(mc=>{
+    let pts = mc.points || [];
+    const cut = wkLbl ? pts.map(p=> p.label).lastIndexOf(wkLbl) : -1;
+    if (cut >= 0) pts = pts.slice(0, cut + 1);
+    return Object.assign({}, mc, { points: pts.slice(-8) });
+  }).filter(mc=> mc.points.length);
+  if (mcs.length){
+    y += 2; brk(60);
+    doc.setFont('helvetica','bold'); doc.setFontSize(12.5); doc.setTextColor(201,154,46);
+    doc.text('EVOLUCIÓN DE MÁXIMOS POR SEMANA', mX, y); y += 2;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(110,110,110);
+    doc.text(T('Peso máximo programado cada semana. Color del punto = valoración media (rojo/naranja mal · azul regular-bien · verde muy bien).'), mX, y + 4); y += 7;
+    const gw = (cW - 6) / 2, gh = 46;
+    mcs.forEach((mc, k)=>{
+      const col = k % 2, x = mX + col * (gw + 6);
+      if (col === 0) brk(gh + 4);
+      const pts = mc.points, kgs = pts.map(p=> p.maxKg);
+      const mn = Math.min.apply(null, kgs), mxk = Math.max.apply(null, kgs), rg = (mxk - mn) || 1;
+      chartBox(x, y, gw, gh, mc.name, 'máx ' + mxk + ' kg');
+      const pl = x + 8, pr = x + gw - 8, pt = y + 16, pb = y + gh - 9;
+      doc.setDrawColor(235,235,238); doc.line(pl, pb, pr, pb); doc.line(pl, pt, pr, pt);
+      const cs = pts.map((p, i)=>({ x: pts.length > 1 ? pl + (pr - pl) * i / (pts.length - 1) : (pl + pr) / 2, y: pb - (p.maxKg - mn) / rg * (pb - pt), p }));
+      doc.setDrawColor(63,111,159); doc.setLineWidth(0.6);
+      for (let i = 0; i < cs.length - 1; i++) doc.line(cs[i].x, cs[i].y, cs[i+1].x, cs[i+1].y);
+      doc.setLineWidth(0.3);
+      cs.forEach(c=>{
+        const r = c.p.ratings && c.p.ratings.length ? c.p.ratings.reduce((a,b)=>a+b,0) / c.p.ratings.length : null;
+        doc.setFillColor.apply(doc, RCOL(r)); doc.circle(c.x, c.y, 1.5, 'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(6.8); doc.setTextColor(40,40,40);
+        doc.text(String(c.p.maxKg), c.x, c.y - 2.4, { align:'center' });
+        doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(120,120,120);
+        doc.text(T(c.p.label), c.x, y + gh - 3.5, { align:'center' });
+      });
+      if (col === 1 || k === mcs.length - 1) y += gh + 5;
+    });
+  }
 
   if (memoText){
     y += 6; brk(16);
@@ -7512,7 +7621,7 @@ function wo2ShowBootError(msg){
 })();
 
 </script>
-<script src="competicion.js?v=20261023183443"></script>
+<script src="competicion.js?v=20261023191009"></script>
 <script>
 // WorkOut 2.0 · Competiciones en la app del atleta (lo inserta build_entreno.py).
 // Lee sus fichas de competición en  WO2.base/competitions/{compId}  y las
@@ -7636,7 +7745,7 @@ function wo2RenderCompsScreen(){
 }
 
 </script>
-<script src="google-config.js?v=20261023183443"></script>
+<script src="google-config.js?v=20261023191009"></script>
 <script>
 // ===== WorkOut 2.0 · Vídeos de las series en Google Drive =====
 // Cada vídeo grabado (o añadido) se guarda primero en el móvil, en una cola,
