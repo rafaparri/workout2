@@ -7,16 +7,16 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261026213745';</script>
-<script src="update.js?v=20261026213745"></script>
+<script>window.WO2_VERSION='20261026214310';</script>
+<script src="update.js?v=20261026214310"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261026213745"></script>
-<script src="branding.js?v=20261026213745"></script>
-<script src="roles.js?v=20261026213745"></script>
+<script src="firebase-init.js?v=20261026214310"></script>
+<script src="branding.js?v=20261026214310"></script>
+<script src="roles.js?v=20261026214310"></script>
 <style>
 
 :root{
@@ -1766,6 +1766,44 @@ function wo2WeekPDF(plan, memoText){
   doc.save('informe-semanal-' + fileWeek + '.pdf');
 }
 
+</script>
+<style>
+.wo2-combo{ margin:16px auto 0; padding:12px 14px; border:1.5px solid var(--surface-3); border-radius:14px; display:flex; flex-direction:column; gap:10px; max-width:380px; }
+.wo2-combo-title{ font-size:16px; font-weight:700; color:var(--muted-2); text-transform:uppercase; letter-spacing:.03em; text-align:center; }
+.wo2-combo-row{ display:flex; align-items:center; gap:12px; }
+.wo2-combo-row .fc-field-input{ width:78px; flex-shrink:0; }
+.wo2-combo-name{ font-size:18px; font-weight:700; color:var(--chalk); line-height:1.25; text-align:left; }
+</style>
+<script>
+// ===== Combos: repeticiones de cada movimiento por separado =====
+function wo2IsCombo(entry){ return !!(entry && entry.parts && entry.parts.length > 1); }
+function wo2ComboName(p){ return (DICT[p.code] || ('Código ' + p.code)) + (p.modifier ? ' (' + p.modifier + ')' : ''); }
+// Caja con una casilla por movimiento. vals = repes iniciales; onInput(i, valor) opcional
+function wo2ComboBox(entry, vals, onInput){
+  const box = el('div','wo2-combo');
+  box.appendChild(el('div','wo2-combo-title','Repes de cada movimiento'));
+  entry.parts.forEach((p, i)=>{
+    const row = el('div','wo2-combo-row');
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.inputMode = 'numeric'; inp.className = 'fc-field-input wo2-combo-inp';
+    const v = vals && vals[i];
+    inp.value = v === null || v === undefined ? '' : v;
+    inp.setAttribute('aria-label', 'Repeticiones de ' + wo2ComboName(p));
+    if (onInput) inp.addEventListener('input', ()=> onInput(i, inp.value.trim()));
+    row.appendChild(inp);
+    row.appendChild(el('div','wo2-combo-name', wo2ComboName(p)));
+    box.appendChild(row);
+  });
+  return box;
+}
+// Texto de repes ("2+1") a partir de las casillas del combo; null si alguna está vacía
+function wo2ComboText(scope){
+  const ins = Array.from((scope || document).querySelectorAll('.wo2-combo-inp'));
+  if (!ins.length) return null;
+  const vals = ins.map(i=> i.value.trim());
+  if (vals.every(v=> v === '')) return '';
+  return vals.map(v=> v === '' ? '0' : v).join('+');
+}
 </script>
 <link rel="stylesheet" href="palette.css?v=2">
 <link rel="stylesheet" href="theme-entreno.css?v=4">
@@ -4394,8 +4432,9 @@ function renderFlashcardOverlay(plan){
       };
       form.appendChild(mkField('KG','kg',90, s.kg));
       form.appendChild(mkField('Series','series',78, s.series));
-      form.appendChild(mkField('Repes','reps',78, repsVal, 'text'));
+      if (!wo2IsCombo(entry)) form.appendChild(mkField('Repes','reps',78, repsVal, 'text'));
       card.appendChild(form);
+      if (wo2IsCombo(entry)) card.appendChild(wo2ComboBox(entry, s.repsParts || (entry.parts.length && s.reps != null ? [s.reps] : null)));
 
       const editActions = el('div','fc-final-actions');
       const cancelBtn = el('button','mark-btn','Cancelar');
@@ -4404,7 +4443,7 @@ function renderFlashcardOverlay(plan){
       saveEditBtn.onclick = ()=>{
         const kgVal = document.getElementById('edit-set-kg').value.trim();
         const serVal = document.getElementById('edit-set-series').value.trim();
-        const repVal = document.getElementById('edit-set-reps').value.trim();
+        const repVal = wo2IsCombo(entry) ? (wo2ComboText(card) ?? '') : document.getElementById('edit-set-reps').value.trim();
         const newKg = Number(kgVal.replace(',','.'));
         if (isNaN(newKg) || newKg<=0) return;
         if (!s.original && !s.added){
@@ -4621,7 +4660,7 @@ function renderFlashcardOverlay(plan){
       const addBtn = el('button','mark-btn ok selected','+ Nuevo peso');
       addBtn.onclick = ()=>{
         const last = entry.sets[entry.sets.length-1] || {kg:null,series:null,reps:null};
-        state.newWeightDraft = { kg:last.kg, series:last.series, reps:last.reps };
+        state.newWeightDraft = { kg:last.kg, series:last.series, reps:last.reps, repsParts: last.repsParts ? last.repsParts.slice() : null };
         render();
       };
       const doneBtn = el('button','mark-btn','Finalizar');
@@ -4651,8 +4690,13 @@ function renderFlashcardOverlay(plan){
       };
       form.appendChild(mk('KG','kg',90));
       form.appendChild(mk('Series','series',78));
-      form.appendChild(mk('Repes','reps',78));
+      if (!wo2IsCombo(entry)) form.appendChild(mk('Repes','reps',78));
       card.appendChild(form);
+      if (wo2IsCombo(entry)) card.appendChild(wo2ComboBox(entry, state.newWeightDraft.repsParts, (i, v)=>{
+        const d = state.newWeightDraft;
+        if (!d.repsParts) d.repsParts = entry.parts.map(()=> null);
+        d.repsParts[i] = v === '' ? null : Number(v.replace(',','.'));
+      }));
 
       const confirmRow = el('div','fc-final-actions');
       const cancelBtn = el('button','mark-btn','Cancelar');
@@ -4661,7 +4705,12 @@ function renderFlashcardOverlay(plan){
       saveBtn.onclick = ()=>{
         const nw = state.newWeightDraft;
         if (nw.kg===null || nw.kg===undefined || isNaN(nw.kg)){ return; }
-        entry.sets.push({ kg:nw.kg, series:nw.series??null, reps:nw.reps??null, added:true });
+        const ns = { kg:nw.kg, series:nw.series??null, reps:nw.reps??null, added:true };
+        if (wo2IsCombo(entry)){
+          const info = parseRepsCell(wo2ComboText(card) || '');
+          ns.reps = info.total; ns.repsParts = info.parts;
+        }
+        entry.sets.push(ns);
         persistUserData();
         state.newWeightDraft = null;
         state.flashcard.cardIdx = entry.sets.length-1; // jump straight to the new set's card
@@ -7621,7 +7670,7 @@ function wo2ShowBootError(msg){
 })();
 
 </script>
-<script src="competicion.js?v=20261026213745"></script>
+<script src="competicion.js?v=20261026214310"></script>
 <script>
 // WorkOut 2.0 · Competiciones en la app del atleta (lo inserta build_entreno.py).
 // Lee sus fichas de competición en  WO2.base/competitions/{compId}  y las
@@ -7745,7 +7794,7 @@ function wo2RenderCompsScreen(){
 }
 
 </script>
-<script src="google-config.js?v=20261026213745"></script>
+<script src="google-config.js?v=20261026214310"></script>
 <script>
 // ===== WorkOut 2.0 · Vídeos de las series en Google Drive =====
 // Cada vídeo grabado (o añadido) se guarda primero en el móvil, en una cola,
