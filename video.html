@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>WorkOut 2.0 · Vídeo de la serie</title>
-<script>window.WO2_VERSION='20261026193935';</script>
-<script src="update.js?v=20261026193935"></script>
+<script>window.WO2_VERSION='20261026213745';</script>
+<script src="update.js?v=20261026213745"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <meta name="theme-color" content="#0d1117">
@@ -76,8 +76,8 @@
       if (tried < srcs.length){ v.src = srcs[tried]; v.load(); return; }
       usePlayer();
     });
-    // Si en 12 s no ha empezado a cargar nada, también se pasa al reproductor de Drive
-    setTimeout(()=>{ if (!done && v.readyState === 0) usePlayer(); }, 12000);
+    // Si el vídeo carga o empieza a sonar, se queda el reproductor normal
+    ['loadedmetadata','playing'].forEach(ev=> v.addEventListener(ev, ()=>{ done = true; }));
   }
 </script>
 </body>
