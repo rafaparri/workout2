@@ -286,7 +286,7 @@ function wo2WeekText(plan, memoText){
     if (D.feeling) bits.push('Sensación: ' + stripEmojiForPDF(feelingLabel(D.feeling)));
     if (bits.length) L.push(bits.join(' · '));
     if (D.note) L.push('Nota del día: ' + D.note);
-    D.vids.forEach(v=> L.push('Vídeo: ' + wo2VideoLink(v, v.label) ));
+    D.vids.forEach(v=>{ L.push('Vídeo: ' + wo2VideoLink(v, v.label)); if (v.analysis && v.analysis.text) L.push('Análisis de técnica (IA):\n' + v.analysis.text); });
   });
   L.push('');
   L.push('SENSACIÓN GENERAL DE LA SEMANA');
@@ -432,6 +432,11 @@ function wo2WeekPDF(plan, memoText){
         doc.setTextColor(30,100,200); doc.setFont('helvetica','bold');
         doc.textWithLink('Ver vídeo', mX + 4 + doc.getTextWidth(lbl), y, { url: wo2VideoLink(v, v.label) });
         y += 5;
+        if (v.analysis && v.analysis.text){
+          doc.setFont('helvetica','normal'); doc.setFontSize(8.8); doc.setTextColor(70,70,70);
+          doc.splitTextToSize(T('Análisis de técnica (IA): ' + v.analysis.text), cW - 10).forEach(l=>{ brk(4.6); doc.text(l, mX + 6, y); y += 4.2; });
+          doc.setFontSize(9.5); y += 1.5;
+        }
       });
     }
     y += 5;

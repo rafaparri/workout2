@@ -555,8 +555,9 @@ patch("  added:  { bg:'#dff3e5', border:'#2e9a52',", "  added:  { bg:'var(--t-go
 
 # ===== Vídeos de las series en Google Drive (los ve el entrenador y salen en el PDF) =====
 DRIVE_JS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_drive.js'), encoding='utf-8').read()
+DRIVE_JS += '\n' + open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_ia.js'), encoding='utf-8').read()
 patch("<script>\n// WorkOut 2.0: fechas de la semana",
-      '<script src="google-config.js?v=1"></script>\n<script>\n' + DRIVE_JS + "\n</script>\n<script>\n// WorkOut 2.0: fechas de la semana")
+      '<script src="google-config.js?v=2"></script>\n<script>\n' + DRIVE_JS + "\n</script>\n<script>\n// WorkOut 2.0: fechas de la semana")
 # Análisis con IA: desactivado en WorkOut hasta tener un servidor con la clave
 patch("      vActions.appendChild(analyzeBtn); vActions.appendChild(delVBtn);", "      vActions.appendChild(delVBtn);")
 patch("  videoSection.appendChild(videoHeading);\n",
@@ -577,6 +578,11 @@ PDF_VIDEOS = """  { const vids = wo2VideosForPdf();
         const x2 = Math.min(marginX + doc.getTextWidth(lbl) + 4, marginX + contentW - 22);
         doc.setTextColor(30,100,200); doc.textWithLink('Ver video', x2, y, { url: v.link });
         y += 6.5;
+        if (v.analysis){
+          doc.setFontSize(9); doc.setTextColor(70,70,70);
+          doc.splitTextToSize(stripEmojiForPDF('Analisis de tecnica (IA): ' + v.analysis), contentW - 4).forEach(l=>{ checkPageBreak(5); doc.text(l, marginX + 4, y); y += 4.4; });
+          doc.setFontSize(10); y += 2;
+        }
       });
       y += 3;
     } }

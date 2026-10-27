@@ -134,6 +134,8 @@ async function wo2UploadOne(item){
   const entry = { id: meta.id, link, name: item.name, planId: item.planId, day: item.day, exIdx: item.exIdx, label: item.label, createdAt: item.createdAt };
   WO2.videos = (WO2.videos || []).concat([entry]);
   await WO2.base.collection('progress').doc('videos').set({ list: WO2.videos, updatedAt: Date.now() }, { merge:true });
+  // Fotogramas para el análisis con IA, mientras el vídeo sigue en el móvil
+  if (typeof wo2IAPrepare === 'function'){ WO2D.msg = ''; await wo2IAPrepare(meta.id, item.blob); }
 }
 
 async function wo2DriveKick(fromTap){
@@ -218,7 +220,8 @@ function wo2DriveCardList(section, plan, day, idx){
     a.textContent = '▶ Ver vídeo · ' + d.toLocaleDateString('es-ES', { day:'numeric', month:'short' }) + ' ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }) + (v.label ? ' · ' + v.label : '');
     a.style.cssText = 'display:block;padding:12px 14px;border-radius:12px;border:1.5px solid var(--t-edge,#33435a);color:var(--t-accent,#34d1c4);font-weight:800;font-size:16px;text-decoration:none;';
     a.onclick = (e)=> e.stopPropagation();
-    if (WO2.coachView){ box.appendChild(a); return; }
+    const ia = typeof wo2IABlock === 'function' ? wo2IABlock(v) : null;
+    if (WO2.coachView){ box.appendChild(a); if (ia) box.appendChild(ia); return; }
     // El atleta puede borrar sus vídeos (de la app y de su Google Drive)
     const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:8px;align-items:stretch;';
     a.style.flex = '1'; a.style.minWidth = '0';
@@ -228,6 +231,7 @@ function wo2DriveCardList(section, plan, day, idx){
     del.onclick = (e)=>{ e.stopPropagation(); wo2DriveDelete(v); };
     row.appendChild(a); row.appendChild(del);
     box.appendChild(row);
+    if (ia) box.appendChild(ia);
   });
   section.appendChild(box);
 }
@@ -270,7 +274,7 @@ function wo2VideosForPdf(){
     const name = entry ? (entry.name || ('Código ' + entry.code)) : (v.label || 'Serie');
     const dn = (typeof DAY_NAMES !== 'undefined' && DAY_NAMES[v.day]) || v.day || '';
     const d = new Date(v.createdAt || Date.now());
-    return { text: (c.day ? '' : dn + ' · ') + name + ' · ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }), link: wo2VideoPage(v, name) };
+    return { text: (c.day ? '' : dn + ' · ') + name + ' · ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }), link: wo2VideoPage(v, name), analysis: v.analysis && v.analysis.text || '' };
   });
 }
 
