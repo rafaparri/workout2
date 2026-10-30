@@ -7,16 +7,16 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261027184603';</script>
-<script src="update.js?v=20261027184603"></script>
+<script>window.WO2_VERSION='20261030214415';</script>
+<script src="update.js?v=20261030214415"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261027184603"></script>
-<script src="branding.js?v=20261027184603"></script>
-<script src="roles.js?v=20261027184603"></script>
+<script src="firebase-init.js?v=20261030214415"></script>
+<script src="branding.js?v=20261030214415"></script>
+<script src="roles.js?v=20261030214415"></script>
 <style>
 
 :root{
@@ -5545,6 +5545,23 @@ function anyUserHasData(){
   });
 }
 
+// Archivo con todos los entrenos del atleta (semanas, pesos, valoraciones,
+// notas, RPE, tiempos, días no entrenados y vídeos), para compartirlo.
+async function wo2ExportMine(){
+  let name = ''; try{ name = getActiveUser().name || ''; }catch(e){}
+  const data = { app:'WorkOut 2.0', tipo:'entrenos-atleta', exportedAt: new Date().toISOString(), atleta: name,
+    plans: state.plans || [], checks: state.checks || {}, notes: state.notes || {}, seriesProgress: state.seriesProgress || {},
+    wo2x: state.wo2x || {}, videos: (typeof WO2 !== 'undefined' && WO2.videos) || [] };
+  const fname = 'entrenos-' + (name || 'atleta').toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + new Date().toISOString().slice(0,10) + '.json';
+  const blob = new Blob([JSON.stringify(data)], { type:'application/json' });
+  try{
+    const file = new File([blob], fname, { type:'application/json' });
+    if (navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], title:'Mis entrenos' }); return; }
+  }catch(e){ if (e && e.name === 'AbortError') return; }
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 4000);
+}
 async function buildBackupObject(){
   const backup = { version:1, exportedAt: Date.now(), activeUserId: activeUserId, users: users, data: {} };
   for (const u of users){
@@ -5821,6 +5838,7 @@ function renderMenuSheet(plan){
   sheet.appendChild(menuItem('🔊', 'Elegir voz de lectura', ()=>{ state.showMenu=false; state.showVoicePicker=true; render(); }));
   if (WO2.coachView) sheet.appendChild(menuItem('⬅️', 'Volver a la ficha del atleta', ()=>{ window.location.href = 'ficha-atleta.html?athlete=' + encodeURIComponent(WO2.viewedUid); }));
   if (WO2_ATHLETE && !WO2.coachView && WO2.isCoach) sheet.appendChild(menuItem('📋', 'Panel de entrenador', ()=>{ window.location.href = 'entrenador.html'; }));
+  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('📤', 'Exportar mis entrenos', ()=>{ state.showMenu = false; render(); wo2ExportMine(); }));
   if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', 'Salir', ()=>{ wo2SignOut(); }));
   if (!WO2_ATHLETE) sheet.appendChild(menuItem('💾', 'Exportar copia de seguridad', async ()=>{
     state.showMenu = false;
@@ -7690,7 +7708,7 @@ function wo2ShowBootError(msg){
 })();
 
 </script>
-<script src="competicion.js?v=20261027184603"></script>
+<script src="competicion.js?v=20261030214415"></script>
 <script>
 // WorkOut 2.0 · Competiciones en la app del atleta (lo inserta build_entreno.py).
 // Lee sus fichas de competición en  WO2.base/competitions/{compId}  y las
@@ -7814,7 +7832,7 @@ function wo2RenderCompsScreen(){
 }
 
 </script>
-<script src="google-config.js?v=20261027184603"></script>
+<script src="google-config.js?v=20261030214415"></script>
 <script>
 // ===== WorkOut 2.0 · Vídeos de las series en Google Drive =====
 // Cada vídeo grabado (o añadido) se guarda primero en el móvil, en una cola,

@@ -590,6 +590,29 @@ PDF_VIDEOS = """  { const vids = wo2VideosForPdf();
   const pageCount = doc.internal.getNumberOfPages();"""
 patch("  const pageCount = doc.internal.getNumberOfPages();", PDF_VIDEOS, 2)
 
+# Atleta: exportar sus entrenos en un archivo (para análisis de la evolución)
+patch("  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', 'Salir',",
+      "  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('📤', 'Exportar mis entrenos', ()=>{ state.showMenu = false; render(); wo2ExportMine(); }));\n"
+      "  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', 'Salir',")
+patch("async function buildBackupObject(){", r"""// Archivo con todos los entrenos del atleta (semanas, pesos, valoraciones,
+// notas, RPE, tiempos, días no entrenados y vídeos), para compartirlo.
+async function wo2ExportMine(){
+  let name = ''; try{ name = getActiveUser().name || ''; }catch(e){}
+  const data = { app:'WorkOut 2.0', tipo:'entrenos-atleta', exportedAt: new Date().toISOString(), atleta: name,
+    plans: state.plans || [], checks: state.checks || {}, notes: state.notes || {}, seriesProgress: state.seriesProgress || {},
+    wo2x: state.wo2x || {}, videos: (typeof WO2 !== 'undefined' && WO2.videos) || [] };
+  const fname = 'entrenos-' + (name || 'atleta').toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + new Date().toISOString().slice(0,10) + '.json';
+  const blob = new Blob([JSON.stringify(data)], { type:'application/json' });
+  try{
+    const file = new File([blob], fname, { type:'application/json' });
+    if (navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], title:'Mis entrenos' }); return; }
+  }catch(e){ if (e && e.name === 'AbortError') return; }
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 4000);
+}
+async function buildBackupObject(){""")
+
 patch('\ninitApp();\n</script>', '\n' + ADAPTER + '\n</script>')
 
 open(out_path, 'w', encoding='utf-8').write(html)
