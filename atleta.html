@@ -435,7 +435,62 @@
     renderExercises(content, plan, navState.day);
   }
 
+  // ---- Peso corporal: dato compartido con la app Nutrición ----
+  // Se guarda en users/{uid}/bodyLog/{AAAA-MM-DD}. La app Nutrición lee y
+  // escribe en el mismo sitio (si el atleta se lo ha autorizado), así que el
+  // último peso es el mismo en las dos apps.
+  function hoyISO(){ return new Date().toLocaleDateString('sv-SE'); }
+  function fechaCorta(iso){ const p = iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+  async function cargarPesos(){
+    const snap = await db.collection('users').doc(signedInUser.uid).collection('bodyLog')
+      .orderBy(firebase.firestore.FieldPath.documentId(),'desc').limit(6).get();
+    return snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+  }
+  function renderWeightCard(container){
+    const card = document.createElement('div');
+    card.className = 'listCard';
+    card.innerHTML =
+      '<div style="font-family:ArchivoBlack,sans-serif;font-size:14px;color:var(--muted-2);text-transform:uppercase;margin-bottom:6px;">Mi peso</div>' +
+      '<div id="pesoActual" style="font-family:ArchivoBlack,sans-serif;font-size:34px;color:var(--gold-2);">…</div>' +
+      '<div id="pesoInfo" class="sub" style="font-size:14px;margin-bottom:10px;"></div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<input id="pesoInput" inputmode="decimal" placeholder="kg, por ejemplo 94,5" style="flex:1;min-width:0;">' +
+        '<button id="pesoBtn" style="width:auto;padding:0 18px;">Guardar</button>' +
+      '</div>' +
+      '<div id="pesoMsg" style="font-size:14px;margin-top:8px;min-height:18px;"></div>' +
+      '<div id="pesoHist" style="font-size:14px;color:var(--muted-2);"></div>';
+    container.appendChild(card);
+    const q = id => card.querySelector('#'+id);
+
+    async function refrescar(){
+      try{
+        const pesos = await cargarPesos();
+        if (!pesos.length){ q('pesoActual').textContent = 'Sin datos'; q('pesoInfo').textContent = 'Anota tu peso; tu nutricionista podrá verlo si se lo autorizas.'; q('pesoHist').textContent = ''; return; }
+        const u = pesos[0];
+        q('pesoActual').textContent = String(u.kg).replace('.',',') + ' kg';
+        q('pesoInfo').textContent = 'Anotado el ' + fechaCorta(u.id) + (u.by==='nutricion' ? ' por tu nutricionista' : '');
+        q('pesoHist').innerHTML = pesos.slice(1).map(p => fechaCorta(p.id)+': '+String(p.kg).replace('.',',')+' kg').join(' · ');
+      }catch(e){
+        q('pesoActual').textContent = '—';
+        q('pesoInfo').textContent = 'No se pudo leer el peso (puede faltar publicar las reglas nuevas).';
+      }
+    }
+    q('pesoBtn').onclick = async ()=>{
+      const kg = parseFloat(String(q('pesoInput').value).replace(',','.'));
+      const m = q('pesoMsg');
+      if (!(kg>=30 && kg<=250)){ m.style.color='var(--red)'; m.textContent='Escribe un peso entre 30 y 250 kg.'; return; }
+      try{
+        await db.collection('users').doc(signedInUser.uid).collection('bodyLog').doc(hoyISO())
+          .set({ kg: Math.round(kg*10)/10, by:'workout', byUid: signedInUser.uid, at: firebase.firestore.FieldValue.serverTimestamp() });
+        q('pesoInput').value=''; m.style.color='var(--green)'; m.textContent='Guardado.';
+        refrescar();
+      }catch(e){ m.style.color='var(--red)'; m.textContent='No se pudo guardar. Inténtalo de nuevo.'; }
+    };
+    refrescar();
+  }
+
   function renderWeeksList(container){
+    renderWeightCard(container);
     if (athletePlans.length){
       const analyticsBtn = document.createElement('button');
       analyticsBtn.className = 'reportBtn';

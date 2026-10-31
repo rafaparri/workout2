@@ -137,7 +137,7 @@ service cloud.firestore {
     // Programación y resultados: SOLO el entrenador del club y el propio
     // atleta. El administrador no tiene acceso (son datos de cada entrenador).
     match /clubs/{clubId}/athletes/{athleteId}/plans/{planId} {
-      allow read: if hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId);
+      allow read: if hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId) || sharedWithMe(athleteId);
       allow write: if hasCoachGrant(clubId);
     }
     match /clubs/{clubId}/athletes/{athleteId}/progress/{docId} {
@@ -159,10 +159,48 @@ service cloud.firestore {
     // intentos y resultados). El entrenador lo gestiona todo; el atleta solo
     // ve las suyas y puede anotar los resultados, sin tocar objetivos.
     match /clubs/{clubId}/athletes/{athleteId}/competitions/{compId} {
-      allow read: if hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId);
+      allow read: if hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId) || sharedWithMe(athleteId);
       allow write: if hasCoachGrant(clubId);
       allow update: if hasAthleteGrant(clubId, athleteId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['results', 'updatedBy', 'updatedAt']);
+    }
+
+    // ===== Datos compartidos con la app Nutrición =====
+    // Autorización: la crea el propio atleta en users/{uid}/shares/{uidNutricionista}
+    // con { active: true, canWriteWeight: true|false }. Sin ella, nadie ajeno ve nada.
+    function sharedWithMe(ownerUid) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(ownerUid)/shares/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(ownerUid)/shares/$(request.auth.uid)).data.active == true;
+    }
+    function canWriteSharedWeight(ownerUid) {
+      return sharedWithMe(ownerUid)
+        && get(/databases/$(database)/documents/users/$(ownerUid)/shares/$(request.auth.uid)).data.canWriteWeight == true;
+    }
+    match /users/{uid}/shares/{nutriUid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || request.auth.uid == nutriUid);
+      allow create, update, delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Peso corporal (un registro por día). Lo escribe el propio atleta y,
+    // solo si lo ha permitido, su nutricionista. Lo lee el atleta, su
+    // nutricionista autorizado y el entrenador de su club.
+    match /users/{uid}/bodyLog/{day} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == uid
+        || sharedWithMe(uid)
+        || (exists(/databases/$(database)/documents/users/$(uid)/roleGrants/athlete)
+            && hasCoachGrant(get(/databases/$(database)/documents/users/$(uid)/roleGrants/athlete).data.clubId))
+      );
+      allow create, update: if isSignedIn()
+        && request.resource.data.kg is number
+        && request.resource.data.kg >= 30 && request.resource.data.kg <= 250
+        && (
+          (request.auth.uid == uid && request.resource.data.by == 'workout')
+          || (canWriteSharedWeight(uid) && request.resource.data.by == 'nutricion'
+              && request.resource.data.byUid == request.auth.uid)
+        );
+      allow delete: if isSignedIn() && request.auth.uid == uid;
     }
 
     match /{document=**} {
