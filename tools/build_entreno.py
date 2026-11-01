@@ -613,18 +613,13 @@ async function wo2ExportMine(){
 }
 async function buildBackupObject(){""")
 
-# ---------- Peso corporal (compartido con la app Nutrición) y recarga forzada ----------
-# El código vive en entreno_peso.js; aquí solo se engancha al menú y a la pantalla.
-PESO_JS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_peso.js'), encoding='utf-8').read()
-patch("/* ---- Menú (hoja inferior con el resto de acciones) ---- */\n", PESO_JS + "/* ---- Menú (hoja inferior con el resto de acciones) ---- */\n")
-patch("  sheet.appendChild(menuItem('🎯', 'Perfil', ()=>{ state.showProfile=true; state.showMenu=false; render(); }));\n",
-      "  sheet.appendChild(menuItem('🎯', 'Perfil', ()=>{ state.showProfile=true; state.showMenu=false; render(); }));\n"
-      "  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('⚖️', 'Mi peso', ()=>{ state.showMenu=false; state.showWeight=true; weightLoad(); render(); }));\n")
+# ---------- Recarga forzada con versión visible ----------
+# El código vive en entreno_recarga.js; aquí solo se engancha al menú y a la pantalla.
+RECARGA_JS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_recarga.js'), encoding='utf-8').read()
+patch("/* ---- Menú (hoja inferior con el resto de acciones) ---- */\n", RECARGA_JS + "/* ---- Menú (hoja inferior con el resto de acciones) ---- */\n")
 patch("  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', 'Salir', ()=>{ wo2SignOut(); }));\n",
       "  sheet.appendChild(menuItem('🔄', 'Recargar app (versión ' + wo2VersionTexto() + ')', ()=>{ wo2RecargarApp(); }));\n"
       "  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', 'Salir', ()=>{ wo2SignOut(); }));\n")
-patch("  if (state.showVoicePicker) root.appendChild(renderVoicePickerOverlay());\n}\n",
-      "  if (state.showVoicePicker) root.appendChild(renderVoicePickerOverlay());\n  if (state.showWeight) root.appendChild(renderWeightSheet());\n}\n")
 
 patch('\ninitApp();\n</script>', '\n' + ADAPTER + '\n</script>')
 
