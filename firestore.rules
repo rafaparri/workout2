@@ -243,6 +243,22 @@ service cloud.firestore {
       allow delete: if patientOwner(pid);
     }
 
+    // ===== Vínculo paciente <-> WorkOut (solicitud que el paciente acepta) =====
+    // nu_links/{id}: la crea el nutricionista con el correo del paciente. El
+    // paciente (mismo correo) la acepta o rechaza; solo puede cambiar el estado
+    // y apuntar su uid y club. El nutricionista puede borrarla (quitar vínculo).
+    match /nu_links/{linkId} {
+      allow read: if isSignedIn() && (resource.data.ownerUid == request.auth.uid
+                                      || resource.data.email == request.auth.token.email);
+      allow create: if hasNutriGrant() && request.resource.data.ownerUid == request.auth.uid
+                       && request.resource.data.status == 'pending'
+                       && request.resource.data.email is string;
+      allow update: if isSignedIn() && resource.data.email == request.auth.token.email
+                       && request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly(['status', 'patientUid', 'clubId', 'acceptedAt']);
+      allow delete: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
