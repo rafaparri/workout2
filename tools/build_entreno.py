@@ -414,6 +414,7 @@ function wo2ShowBootError(msg){
       progSnap.docs.forEach(d=>{ progDocs[d.id] = d.data(); });
       const main = progDocs['main'] || {};
       const prof = progDocs['profile'] || {};
+      WO2.videos = (progDocs['videos'] && progDocs['videos'].list) || [];
       const dayDates = main.dayDates || {};
       const plans = plansSnap.docs.map(d=>{
         const p = d.data();
@@ -551,6 +552,66 @@ patch("<script>\n// WorkOut 2.0: fechas de la semana", '<script src="competicion
 # Cambios del atleta: fondos oscuros.
 patch("  edited: { bg:'#fde9da', border:'#e07b39',", "  edited: { bg:'var(--t-chg-bg)', border:'var(--t-chg)',")
 patch("  added:  { bg:'#dff3e5', border:'#2e9a52',", "  added:  { bg:'var(--t-good-bg)', border:'var(--t-good)',")
+
+# ===== Vídeos de las series en Google Drive (los ve el entrenador y salen en el PDF) =====
+DRIVE_JS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_drive.js'), encoding='utf-8').read()
+DRIVE_JS += '\n' + open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_ia.js'), encoding='utf-8').read()
+patch("<script>\n// WorkOut 2.0: fechas de la semana",
+      '<script src="google-config.js?v=2"></script>\n<script>\n' + DRIVE_JS + "\n</script>\n<script>\n// WorkOut 2.0: fechas de la semana")
+# Análisis con IA: desactivado en WorkOut hasta tener un servidor con la clave
+patch("      vActions.appendChild(analyzeBtn); vActions.appendChild(delVBtn);", "      vActions.appendChild(delVBtn);")
+patch("  videoSection.appendChild(videoHeading);\n",
+      "  videoSection.appendChild(videoHeading);\n  wo2DriveCardList(videoSection, plan, day, idx);\n")
+patch("      videos.push({ id: 'v'+Date.now()+Math.random().toString(36).slice(2,6), name:file.name, url, analysis:null, formatWarning: looksLikeHevcMov });\n",
+      "      videos.push({ id: 'v'+Date.now()+Math.random().toString(36).slice(2,6), name:file.name, url, analysis:null, formatWarning: looksLikeHevcMov });\n      wo2DriveQueue(file, { planId: plan.id, day, exIdx: idx, label: entry.name || ('Código ' + entry.code) });\n")
+patch("function generateDayReport(plan, day){\n", "function generateDayReport(plan, day){\n  wo2ReportCtx = { planId: plan.id, day };\n")
+patch("function generateWeekReport(plan){\n", "function generateWeekReport(plan){\n  wo2ReportCtx = { planId: plan.id, day: null };\n")
+PDF_VIDEOS = """  { const vids = wo2VideosForPdf();
+    if (vids.length){
+      checkPageBreak(14);
+      sectionTitle('VIDEOS DE LAS SERIES', [201,154,46]);
+      doc.setFont('helvetica','normal'); doc.setFontSize(10);
+      vids.forEach(v=>{
+        checkPageBreak(7);
+        const lbl = stripEmojiForPDF(v.text);
+        doc.setTextColor(40,40,40); doc.text(lbl, marginX, y);
+        const x2 = Math.min(marginX + doc.getTextWidth(lbl) + 4, marginX + contentW - 22);
+        doc.setTextColor(30,100,200); doc.textWithLink('Ver video', x2, y, { url: v.link });
+        y += 6.5;
+        if (v.analysis){
+          doc.setFontSize(9); doc.setTextColor(70,70,70);
+          doc.splitTextToSize(stripEmojiForPDF('Analisis de tecnica (IA): ' + v.analysis), contentW - 4).forEach(l=>{ checkPageBreak(5); doc.text(l, marginX + 4, y); y += 4.4; });
+          doc.setFontSize(10); y += 2;
+        }
+      });
+      y += 3;
+    } }
+
+  const pageCount = doc.internal.getNumberOfPages();"""
+patch("  const pageCount = doc.internal.getNumberOfPages();", PDF_VIDEOS, 2)
+
+# Atleta: exportar sus entrenos en un archivo (para análisis de la evolución)
+patch("  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', 'Salir',",
+      "  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('📤', 'Exportar mis entrenos', ()=>{ state.showMenu = false; render(); wo2ExportMine(); }));\n"
+      "  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', 'Salir',")
+patch("async function buildBackupObject(){", r"""// Archivo con todos los entrenos del atleta (semanas, pesos, valoraciones,
+// notas, RPE, tiempos, días no entrenados y vídeos), para compartirlo.
+async function wo2ExportMine(){
+  let name = ''; try{ name = getActiveUser().name || ''; }catch(e){}
+  const data = { app:'WorkOut 2.0', tipo:'entrenos-atleta', exportedAt: new Date().toISOString(), atleta: name,
+    plans: state.plans || [], checks: state.checks || {}, notes: state.notes || {}, seriesProgress: state.seriesProgress || {},
+    wo2x: state.wo2x || {}, videos: (typeof WO2 !== 'undefined' && WO2.videos) || [] };
+  const fname = 'entrenos-' + (name || 'atleta').toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + new Date().toISOString().slice(0,10) + '.json';
+  const blob = new Blob([JSON.stringify(data)], { type:'application/json' });
+  try{
+    const file = new File([blob], fname, { type:'application/json' });
+    if (navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], title:'Mis entrenos' }); return; }
+  }catch(e){ if (e && e.name === 'AbortError') return; }
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 4000);
+}
+async function buildBackupObject(){""")
 
 patch('\ninitApp();\n</script>', '\n' + ADAPTER + '\n</script>')
 
