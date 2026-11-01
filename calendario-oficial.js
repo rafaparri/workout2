@@ -6,13 +6,16 @@
 //   cats: 'junior', 'sub23', 'absoluto', 'master'
 //   sex:  'FM' (femenino y masculino), 'F' o 'M'
 //   scope: 'es' (España) o 'int' (internacional)
-window.WO2_OFICIAL_ACTUALIZADO = '13 de octubre de 2026';
+window.WO2_OFICIAL_ACTUALIZADO = '1 de noviembre de 2026';
 // Cambios del calendario oficial (la app avisa al entrenador): { id, date, title, text }
-window.WO2_OFICIAL_CAMBIOS = [];
+window.WO2_OFICIAL_CAMBIOS = [
+  { id:'2026-11-mundial-ningbo', date:'1 de noviembre de 2026', title:'Mundial Absoluto 2026: sede y fechas corregidas',
+    text:'Según el reglamento oficial de la IWF, el Campeonato del Mundo Absoluto 2026 se celebra en Ningbo (China) del 27 de octubre al 8 de noviembre, no en Chengdú del 28 de octubre al 10 de noviembre.' }
+];
 window.WO2_OFICIAL = [
   { id:'2026-eu-jun-u23', name:'Campeonato de Europa Júnior y Sub-23', place:'Durrës (Albania)', startDate:'2026-10-12', endDate:'2026-10-19', scope:'int', org:'EWF', cats:['junior','sub23'], sex:'FM' },
   { id:'2026-gp-gandia', name:'Gran Prix Internacional Femenino · Trofeo Ciudad de Gandía', place:'Gandía (Valencia)', startDate:'2026-10-16', endDate:'2026-10-18', scope:'es', org:'RFEH', cats:['absoluto'], sex:'F' },
-  { id:'2026-mundo-abs', name:'Campeonato del Mundo Absoluto', place:'Chengdú (China)', startDate:'2026-10-28', endDate:'2026-11-10', scope:'int', org:'IWF', cats:['absoluto'], sex:'FM' },
+  { id:'2026-mundo-abs', name:'Campeonato del Mundo Absoluto', place:'Ningbo (China)', startDate:'2026-10-27', endDate:'2026-11-08', scope:'int', org:'IWF', cats:['absoluto'], sex:'FM' },
   { id:'2026-med-masters', name:'Mediterranean Masters Open', place:'Portugal', startDate:'2026-10-29', endDate:'2026-11-01', scope:'int', org:'Máster', cats:['master'], sex:'FM' },
   { id:'2026-liga-4', name:'IV Jornada Liga de Clubes / Playoff', place:'Sedes autonómicas', startDate:'2026-11-01', endDate:'2026-11-02', scope:'es', org:'RFEH', cats:['absoluto'], sex:'FM' },
   { id:'2026-esp-junior', name:'LV Campeonato de España Júnior y por Federaciones', place:'Ourense (Galicia)', startDate:'2026-11-14', endDate:'2026-11-16', scope:'es', org:'RFEH', cats:['junior'], sex:'FM' },
