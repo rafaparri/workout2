@@ -615,13 +615,15 @@ async function buildBackupObject(){""")
 
 # ---------- Recarga forzada con versión visible ----------
 # El código vive en entreno_recarga.js; aquí solo se engancha al menú y a la pantalla.
-RECARGA_JS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_recarga.js'), encoding='utf-8').read()
+RECARGA_JS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_nutricion.js'), encoding='utf-8').read() + open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_recarga.js'), encoding='utf-8').read()
 patch("/* ---- Menú (hoja inferior con el resto de acciones) ---- */\n", RECARGA_JS + "/* ---- Menú (hoja inferior con el resto de acciones) ---- */\n")
 patch("  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', 'Salir', ()=>{ wo2SignOut(); }));\n",
       "  sheet.appendChild(menuItem('🔄', 'Recargar app (versión ' + wo2VersionTexto() + ')', ()=>{ wo2RecargarApp(); }));\n"
       "  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', 'Salir', ()=>{ wo2SignOut(); }));\n")
 
 patch('\ninitApp();\n</script>', '\n' + ADAPTER + '\n</script>')
+patch("      if (prof.metrics) u.metrics = prof.metrics;\n      users = [u];\n      activeUserId = u.id;\n",
+      "      if (prof.metrics) u.metrics = prof.metrics;\n      users = [u];\n      activeUserId = u.id;\n      wo2MergeNutriWeights(u);\n")
 
 open(out_path, 'w', encoding='utf-8').write(html)
 print('entreno.html generado:', len(html), 'bytes')

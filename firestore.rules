@@ -144,7 +144,9 @@ service cloud.firestore {
       allow write: if hasCoachGrant(clubId);
     }
     match /clubs/{clubId}/athletes/{athleteId}/progress/{docId} {
-      allow read: if hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId);
+      // El nutricionista autorizado por el atleta solo lee el perfil (peso y tensión).
+      allow read: if hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId)
+                     || (docId == 'profile' && sharedWithMe(athleteId));
       allow write: if hasCoachGrant(clubId) || hasAthleteGrant(clubId, athleteId);
     }
     // Comentarios del entrenador en los informes: los escribe el entrenador,
