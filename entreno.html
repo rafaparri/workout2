@@ -5810,6 +5810,19 @@ function renderWeightSheet(){
   return overlay;
 }
 
+/* ---- Versión y recarga forzada ---- */
+function wo2VersionTexto(){
+  const v = String(window.WO2_VERSION || '');
+  const m = v.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})/);
+  return m ? (m[3]+'/'+m[2]+'/'+m[1]+' '+m[4]+':'+m[5]) : 'desconocida';
+}
+function wo2RecargarApp(){
+  // Pide la página otra vez saltándose la caché del navegador; los datos
+  // (planes, pesos, progreso) se vuelven a leer de la base de datos.
+  try{ const u = new URL(location.href); u.searchParams.set('r', Date.now()); location.replace(u.toString()); }
+  catch(e){ location.reload(); }
+}
+
 /* ---- Menú (hoja inferior con el resto de acciones) ---- */
 function menuItem(icon, label, onClick){
   const item = el('div','hist-item');
@@ -5922,6 +5935,7 @@ function renderMenuSheet(plan){
   if (WO2.coachView) sheet.appendChild(menuItem('⬅️', 'Volver a la ficha del atleta', ()=>{ window.location.href = 'ficha-atleta.html?athlete=' + encodeURIComponent(WO2.viewedUid); }));
   if (WO2_ATHLETE && !WO2.coachView && WO2.isCoach) sheet.appendChild(menuItem('📋', 'Panel de entrenador', ()=>{ window.location.href = 'entrenador.html'; }));
   if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('📤', 'Exportar mis entrenos', ()=>{ state.showMenu = false; render(); wo2ExportMine(); }));
+  sheet.appendChild(menuItem('🔄', 'Recargar app (versión ' + wo2VersionTexto() + ')', ()=>{ wo2RecargarApp(); }));
   if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', 'Salir', ()=>{ wo2SignOut(); }));
   if (!WO2_ATHLETE) sheet.appendChild(menuItem('💾', 'Exportar copia de seguridad', async ()=>{
     state.showMenu = false;
