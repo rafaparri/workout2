@@ -237,6 +237,11 @@ service cloud.firestore {
         && request.resource.data.kg is number && request.resource.data.kg >= 20 && request.resource.data.kg <= 300;
       allow delete: if patientOwner(pid);
     }
+    match /nu_patients/{pid}/measures/{day} {
+      allow read: if patientOwner(pid) || patientLinked(pid);
+      allow create, update: if patientOwner(pid);
+      allow delete: if patientOwner(pid);
+    }
     match /nu_patients/{pid}/weeks/{weekId} {
       allow read: if patientOwner(pid) || patientLinked(pid);
       allow create, update: if patientOwner(pid);
