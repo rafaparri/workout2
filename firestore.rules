@@ -69,7 +69,10 @@ service cloud.firestore {
       // solo copiando el club exacto que diga una invitación válida — del
       // superadmin si es para entrenador, de su entrenador si es atleta —
       // nunca inventándose otro club ni otro rol.
-      allow create: if hasSuperadminGrant() || (
+      allow create: if hasSuperadminGrant()
+        // App Nutrición: cualquiera puede activarse a sí mismo como nutricionista.
+        || (grantId == 'nutritionist' && isSignedIn() && request.auth.uid == uid)
+        || (
         (grantId == 'athlete' || grantId == 'coach' || grantId == 'admin') && isSignedIn() && request.auth.uid == uid &&
         exists(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)) &&
         get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.email == request.auth.token.email &&
@@ -201,6 +204,41 @@ service cloud.firestore {
               && request.resource.data.byUid == request.auth.uid)
         );
       allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ===== App Nutrición: pacientes que crea cada nutricionista a mano =====
+    // nu_patients/{pid}: ficha. La crea y gestiona su nutricionista (ownerUid).
+    // Si el paciente tiene cuenta y se vincula (linkedUid), solo la puede leer.
+    function hasNutriGrant() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid)/roleGrants/nutritionist);
+    }
+    function patientOwner(pid) {
+      return hasNutriGrant()
+        && get(/databases/$(database)/documents/nu_patients/$(pid)).data.ownerUid == request.auth.uid;
+    }
+    function patientLinked(pid) {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/nu_patients/$(pid)).data.get('linkedUid', null) == request.auth.uid;
+    }
+    match /nu_patients/{pid} {
+      allow read: if isSignedIn() && (resource.data.ownerUid == request.auth.uid
+                                      || resource.data.get('linkedUid', null) == request.auth.uid);
+      allow create: if hasNutriGrant() && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if hasNutriGrant() && resource.data.ownerUid == request.auth.uid
+                       && request.resource.data.ownerUid == request.auth.uid;
+      allow delete: if hasNutriGrant() && resource.data.ownerUid == request.auth.uid;
+    }
+    match /nu_patients/{pid}/weights/{day} {
+      allow read: if patientOwner(pid) || patientLinked(pid);
+      allow create, update: if patientOwner(pid)
+        && request.resource.data.kg is number && request.resource.data.kg >= 20 && request.resource.data.kg <= 300;
+      allow delete: if patientOwner(pid);
+    }
+    match /nu_patients/{pid}/weeks/{weekId} {
+      allow read: if patientOwner(pid) || patientLinked(pid);
+      allow create, update: if patientOwner(pid);
+      allow delete: if patientOwner(pid);
     }
 
     match /{document=**} {
