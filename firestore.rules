@@ -259,6 +259,19 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
     }
 
+    // ---- RPT Nutrición: recetario ----
+    // Cada nutricionista tiene sus recetas. Las marcadas como compartidas (shared == true)
+    // las pueden leer los demás nutricionistas, pero solo su dueño las modifica o borra.
+    match /nu_recipes/{recipeId} {
+      allow read: if isSignedIn() && (resource.data.ownerUid == request.auth.uid
+                                      || (resource.data.shared == true && hasNutriGrant()));
+      allow create: if hasNutriGrant() && request.resource.data.ownerUid == request.auth.uid
+                       && request.resource.data.name is string;
+      allow update: if isSignedIn() && resource.data.ownerUid == request.auth.uid
+                       && request.resource.data.ownerUid == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
