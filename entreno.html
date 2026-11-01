@@ -5744,7 +5744,7 @@ async function weightLoad(){
     weightState.list = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
   }catch(e){
     weightState.list = [];
-    weightState.error = 'No se pudo leer el peso. Comprueba la conexión.';
+    weightState.error = 'No se pudo leer el peso (' + ((e && (e.code || e.message)) || 'error') + ').'; console.error('bodyLog', e);
   }
   if (state.showWeight) render();
 }
@@ -5758,7 +5758,7 @@ async function weightSave(raw){
     weightState.msg='Guardado.'; weightState.msgOk=true;
     await weightLoad();
   }catch(e){
-    weightState.msg='No se pudo guardar. Inténtalo de nuevo.'; weightState.msgOk=false;
+    weightState.msg='No se pudo guardar (' + ((e && (e.code || e.message)) || 'error') + ').'; weightState.msgOk=false;
   }
   weightState.busy = false; render();
 }
