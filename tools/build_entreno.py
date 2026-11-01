@@ -185,7 +185,8 @@ function wo2ScheduleProfilePush(){
     if (!u) return;
     try{
       await WO2.base.collection('progress').doc('profile').set({
-        objetivos: u.objetivos || null, rms: u.rms || {}, metrics: u.metrics || [], updatedAt: Date.now()
+        objetivos: u.objetivos || null, rms: u.rms || {}, metrics: u.metrics || [],
+        moves: (state.wo2x && state.wo2x.moves) || {}, updatedAt: Date.now()
       });
     }catch(e){ wo2SaveError(e); }
   }, 700);
@@ -473,6 +474,10 @@ function wo2ShowBootError(msg){
 # Hoja de estilos propia, cargada después de la de la app original.
 patch('</head>', '<link rel="stylesheet" href="palette.css?v=2">\n<link rel="stylesheet" href="theme-entreno.css?v=4">\n<meta name="theme-color" content="#0d1117">\n</head>')
 # Letra: Oswald/Inter de la original pasan a ArchivoBlack/Archivo (nombres sin espacios: van dentro de textos JS).
+# Los días movidos ("pasar el entreno del jueves al viernes") se copian también al perfil,
+# que sí puede leer el nutricionista autorizado (progress/main no).
+patch("function wo2Save(){ try{ persistUserData(); }catch(e){} if (typeof wo2ScheduleProgressPush === 'function') wo2ScheduleProgressPush(); }",
+      "function wo2Save(){ try{ persistUserData(); }catch(e){} if (typeof wo2ScheduleProgressPush === 'function') wo2ScheduleProgressPush(); if (typeof wo2ScheduleProfilePush === 'function') wo2ScheduleProfilePush(); }")
 html = html.replace("'Oswald'", "ArchivoBlack").replace('Oswald,', 'ArchivoBlack,').replace("'Inter'", "Archivo").replace('Inter,', 'Archivo,')
 # Botones pequeños (Notas, Informe, Añadir vídeo…): más grandes para el dedo.
 html = html.replace("font-weight:600;font-size:11.5px;padding:6px 11px;border-radius:8px", "font-weight:700;font-size:15px;padding:10px 14px;border-radius:12px;min-height:44px")

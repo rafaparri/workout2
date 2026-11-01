@@ -7,16 +7,16 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261101075807';</script>
-<script src="update.js?v=20261101075807"></script>
+<script>window.WO2_VERSION='20261101192526';</script>
+<script src="update.js?v=20261101192526"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261101075807"></script>
-<script src="branding.js?v=20261101075807"></script>
-<script src="roles.js?v=20261101075807"></script>
+<script src="firebase-init.js?v=20261101192526"></script>
+<script src="branding.js?v=20261101192526"></script>
+<script src="roles.js?v=20261101192526"></script>
 <style>
 
 :root{
@@ -605,7 +605,7 @@ function wo2X(){
   ['dayOff','setOff','moves'].forEach(k=>{ if (!state.wo2x[k] || typeof state.wo2x[k] !== 'object') state.wo2x[k] = {}; });
   return state.wo2x;
 }
-function wo2Save(){ try{ persistUserData(); }catch(e){} if (typeof wo2ScheduleProgressPush === 'function') wo2ScheduleProgressPush(); }
+function wo2Save(){ try{ persistUserData(); }catch(e){} if (typeof wo2ScheduleProgressPush === 'function') wo2ScheduleProgressPush(); if (typeof wo2ScheduleProfilePush === 'function') wo2ScheduleProfilePush(); }
 function wo2CanEdit(){ return !(typeof WO2 !== 'undefined' && WO2.coachView); }
 function wo2DayOff(plan, d){ return wo2X().dayOff[plan.id + '|' + d] || null; }
 function wo2MovedTo(plan, d){ return wo2X().moves[plan.id + '|' + d] || null; }
@@ -5734,6 +5734,7 @@ function renderBackupTextOverlay(){
    Peso y tensión y se borran de ese buzón, así no se repiten. */
 async function wo2MergeNutriWeights(u){
   if (WO2.coachView || !WO2.uid || !u) return;
+  try{ wo2ScheduleProfilePush(); }catch(e){} // publica también los días movidos
   try{
     const snap = await db.collection('users').doc(WO2.uid).collection('bodyLog').where('by','==','nutricion').get();
     if (snap.empty) return;
@@ -7460,7 +7461,8 @@ function wo2ScheduleProfilePush(){
     if (!u) return;
     try{
       await WO2.base.collection('progress').doc('profile').set({
-        objetivos: u.objetivos || null, rms: u.rms || {}, metrics: u.metrics || [], updatedAt: Date.now()
+        objetivos: u.objetivos || null, rms: u.rms || {}, metrics: u.metrics || [],
+        moves: (state.wo2x && state.wo2x.moves) || {}, updatedAt: Date.now()
       });
     }catch(e){ wo2SaveError(e); }
   }, 700);
@@ -7745,7 +7747,7 @@ function wo2ShowBootError(msg){
 })();
 
 </script>
-<script src="competicion.js?v=20261101075807"></script>
+<script src="competicion.js?v=20261101192526"></script>
 <script>
 // WorkOut 2.0 · Competiciones en la app del atleta (lo inserta build_entreno.py).
 // Lee sus fichas de competición en  WO2.base/competitions/{compId}  y las
@@ -7869,7 +7871,7 @@ function wo2RenderCompsScreen(){
 }
 
 </script>
-<script src="google-config.js?v=20261101075807"></script>
+<script src="google-config.js?v=20261101192526"></script>
 <script>
 // ===== WorkOut 2.0 · Vídeos de las series en Google Drive =====
 // Cada vídeo grabado (o añadido) se guarda primero en el móvil, en una cola,

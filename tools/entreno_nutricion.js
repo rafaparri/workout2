@@ -4,6 +4,7 @@
    Peso y tensión y se borran de ese buzón, así no se repiten. */
 async function wo2MergeNutriWeights(u){
   if (WO2.coachView || !WO2.uid || !u) return;
+  try{ wo2ScheduleProfilePush(); }catch(e){} // publica también los días movidos
   try{
     const snap = await db.collection('users').doc(WO2.uid).collection('bodyLog').where('by','==','nutricion').get();
     if (snap.empty) return;
