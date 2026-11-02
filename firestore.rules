@@ -5,6 +5,14 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
+    // Correo comprobado: el usuario ha demostrado que el correo es suyo
+    // (los enlaces mágicos lo marcan así). Evita que alguien se cree una
+    // cuenta con el correo de otra persona para quedarse su invitación.
+    function hasVerifiedEmail(email) {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == email;
+    }
 
     // --- Permisos independientes por rol, en vez de un único campo "role"
     // en el perfil. Así, la misma persona puede tener a la vez un permiso
@@ -76,6 +84,7 @@ service cloud.firestore {
         (grantId == 'athlete' || grantId == 'coach' || grantId == 'admin') && isSignedIn() && request.auth.uid == uid &&
         exists(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)) &&
         get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.email == request.auth.token.email &&
+        request.auth.token.email_verified == true &&
         get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.role == grantId &&
         (grantId == 'admin' ||
          request.resource.data.clubId == get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.clubId)
@@ -95,7 +104,7 @@ service cloud.firestore {
     }
 
     match /invites/{inviteId} {
-      allow read: if isSignedIn() && request.auth.token.email == resource.data.email;
+      allow read: if hasVerifiedEmail(resource.data.email);
       allow create, update: if hasSuperadminGrant() || (
         isSignedIn() && hasCoachGrant(request.resource.data.clubId) && request.resource.data.role == 'athlete'
       ) || (
@@ -134,7 +143,8 @@ service cloud.firestore {
       allow write: if hasCoachGrant(clubId);
       allow create: if isSignedIn() && request.auth.uid == athleteId &&
         exists(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)) &&
-        get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.clubId == clubId;
+        get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.clubId == clubId &&
+        hasVerifiedEmail(get(/databases/$(database)/documents/invites/$(request.resource.data.inviteId)).data.email);
     }
 
     // Programación y resultados: SOLO el entrenador del club y el propio
@@ -254,11 +264,11 @@ service cloud.firestore {
     // y apuntar su uid y club. El nutricionista puede borrarla (quitar vínculo).
     match /nu_links/{linkId} {
       allow read: if isSignedIn() && (resource.data.ownerUid == request.auth.uid
-                                      || resource.data.email == request.auth.token.email);
+                                      || hasVerifiedEmail(resource.data.email));
       allow create: if hasNutriGrant() && request.resource.data.ownerUid == request.auth.uid
                        && request.resource.data.status == 'pending'
                        && request.resource.data.email is string;
-      allow update: if isSignedIn() && resource.data.email == request.auth.token.email
+      allow update: if hasVerifiedEmail(resource.data.email)
                        && request.resource.data.diff(resource.data).affectedKeys()
                             .hasOnly(['status', 'patientUid', 'clubId', 'acceptedAt']);
       allow delete: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
