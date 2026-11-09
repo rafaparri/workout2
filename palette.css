@@ -75,3 +75,45 @@ html[data-palette="rojo"]{
 
 /* Figura del logo coloreada con el color que toque (mask sobre la silueta) */
 .wo2-fig{ display:inline-block; background:var(--t-accent); -webkit-mask:url(static/figura-oro.png) center/contain no-repeat; mask:url(static/figura-oro.png) center/contain no-repeat; aspect-ratio:590/348; }
+
+/* ---------- 5 · Grafito y naranja (oscuro, potente) ---------- */
+html[data-palette="naranja"]{
+  --t-bg:#121212; --t-bg2:#171717; --t-surface:#1e1e1e; --t-surface2:#252525;
+  --t-chip:#2c2c2c; --t-line:#333333; --t-edge:#444444;
+  --t-text:#f2f2f2; --t-muted:#c4c4c4; --t-muted2:#9a9a9a; --t-muted3:#6c6c6c;
+  --t-accent:#ff7a1a; --t-accent2:#ff9a4d; --t-ink:#1a0d02;
+  --t-accent-soft:#33200f; --t-accent-edge:#7a4214;
+  --t-good:#3fb26f; --t-good-bg:#13281c; --t-good-fg:#80dba6; --t-good-edge:#225c3e;
+  --t-bad:#e5484d; --t-bad-bg:#2e1617; --t-bad-fg:#ff9a9d; --t-bad-edge:#6a2a2d;
+  --t-chg:#f2c53a; --t-chg-bg:#2c2610; --t-chg-fg:#ffe07a;
+  --t-inf:#5aa9ff; --t-inf-bg:#132339; --t-inf-fg:#9cc9ff;
+  --t-scheme:dark;
+}
+
+/* ---------- 6 · Verde oliva (oscuro, sobrio) ---------- */
+html[data-palette="oliva"]{
+  --t-bg:#0f120c; --t-bg2:#141810; --t-surface:#1a1f15; --t-surface2:#20261a;
+  --t-chip:#283020; --t-line:#2e3725; --t-edge:#3d4a30;
+  --t-text:#eef1e8; --t-muted:#bcc4ad; --t-muted2:#8f9a7e; --t-muted3:#68725a;
+  --t-accent:#a3c45a; --t-accent2:#bcd97a; --t-ink:#12170a;
+  --t-accent-soft:#232c16; --t-accent-edge:#4f6328;
+  --t-good:#3fb26f; --t-good-bg:#13281c; --t-good-fg:#80dba6; --t-good-edge:#225c3e;
+  --t-bad:#e0614f; --t-bad-bg:#2c1717; --t-bad-fg:#ff9d8f; --t-bad-edge:#64302b;
+  --t-chg:#f2a33a; --t-chg-bg:#2c2110; --t-chg-fg:#ffc47a;
+  --t-inf:#6fb3ea; --t-inf-bg:#14202c; --t-inf-fg:#8cc4f0;
+  --t-scheme:dark;
+}
+
+/* ---------- 7 · Violeta (oscuro, moderno) ---------- */
+html[data-palette="violeta"]{
+  --t-bg:#100d18; --t-bg2:#15111f; --t-surface:#1c1729; --t-surface2:#231d33;
+  --t-chip:#2b2440; --t-line:#30284a; --t-edge:#433863;
+  --t-text:#f0edf8; --t-muted:#c3bad8; --t-muted2:#968cb0; --t-muted3:#6b6285;
+  --t-accent:#a98bff; --t-accent2:#c2adff; --t-ink:#140c2b;
+  --t-accent-soft:#251d3d; --t-accent-edge:#56448f;
+  --t-good:#3fb26f; --t-good-bg:#13281c; --t-good-fg:#80dba6; --t-good-edge:#225c3e;
+  --t-bad:#e5576a; --t-bad-bg:#2e1620; --t-bad-fg:#ff9dab; --t-bad-edge:#6a2a3a;
+  --t-chg:#f2a33a; --t-chg-bg:#2c2110; --t-chg-fg:#ffc47a;
+  --t-inf:#5ec8e5; --t-inf-bg:#122630; --t-inf-fg:#97def0;
+  --t-scheme:dark;
+}

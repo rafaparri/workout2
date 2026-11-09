@@ -472,7 +472,7 @@ function wo2ShowBootError(msg){
 
 # ===== Aspecto "Pista en oro" (negro y oro, letra Archivo) =====
 # Hoja de estilos propia, cargada después de la de la app original.
-patch('</head>', '<link rel="stylesheet" href="palette.css?v=2">\n<link rel="stylesheet" href="theme-entreno.css?v=4">\n<meta name="theme-color" content="#0d1117">\n</head>')
+patch('</head>', '<link rel="stylesheet" href="palette.css?v=3">\n<script src="palette.js?v=1"></script>\n<link rel="stylesheet" href="theme-entreno.css?v=4">\n<meta name="theme-color" content="#0d1117">\n</head>')
 # Letra: Oswald/Inter de la original pasan a ArchivoBlack/Archivo (nombres sin espacios: van dentro de textos JS).
 # Los días movidos ("pasar el entreno del jueves al viernes") se copian también al perfil,
 # que sí puede leer el nutricionista autorizado (progress/main no).
@@ -597,6 +597,7 @@ patch("  const pageCount = doc.internal.getNumberOfPages();", PDF_VIDEOS, 2)
 
 # Atleta: exportar sus entrenos en un archivo (para análisis de la evolución)
 patch("  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', 'Salir',",
+      "  if (WO2_ATHLETE) sheet.appendChild(menuItem('🎨', 'Colores de la app', ()=>{ state.showMenu = false; render(); wo2PalettePicker(); }));\n"
       "  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('📤', 'Exportar mis entrenos', ()=>{ state.showMenu = false; render(); wo2ExportMine(); }));\n"
       "  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', 'Salir',")
 patch("async function buildBackupObject(){", r"""// Archivo con todos los entrenos del atleta (semanas, pesos, valoraciones,
