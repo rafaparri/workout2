@@ -32,6 +32,29 @@ function wo2ExStart(plan, d, i){
   t.ex[i] = { start: Date.now() };
   wo2Save(); render();
 }
+// ✎ Corregir a mano la hora de inicio y de fin de un movimiento
+function wo2ExEdit(plan, d, i){
+  if (!wo2CanEdit()) return;
+  const t = wo2TDay(plan, d, false), x = t && t.ex[i]; if (!x || !x.start) return;
+  const ex = wo2ExDuration(plan, d, i);
+  const parse = (txt, base)=>{
+    const m = /^\s*(\d{1,2})[:.,h ]?(\d{2})\s*$/.exec(String(txt || ''));
+    if (!m || +m[1] > 23 || +m[2] > 59) return null;
+    const dt = new Date(base); dt.setHours(+m[1], +m[2], 0, 0); return dt.getTime();
+  };
+  const a = prompt('Hora a la que EMPEZASTE este movimiento (por ejemplo 18:05):', wo2Hm(x.start));
+  if (a === null) return;
+  const st = parse(a, x.start); if (!st){ alert('No entiendo esa hora. Escríbela así: 18:05'); return; }
+  const b = prompt('Hora a la que TERMINASTE (la última serie), por ejemplo 18:23:', ex && ex.end ? wo2Hm(ex.end) : wo2Hm(st + 18 * 60000));
+  if (b === null) return;
+  let en = parse(b, st); if (!en){ alert('No entiendo esa hora. Escríbela así: 18:23'); return; }
+  if (en < st) en += 24 * 3600000;   // pasó de medianoche
+  x.start = st; x.end = en; x.manual = true; x.auto = false;
+  const idxs = wo2ExIdxList(plan, d), exs = idxs.map(k=> t.ex[k]).filter(y=> y && y.start);
+  const all = idxs.every(k=> wo2ExResolved(plan, d, k) || (t.ex[k] && t.ex[k].manual && t.ex[k].end));
+  t.end = all && exs.length ? Math.max.apply(null, exs.map(y=> y.end || y.start)) : null;
+  wo2Save(); render();
+}
 function wo2ExReset(plan, d, i){
   if (!wo2CanEdit()) return;
   if (!confirm('¿Volver a poner a cero el tiempo de este movimiento?')) return;
@@ -39,8 +62,27 @@ function wo2ExReset(plan, d, i){
   delete t.ex[i]; t.end = null;
   wo2Save(); render();
 }
-// Se ejecuta antes de cada guardado: inicia solo lo que se marcó sin «Iniciar»
-// y cierra movimientos y entreno cuando está todo resuelto.
+// Hora a la que se marcó cada serie: state.wo2x.markAt[clave de la serie] = ms
+// (0 = marcada antes de existir este registro, hora desconocida).
+function wo2Marks(){ const x = wo2X(); if (!x.markAt || typeof x.markAt !== 'object') x.markAt = {}; return x.markAt; }
+// Al pintar: las series que ya estaban marcadas no reciben la hora de ahora
+function wo2PrimeMarks(plan, d, i){
+  const e = plan.days[d] && plan.days[d][i]; if (!e || !e.sets) return;
+  const mk = wo2Marks();
+  e.sets.forEach((s, si)=>{ const k = checkKey(plan, d, i, si); if (wo2SetResolved(plan, d, i, si) && mk[k] === undefined) mk[k] = 0; });
+}
+// Última serie marcada de un movimiento (0 si no se sabe)
+function wo2LastMark(plan, d, i){
+  const e = plan.days[d] && plan.days[d][i]; if (!e || !e.sets) return 0;
+  const mk = wo2Marks(); let m = 0;
+  e.sets.forEach((s, si)=>{ const v = mk[checkKey(plan, d, i, si)]; if (v > m) m = v; });
+  return m;
+}
+const WO2T_IDLE = 45 * 60000;   // sin marcar nada en 45 min: el movimiento se da por terminado
+// Se ejecuta antes de cada guardado: anota la hora de las series que se acaban
+// de marcar, inicia solo lo que se marcó sin «Iniciar» y cierra movimientos y
+// entreno con la hora de la ÚLTIMA SERIE (no con la hora del guardado: una nota
+// o un comentario escritos después no cambian nada).
 function wo2TimeSync(){
   if (!state || !state.plans) return;
   const plan = state.plans.find(p=> p.id === state.activePlanId); if (!plan) return;
@@ -48,24 +90,34 @@ function wo2TimeSync(){
   if (state.activeDay) days.add(state.activeDay);
   if (state.activeDay) wo2MovedInto(plan, state.activeDay).forEach(s=> days.add(s));
   if (state.flashcard && state.flashcard.day) days.add(state.flashcard.day);
-  const now = Date.now();
+  const now = Date.now(), mk = wo2Marks();
   days.forEach(d=>{
     const idxs = wo2ExIdxList(plan, d); if (!idxs.length) return;
     idxs.forEach(i=>{
+      const e = plan.days[d][i];
+      (e.sets || []).forEach((s, si)=>{
+        const k = checkKey(plan, d, i, si);
+        if (wo2SetResolved(plan, d, i, si)){ if (mk[k] === undefined) mk[k] = now; }
+        else if (mk[k] !== undefined) delete mk[k];
+      });
       const sk = plan.id + '|' + d + '|' + i, cnt = wo2ResolvedCount(plan, d, i), prev = WO2T_SNAP[sk];
       WO2T_SNAP[sk] = cnt;
       let t = wo2TDay(plan, d, false);
       // Se marcó la primera serie sin haber pulsado «Iniciar»: empieza ahora
       if (prev === 0 && cnt > 0 && !(t && t.ex[i] && t.ex[i].start)){ t = wo2TDay(plan, d, true); t.ex[i] = { start: now, auto: true }; }
       const cur = t && t.ex[i];
-      if (!cur || !cur.start) return;
-      if (wo2ExResolved(plan, d, i)){ if (!cur.end) cur.end = now; }
-      else if (cur.end) delete cur.end;
+      if (!cur || !cur.start || cur.manual) return;
+      if (wo2ExResolved(plan, d, i)){
+        const lm = wo2LastMark(plan, d, i);
+        if (lm > 0) cur.end = Math.max(lm, cur.start);
+        else if (!cur.end) cur.end = now;
+      } else if (cur.end) delete cur.end;
     });
     const t = wo2TDay(plan, d, false); if (!t) return;
-    const started = Object.values(t.ex || {}).some(x=> x && x.start);
-    const all = idxs.every(i=> wo2ExResolved(plan, d, i));
-    if (all && started){ if (!t.end) t.end = now; } else t.end = null;
+    const exs = idxs.map(i=> t.ex[i]).filter(x=> x && x.start);
+    const all = idxs.every(i=> wo2ExResolved(plan, d, i) || (t.ex[i] && t.ex[i].manual && t.ex[i].end));
+    if (all && exs.length) t.end = Math.max.apply(null, exs.map(x=> x.end || x.start));
+    else t.end = null;
   });
 }
 // Series resueltas de cada movimiento la última vez que se vio en pantalla
@@ -102,17 +154,25 @@ function wo2DayDuration(plan, d){
   if (!starts.length) return null;
   const start = Math.min.apply(null, starts);
   if (t.end) return { start, end: t.end, ms: t.end - start, running: false };
+  // No se marcaron todos los movimientos: si lleva rato parado, acaba en lo último hecho
+  let last = start;
+  wo2ExIdxList(plan, d).forEach(i=>{ const x = t.ex[i]; if (x && x.start) last = Math.max(last, x.end || 0, x.start, wo2LastMark(plan, d, i)); });
+  if (Date.now() - last > WO2T_IDLE) return { start, end: last, ms: last - start, running: false, partial: true };
   return { start, end: null, ms: Date.now() - start, running: true };
 }
 function wo2ExDuration(plan, d, i){
   const t = wo2TDay(plan, d, false); const x = t && t.ex && t.ex[i];
   if (!x || !x.start) return null;
-  return { start: x.start, end: x.end || null, ms: (x.end || Date.now()) - x.start, running: !x.end, auto: !!x.auto };
+  if (x.end) return { start: x.start, end: x.end, ms: x.end - x.start, running: false, auto: !!x.auto, manual: !!x.manual };
+  const lm = wo2LastMark(plan, d, i);
+  if (lm && Date.now() - lm > WO2T_IDLE) return { start: x.start, end: lm, ms: lm - x.start, running: false, auto: !!x.auto, partial: true };
+  return { start: x.start, end: null, ms: Date.now() - x.start, running: true, auto: !!x.auto };
 }
 
 // ---------- En pantalla ----------
 function wo2ExTimerRow(card, plan, d, i){
   const sk = plan.id + '|' + d + '|' + i;
+  wo2PrimeMarks(plan, d, i);
   if (WO2T_SNAP[sk] === undefined) WO2T_SNAP[sk] = wo2ResolvedCount(plan, d, i);
   const ex = wo2ExDuration(plan, d, i);
   const row = document.createElement('div');
@@ -127,9 +187,13 @@ function wo2ExTimerRow(card, plan, d, i){
   } else {
     const s = document.createElement('span');
     if (ex.running){ s.className = 'wo2-exrun'; s.dataset.wo2tStart = ex.start; s.textContent = '⏱ En curso · ' + wo2Clock(ex.ms); }
-    else { s.className = 'wo2-exdone'; s.textContent = '✓ Hecho en ' + wo2Dur(ex.ms) + ' (' + wo2Hm(ex.start) + ' → ' + wo2Hm(ex.end) + ')'; }
+    else { s.className = 'wo2-exdone'; s.textContent = (ex.partial ? '⏸ Parado tras ' : '✓ Hecho en ') + wo2Dur(ex.ms) + ' (' + wo2Hm(ex.start) + ' → ' + wo2Hm(ex.end) + ')'; }
     row.appendChild(s);
     if (wo2CanEdit()){
+      const ed = document.createElement('button'); ed.type = 'button'; ed.className = 'wo2-exreset'; ed.textContent = '✎';
+      ed.setAttribute('aria-label', 'Corregir las horas de este movimiento');
+      ed.onclick = (e)=>{ e.stopPropagation(); wo2ExEdit(plan, d, i); };
+      row.appendChild(ed);
       const r = document.createElement('button'); r.type = 'button'; r.className = 'wo2-exreset'; r.textContent = '↺';
       r.setAttribute('aria-label', 'Poner a cero el tiempo de este movimiento');
       r.onclick = (e)=>{ e.stopPropagation(); wo2ExReset(plan, d, i); };
@@ -149,7 +213,7 @@ function wo2DayTimer(section, plan, d){
     box.innerHTML = '⏱ Entreno en curso · <b data-wo2t-start="' + dd.start + '">' + wo2Clock(dd.ms) + '</b> <span>(desde las ' + wo2Hm(dd.start) + ')</span>';
   } else {
     box.classList.add('done');
-    box.innerHTML = '⏱ Entreno completado en <b>' + wo2Dur(dd.ms) + '</b> <span>(' + wo2Hm(dd.start) + ' → ' + wo2Hm(dd.end) + ')</span>';
+    box.innerHTML = '⏱ ' + (dd.partial ? 'Entreno (sin terminar de marcar)' : 'Entreno completado') + ' en <b>' + wo2Dur(dd.ms) + '</b> <span>(' + wo2Hm(dd.start) + ' → ' + wo2Hm(dd.end) + ')</span>';
   }
   section.appendChild(box);
 }
