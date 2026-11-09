@@ -460,10 +460,25 @@ function wo2ShowBootError(msg){
       try{ restTimerMuted = (await storageGet(REST_TIMER_MUTED_KEY)) === '1'; }catch(e){ restTimerMuted = false; }
 
       clearInterval(bootTimer);
+      try{ sessionStorage.removeItem('wo2_boot_retry'); }catch(err){}
       render();
     }catch(e){
       clearInterval(bootTimer);
       console.error(e);
+      const offline = (e && (e.code === 'unavailable' || /offline|network|unavailable/i.test(String(e.message || ''))));
+      if (offline){
+        // Sin conexión con el servidor (cobertura, wifi, el móvil recién despertado): se reintenta solo
+        let n = 0; try{ n = Number(sessionStorage.getItem('wo2_boot_retry') || 0); }catch(err){}
+        if (n < 3){
+          try{ sessionStorage.setItem('wo2_boot_retry', String(n + 1)); }catch(err){}
+          wo2ShowBootError('Sin conexión con el servidor. Reintentando… (' + (n + 1) + ' de 3)');
+          setTimeout(()=> location.reload(), 2500 + n * 2500);
+          return;
+        }
+        try{ sessionStorage.removeItem('wo2_boot_retry'); }catch(err){}
+        wo2ShowBootError('No hay conexión con el servidor. Comprueba la cobertura o el wifi y pulsa «Reintentar».');
+        return;
+      }
       wo2ShowBootError('No se han podido cargar tus datos (' + (e.message || e.code || e) + ').');
     }
   });

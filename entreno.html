@@ -7,16 +7,16 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261109213555';</script>
-<script src="update.js?v=20261109213555"></script>
+<script>window.WO2_VERSION='20261109213741';</script>
+<script src="update.js?v=20261109213741"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261109213555"></script>
-<script src="branding.js?v=20261109213555"></script>
-<script src="roles.js?v=20261109213555"></script>
+<script src="firebase-init.js?v=20261109213741"></script>
+<script src="branding.js?v=20261109213741"></script>
+<script src="roles.js?v=20261109213741"></script>
 <style>
 
 :root{
@@ -7803,17 +7803,32 @@ function wo2ShowBootError(msg){
       try{ restTimerMuted = (await storageGet(REST_TIMER_MUTED_KEY)) === '1'; }catch(e){ restTimerMuted = false; }
 
       clearInterval(bootTimer);
+      try{ sessionStorage.removeItem('wo2_boot_retry'); }catch(err){}
       render();
     }catch(e){
       clearInterval(bootTimer);
       console.error(e);
+      const offline = (e && (e.code === 'unavailable' || /offline|network|unavailable/i.test(String(e.message || ''))));
+      if (offline){
+        // Sin conexión con el servidor (cobertura, wifi, el móvil recién despertado): se reintenta solo
+        let n = 0; try{ n = Number(sessionStorage.getItem('wo2_boot_retry') || 0); }catch(err){}
+        if (n < 3){
+          try{ sessionStorage.setItem('wo2_boot_retry', String(n + 1)); }catch(err){}
+          wo2ShowBootError('Sin conexión con el servidor. Reintentando… (' + (n + 1) + ' de 3)');
+          setTimeout(()=> location.reload(), 2500 + n * 2500);
+          return;
+        }
+        try{ sessionStorage.removeItem('wo2_boot_retry'); }catch(err){}
+        wo2ShowBootError('No hay conexión con el servidor. Comprueba la cobertura o el wifi y pulsa «Reintentar».');
+        return;
+      }
       wo2ShowBootError('No se han podido cargar tus datos (' + (e.message || e.code || e) + ').');
     }
   });
 })();
 
 </script>
-<script src="competicion.js?v=20261109213555"></script>
+<script src="competicion.js?v=20261109213741"></script>
 <script>
 // WorkOut 2.0 · Competiciones en la app del atleta (lo inserta build_entreno.py).
 // Lee sus fichas de competición en  WO2.base/competitions/{compId}  y las
@@ -7937,7 +7952,7 @@ function wo2RenderCompsScreen(){
 }
 
 </script>
-<script src="google-config.js?v=20261109213555"></script>
+<script src="google-config.js?v=20261109213741"></script>
 <script>
 // ===== WorkOut 2.0 · Vídeos de las series en Google Drive =====
 // Cada vídeo grabado (o añadido) se guarda primero en el móvil, en una cola,
