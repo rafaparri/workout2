@@ -7,16 +7,16 @@
 <link rel="apple-touch-icon" href="static/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png?v=2">
 <link rel="manifest" href="manifest.webmanifest">
-<script>window.WO2_VERSION='20261113214152';</script>
-<script src="update.js?v=20261113214152"></script>
+<script>window.WO2_VERSION='20261113214444';</script>
+<script src="update.js?v=20261113214444"></script>
 <meta name="apple-mobile-web-app-title" content="WorkOut 2.0">
 <meta name="application-name" content="WorkOut 2.0">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="firebase-init.js?v=20261113214152"></script>
-<script src="branding.js?v=20261113214152"></script>
-<script src="roles.js?v=20261113214152"></script>
+<script src="firebase-init.js?v=20261113214444"></script>
+<script src="branding.js?v=20261113214444"></script>
+<script src="roles.js?v=20261113214444"></script>
 <style>
 
 :root{
@@ -1965,6 +1965,41 @@ function wo2ComboText(scope){
 <style>.fc-card .wo2-extimer.wo2-fctimer{ width:100%; margin:0 0 4px; }
 .fc-card .wo2-fctimer .wo2-exstart{ min-height:56px; font-size:19px; }
 .fc-card .wo2-fctimer .wo2-exrun, .fc-card .wo2-fctimer .wo2-exdone{ text-align:center; }</style>
+<script>
+// ===== Evolución por movimiento en pantalla (mismo cálculo que el PDF) =====
+function wo2WeekMovementCharts(plan){
+  if (typeof wo2Evolution !== 'function' || !plan) return [];
+  return wo2Evolution(plan, wo2WeekData(plan)).map(mc=>({ name: mc.name,
+    points: mc.points.map(p=>({ label: p.label, date: p.date, maxKg: p.kg, current: p.current, src: p.src, ratings: p.avg != null ? [p.avg] : [] })) }));
+}
+function wo2SparkSVG(points){
+  const width = 300, height = 130, padX = 20, top = 22, bottom = 34;
+  const kgs = points.map(p=> p.maxKg), mn = Math.min(...kgs), mx = Math.max(...kgs), rg = (mx - mn) || 1;
+  const stepX = points.length > 1 ? (width - 2*padX) / (points.length - 1) : 0;
+  const cs = points.map((p, i)=>({ x: points.length > 1 ? padX + i*stepX : width/2, y: height - bottom - ((p.maxKg - mn) / rg) * (height - top - bottom), p }));
+  const path = cs.map((c, i)=> (i ? 'L' : 'M') + c.x.toFixed(1) + ',' + c.y.toFixed(1)).join(' ');
+  const col = (p)=>{ const r = p.ratings && p.ratings.length ? p.ratings[0] : null; const info = r != null ? ratingInfo(Math.round(r)) : null; return info ? info.color : '#8892a0'; };
+  const dots = cs.map(c=> '<circle cx="'+c.x.toFixed(1)+'" cy="'+c.y.toFixed(1)+'" r="'+(c.p.current ? 6 : 4.5)+'" fill="'+col(c.p)+'" stroke="#fff" stroke-width="1.5"/>' +
+    '<text x="'+c.x.toFixed(1)+'" y="'+(c.y - 9).toFixed(1)+'" font-size="12" font-weight="700" fill="currentColor" text-anchor="middle" font-family="IBM Plex Mono, monospace">'+c.p.maxKg+'</text>' +
+    '<text x="'+c.x.toFixed(1)+'" y="'+(height - 18)+'" font-size="11" font-weight="'+(c.p.current ? 700 : 400)+'" fill="currentColor" opacity="'+(c.p.current ? 1 : .65)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace">'+c.p.label+'</text>' +
+    '<text x="'+c.x.toFixed(1)+'" y="'+(height - 4)+'" font-size="9.5" fill="currentColor" opacity=".55" text-anchor="middle" font-family="IBM Plex Mono, monospace">'+(c.p.date || '')+'</text>').join('');
+  return '<svg width="100%" height="'+height+'" viewBox="0 0 '+width+' '+height+'" preserveAspectRatio="xMidYMid meet" style="color:var(--chalk);overflow:visible">' +
+    '<path d="'+path+'" fill="none" stroke="#3f6f9f" stroke-width="2.5"/>' + dots + '</svg>';
+}
+function wo2SparkList(points){
+  const box = document.createElement('div');
+  box.style.cssText = 'margin-top:8px;border-top:1px solid var(--surface-3);padding-top:8px;display:grid;grid-template-columns:auto auto 1fr;gap:4px 12px;font-size:15px;line-height:1.35;color:var(--chalk);';
+  points.slice().reverse().forEach(p=>{
+    const a = document.createElement('div'); a.textContent = p.label + ' · ' + (p.date || '');
+    const b = document.createElement('div'); b.textContent = p.maxKg + ' kg'; b.style.fontWeight = '800';
+    const c = document.createElement('div'); c.textContent = p.src ? p.src.day + ' · ' + p.src.sr + (p.src.r ? ' · ' + p.src.r + '/5' : '') : '';
+    c.style.color = 'var(--muted-2)';
+    if (p.current){ a.style.fontWeight = '800'; }
+    box.appendChild(a); box.appendChild(b); box.appendChild(c);
+  });
+  return box;
+}
+</script>
 <link rel="stylesheet" href="palette.css?v=3">
 <script src="palette.js?v=1"></script>
 <link rel="stylesheet" href="theme-entreno.css?v=4">
@@ -4908,6 +4943,7 @@ function renderFlashcardOverlay(plan){
 function buildAnalytics(){
   const byCode = {};
   const plansSorted = [...state.plans].filter(p=>!p.needsReview).sort((a,b)=>{
+    if (typeof wo2PlanTime === 'function'){ const d = wo2PlanTime(a) - wo2PlanTime(b); if (d) return d; }
     const wa = typeof a.meta.week === 'number' ? a.meta.week : null;
     const wb = typeof b.meta.week === 'number' ? b.meta.week : null;
     if (wa!==null && wb!==null && wa!==wb) return wa-wb;
@@ -4921,7 +4957,7 @@ function buildAnalytics(){
         if (entry.type!=='exercise') return;
         if (!perCodeThisPlan[entry.code]) perCodeThisPlan[entry.code] = { name: entry.name, kgs:[], ratings:[] };
         entry.sets.forEach((s,si)=>{
-          if (s.kg!==null && s.kg!==undefined) perCodeThisPlan[entry.code].kgs.push(s.kg);
+          if (s.kg!==null && s.kg!==undefined && (typeof wo2SetDone !== 'function' || wo2SetDone(plan, day, exIdx, si).series > 0)) perCodeThisPlan[entry.code].kgs.push(s.kg);
           const r = normalizeCheck(state.checks[checkKey(plan,day,exIdx,si)]);
           if (r!==null) perCodeThisPlan[entry.code].ratings.push(r);
         });
@@ -6800,8 +6836,9 @@ function generateWeekReport(plan){
   const summary = localWeekSummary(perDay);
   const watchPatterns = weekWatchPatterns(perDay);
   const keywordPatterns = weekNoteKeywordPatterns(perDay);
-  const movementCharts = weekMovementCharts();
-  state.weekReport = { planId: plan.id, perDay, status, watchPatterns, keywordPatterns, movementCharts, memo: { loading:false, text: summary, error:null } };
+  const movementCharts = (typeof wo2WeekMovementCharts === 'function') ? wo2WeekMovementCharts(plan) : weekMovementCharts();
+  const memoTxt = (typeof wo2WeekReading === 'function') ? wo2WeekReading(wo2WeekData(plan)) : summary;
+  state.weekReport = { planId: plan.id, perDay, status, watchPatterns, keywordPatterns, movementCharts, memo: { loading:false, text: memoTxt, error:null } };
   render();
 }
 
@@ -7483,7 +7520,7 @@ function renderWeekReportOverlay(plan){
   }
 
   if (r.movementCharts && r.movementCharts.length){
-    const chartsTitle = el('div', null, 'MÁXIMOS ACUMULADOS POR MOVIMIENTO');
+    const chartsTitle = el('div', null, 'EVOLUCIÓN DE CADA MOVIMIENTO · peso máximo hecho cada semana');
     chartsTitle.style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:16px;color:var(--chalk);letter-spacing:.02em;margin:10px 0 12px;';
     sheet.appendChild(chartsTitle);
     r.movementCharts.forEach(mc=>{
@@ -7493,13 +7530,14 @@ function renderWeekReportOverlay(plan){
       head.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;';
       head.appendChild(el('div', null, mc.name)).style.cssText = 'font-family:ArchivoBlack,sans-serif;font-weight:700;font-size:15px;color:var(--chalk);';
       const lastKg = mc.points[mc.points.length-1].maxKg;
-      const kgEl = el('div', null, lastKg+'kg');
+      const kgEl = el('div', null, 'máx ' + Math.max(...mc.points.map(p=>p.maxKg)) + ' kg');
       kgEl.style.cssText = 'font-family:IBM Plex Mono,monospace;font-weight:700;font-size:15px;color:var(--yellow-deep);';
       head.appendChild(kgEl);
       card.appendChild(head);
       const svgWrap = el('div');
-      svgWrap.innerHTML = sparklineSVG(mc.points);
+      svgWrap.innerHTML = mc.points[0] && mc.points[0].date !== undefined ? wo2SparkSVG(mc.points) : sparklineSVG(mc.points);
       card.appendChild(svgWrap);
+      if (mc.points[0] && mc.points[0].date !== undefined) card.appendChild(wo2SparkList(mc.points));
       sheet.appendChild(card);
     });
   }
@@ -7916,7 +7954,7 @@ function wo2ShowBootError(msg){
 })();
 
 </script>
-<script src="competicion.js?v=20261113214152"></script>
+<script src="competicion.js?v=20261113214444"></script>
 <script>
 // WorkOut 2.0 · Competiciones en la app del atleta (lo inserta build_entreno.py).
 // Lee sus fichas de competición en  WO2.base/competitions/{compId}  y las
@@ -8040,7 +8078,7 @@ function wo2RenderCompsScreen(){
 }
 
 </script>
-<script src="google-config.js?v=20261113214152"></script>
+<script src="google-config.js?v=20261113214444"></script>
 <script>
 // ===== WorkOut 2.0 · Vídeos de las series en Google Drive =====
 // Cada vídeo grabado (o añadido) se guarda primero en el móvil, en una cola,
