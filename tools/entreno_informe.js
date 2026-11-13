@@ -373,7 +373,7 @@ function wo2PlanTime(p){
 function wo2MoveKey(e){ return String(wo2ExName(e) || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
 // Peso máximo hecho de un movimiento (clave) en una semana; null si no se hizo
 function wo2DoneMax(p, key){
-  let mx = null; const rs = [];
+  let mx = null, src = null; const rs = [];
   DAY_ORDER.forEach(d=>{
     if (!p.days || !p.days[d]) return;
     p.days[d].forEach((e, i)=>{
@@ -383,11 +383,11 @@ function wo2DoneMax(p, key){
         if (r) rs.push(r);
         const kg = Number(s.kg);
         if (!kg || wo2SetDone(p, d, i, si).series <= 0) return;
-        if (mx === null || kg > mx) mx = kg;
+        if (mx === null || kg > mx){ mx = kg; src = { day: DAY_NAMES[d], sr: (s.series || '?') + '×' + repDisplayText(s), r }; }
       });
     });
   });
-  return mx === null ? null : { kg: mx, avg: rs.length ? rs.reduce((a,b)=>a+b,0) / rs.length : null };
+  return mx === null ? null : { kg: mx, avg: rs.length ? rs.reduce((a,b)=>a+b,0) / rs.length : null, src };
 }
 function wo2Evolution(plan, W){
   const t0 = wo2PlanTime(plan);
@@ -407,7 +407,7 @@ function wo2Evolution(plan, W){
     plans.forEach(p=>{
       const r = wo2DoneMax(p, k); if (!r) return;
       const t = wo2PlanTime(p);
-      pts.push({ kg: r.kg, avg: r.avg, current: p.id === plan.id,
+      pts.push({ kg: r.kg, avg: r.avg, src: r.src, current: p.id === plan.id,
         label: p.meta && p.meta.week != null ? 'S' + p.meta.week : '·',
         date: t ? new Date(t).toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit' }) : '' });
     });
@@ -681,17 +681,17 @@ function wo2WeekPDF(plan, memoText){
     doc.setFont('helvetica','bold'); doc.setFontSize(12.5); doc.setTextColor(201,154,46);
     doc.text('EVOLUCIÓN DE CADA MOVIMIENTO', mX, y); y += 2;
     doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(110,110,110);
-    doc.splitTextToSize(T('Peso máximo HECHO (marcado) cada semana en los movimientos de esta semana, hasta 8 semanas atrás, ordenadas por fecha. Color del punto = valoración media de ese movimiento esa semana.'), cW).forEach(l=>{ doc.text(l, mX, y + 4); y += 3.8; });
+    doc.splitTextToSize(T('Peso máximo HECHO (marcado) cada semana en los movimientos de esta semana, hasta 8 semanas atrás, ordenadas por fecha. A la derecha, el día y la serie de la que sale cada peso, para comprobarlo. Color del punto = valoración media de ese movimiento esa semana.'), cW).forEach(l=>{ doc.text(l, mX, y + 4); y += 3.8; });
     y += 4;
-    const gw = (cW - 6) / 2, gh = 48;
-    EV.forEach((mc, k)=>{
-      const col = k % 2, x = mX + col * (gw + 6);
-      if (col === 0) brk(gh + 4);
+    EV.forEach((mc)=>{
       const pts = mc.points, kgs = pts.map(p=> p.kg);
+      const gh = Math.max(50, 16 + pts.length * 5.2 + 4);
+      brk(gh + 4);
       const mn = Math.min.apply(null, kgs), mxk = Math.max.apply(null, kgs), rg = (mxk - mn) || 1;
-      const title = doc.splitTextToSize(T(mc.name), gw - 34)[0];
-      chartBox(x, y, gw, gh, title, 'máx ' + mxk + ' kg');
-      const pl = x + 9, pr = x + gw - 9, pt = y + 16, pb = y + gh - 12;
+      chartBox(mX, y, cW, gh, mc.name, 'máx ' + mxk + ' kg');
+      // Gráfica (izquierda)
+      const gwid = cW * 0.52;
+      const pl = mX + 9, pr = mX + gwid - 6, pt = y + 16, pb = y + gh - 12;
       doc.setDrawColor(235,235,238); doc.line(pl, pb, pr, pb); doc.line(pl, pt, pr, pt);
       const cs = pts.map((p, i)=>({ x: pts.length > 1 ? pl + (pr - pl) * i / (pts.length - 1) : (pl + pr) / 2, y: pb - (p.kg - mn) / rg * (pb - pt), p }));
       doc.setDrawColor(63,111,159); doc.setLineWidth(0.6);
@@ -707,7 +707,22 @@ function wo2WeekPDF(plan, memoText){
         doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(140,140,140);
         doc.text(T(c.p.date), c.x, y + gh - 3.2, { align:'center' });
       });
-      if (col === 1 || k === EV.length - 1) y += gh + 5;
+      // De dónde sale cada punto (derecha)
+      const lx = mX + gwid + 2;
+      doc.setDrawColor(230,230,233); doc.line(lx - 2, y + 10, lx - 2, y + gh - 3);
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(110,110,110);
+      doc.text('SEMANA', lx + 1, y + 13); doc.text('PESO', lx + 31, y + 13); doc.text(T('DÍA Y SERIE'), lx + 46, y + 13);
+      pts.forEach((p, i)=>{
+        const yy = y + 18.5 + i * 5.2;
+        doc.setFont('helvetica', p.current ? 'bold' : 'normal'); doc.setFontSize(8.3); doc.setTextColor(40,40,40);
+        doc.text(T(p.label + ' · ' + p.date), lx + 1, yy);
+        doc.setFont('helvetica','bold');
+        doc.text(p.kg + ' kg', lx + 31, yy);
+        doc.setFont('helvetica','normal'); doc.setTextColor(90,90,90);
+        const sr = p.src ? p.src.day + ' · ' + p.src.sr + (p.src.r ? ' · ' + p.src.r + '/5' : '') : '';
+        doc.text(doc.splitTextToSize(T(sr), cW - gwid - 46)[0] || '', lx + 46, yy);
+      });
+      y += gh + 5;
     });
   }
 
