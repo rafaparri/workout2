@@ -677,7 +677,7 @@ function wo2WeekPDF(plan, memoText){
   // semanas anteriores (por fecha, no por número de semana), lo marcado de verdad.
   const EV = wo2Evolution(plan, W);
   if (EV.length){
-    y += 2; brk(60);
+    y += 2; brk(26 + Math.max(50, 20 + EV[0].points.length * 5.2) + 4);
     doc.setFont('helvetica','bold'); doc.setFontSize(12.5); doc.setTextColor(201,154,46);
     doc.text('EVOLUCIÓN DE CADA MOVIMIENTO', mX, y); y += 2;
     doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(110,110,110);
