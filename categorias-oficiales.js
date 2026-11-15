@@ -4,7 +4,7 @@
 // (la app avisa al entrenador de los cambios que todavía no ha visto).
 (function(){
   const C = window.WO2CAT = {};
-  C.ACTUALIZADO = '1 de noviembre de 2026';
+  C.ACTUALIZADO = '15 de noviembre de 2026';
   C.VIGENTE_DESDE = '1 de agosto de 2026';
 
   // Grupos de edad

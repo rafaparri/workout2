@@ -6,7 +6,7 @@
 //   cats: 'junior', 'sub23', 'absoluto', 'master'
 //   sex:  'FM' (femenino y masculino), 'F' o 'M'
 //   scope: 'es' (España) o 'int' (internacional)
-window.WO2_OFICIAL_ACTUALIZADO = '1 de noviembre de 2026';
+window.WO2_OFICIAL_ACTUALIZADO = '15 de noviembre de 2026';
 // Cambios del calendario oficial (la app avisa al entrenador): { id, date, title, text }
 window.WO2_OFICIAL_CAMBIOS = [
   { id:'2026-11-mundial-ningbo', date:'1 de noviembre de 2026', title:'Mundial Absoluto 2026: sede y fechas corregidas',
@@ -24,5 +24,6 @@ window.WO2_OFICIAL = [
   { id:'2027-eu-abs', name:'Campeonato de Europa Absoluto', place:'Antalya (Turquía)', startDate:'2027-04-11', endDate:'2027-04-18', scope:'int', org:'EWF', cats:['absoluto'], sex:'FM' },
   { id:'2027-wmg-kansai', name:'World Masters Games 2027 Kansai · Halterofilia', place:'Naruto, Tokushima (Japón)', startDate:'2027-05-17', endDate:'2027-05-25', scope:'int', org:'Máster', cats:['master'], sex:'FM' },
   { id:'2027-eu-masters', name:'Campeonato de Europa Máster', place:'Laukaa (Finlandia)', startDate:'2027-08-04', endDate:'2027-08-13', scope:'int', org:'Máster', cats:['master'], sex:'FM' },
+  { id:'2027-mundo-abs', name:'Campeonato del Mundo Absoluto', place:'Ereván (Armenia)', startDate:'2027-09-21', endDate:'2027-10-03', scope:'int', org:'IWF', cats:['absoluto'], sex:'FM', note:'Fechas por confirmar por la IWF' },
   { id:'2028-mundo-masters', name:'Campeonato del Mundo Máster', place:'Corbera de Llobregat (Barcelona)', startDate:'2028-07-27', endDate:'2028-08-05', scope:'int', org:'Máster', cats:['master'], sex:'FM', note:'Fechas por confirmar' }
 ];
