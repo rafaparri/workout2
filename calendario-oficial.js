@@ -9,6 +9,8 @@
 window.WO2_OFICIAL_ACTUALIZADO = '15 de noviembre de 2026';
 // Cambios del calendario oficial (la app avisa al entrenador): { id, date, title, text }
 window.WO2_OFICIAL_CAMBIOS = [
+  { id:'2026-11-kansai-fechas', date:'15 de noviembre de 2026', title:'World Masters Games Kansai 2027: fechas de halterofilia corregidas',
+    text:'Según la web oficial de la organización (Tokushima), la halterofilia de los World Masters Games 2027 se compite del 16 al 24 de mayo de 2027, no del 17 al 25. Ahí mismo se celebra también el Campeonato del Mundo Máster de la IMWA.' },
   { id:'2026-11-mundial-ningbo', date:'1 de noviembre de 2026', title:'Mundial Absoluto 2026: sede y fechas corregidas',
     text:'Según el reglamento oficial de la IWF, el Campeonato del Mundo Absoluto 2026 se celebra en Ningbo (China) del 27 de octubre al 8 de noviembre, no en Chengdú del 28 de octubre al 10 de noviembre.' }
 ];
@@ -22,7 +24,7 @@ window.WO2_OFICIAL = [
   { id:'2026-copa-rey-reina', name:'Copa S.M. el Rey y Copa S.M. la Reina', place:'Zarautz (Gipuzkoa)', startDate:'2026-11-28', endDate:'2026-11-30', scope:'es', org:'RFEH', cats:['absoluto'], sex:'FM' },
   { id:'2027-open-potsdam', name:'6.º Open Internacional de Halterofilia Máster de Alemania', place:'Potsdam (Alemania)', startDate:'2027-01-29', endDate:'2027-01-31', scope:'int', org:'Máster', cats:['master'], sex:'FM' },
   { id:'2027-eu-abs', name:'Campeonato de Europa Absoluto', place:'Antalya (Turquía)', startDate:'2027-04-11', endDate:'2027-04-18', scope:'int', org:'EWF', cats:['absoluto'], sex:'FM' },
-  { id:'2027-wmg-kansai', name:'World Masters Games 2027 Kansai · Halterofilia', place:'Naruto, Tokushima (Japón)', startDate:'2027-05-17', endDate:'2027-05-25', scope:'int', org:'Máster', cats:['master'], sex:'FM' },
+  { id:'2027-wmg-kansai', name:'World Masters Games 2027 Kansai · Halterofilia (y Campeonato del Mundo Máster IMWA)', place:'Naruto, Tokushima (Japón)', startDate:'2027-05-16', endDate:'2027-05-24', scope:'int', org:'Máster', cats:['master'], sex:'FM', note:'El 15 de mayo es día de acreditaciones, sin competición' },
   { id:'2027-eu-masters', name:'Campeonato de Europa Máster', place:'Laukaa (Finlandia)', startDate:'2027-08-04', endDate:'2027-08-13', scope:'int', org:'Máster', cats:['master'], sex:'FM' },
   { id:'2027-mundo-abs', name:'Campeonato del Mundo Absoluto', place:'Ereván (Armenia)', startDate:'2027-09-21', endDate:'2027-10-03', scope:'int', org:'IWF', cats:['absoluto'], sex:'FM', note:'Fechas por confirmar por la IWF' },
   { id:'2028-mundo-masters', name:'Campeonato del Mundo Máster', place:'Corbera de Llobregat (Barcelona)', startDate:'2028-07-27', endDate:'2028-08-05', scope:'int', org:'Máster', cats:['master'], sex:'FM', note:'Fechas por confirmar' }
