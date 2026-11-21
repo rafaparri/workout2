@@ -166,6 +166,15 @@ service cloud.firestore {
       allow write: if hasCoachGrant(clubId);
     }
 
+    // Ciclo menstrual (dato de salud, opcional). Solo la atleta lee y escribe.
+    // Su entrenador solo lo lee si ella lo ha compartido (sharedWithCoach).
+    // El administrador de la plataforma NO tiene acceso.
+    match /clubs/{clubId}/athletes/{athleteId}/cycle/{docId} {
+      allow read: if hasAthleteGrant(clubId, athleteId)
+                     || (hasCoachGrant(clubId) && resource.data.sharedWithCoach == true);
+      allow write: if hasAthleteGrant(clubId, athleteId);
+    }
+
     // Calendario de competiciones del club: lo gestiona el entrenador.
     match /clubs/{clubId}/competitions/{compId} {
       allow read, write: if hasCoachGrant(clubId);

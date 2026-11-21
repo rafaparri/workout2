@@ -103,6 +103,11 @@
       <div id="uploadMsg" class="msg"></div>
     </div>
 
+    <div class="card" id="cycleCard" style="display:none;">
+      <label>🗓️ Ciclo (compartido por la atleta)</label>
+      <div id="cycleBody"></div>
+    </div>
+
     <div class="card">
       <label>Semanas subidas</label>
       <div id="plansList"><div class="empty">Cargando…</div></div>
@@ -432,7 +437,7 @@ function planId(meta){
         return;
       }
       renderAthlete(athSnap.data());
-      loadPlans();
+      loadPlans(); loadCoachCycle();
     }catch(e){
       document.getElementById('loadingMsg').textContent = 'Error: ' + (e.message || e.code);
     }
@@ -578,6 +583,58 @@ function planId(meta){
   document.getElementById('weekStart').addEventListener('change', ()=>{
     const el = document.getElementById('weekStart'); const m = wo2Monday(el.value); if (m) el.value = m; wo2ShowRange();
   });
+
+  function cyTodayStr(){
+    const d = new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function cyDayNum(str){ const a=str.split('-').map(Number); return Math.round(Date.UTC(a[0],a[1]-1,a[2])/86400000); }
+  function cyFmt(str){ const a=str.split('-'); return a[2]+'/'+a[1]+'/'+a[0]; }
+  function cyEffectiveLength(c){
+    const st = (c.starts||[]).slice().sort();
+    if (st.length >= 3){
+      const diffs = [];
+      for (let i=Math.max(1, st.length-6); i<st.length; i++) diffs.push(cyDayNum(st[i])-cyDayNum(st[i-1]));
+      const ok = diffs.filter(d=>d>=21 && d<=40);
+      if (ok.length) return Math.round(ok.reduce((a,b)=>a+b,0)/ok.length);
+    }
+    return Math.min(40, Math.max(21, Number(c.cycleLength)||28));
+  }
+  /* Estimación orientativa (no médica). Devuelve null si no hay datos. */
+  function cyPhase(c, todayStr){
+    if (!c || !c.enabled || !(c.starts||[]).length) return null;
+    const st = c.starts.slice().sort();
+    const t = cyDayNum(todayStr || cyTodayStr());
+    const past = st.filter(x=>cyDayNum(x)<=t);
+    if (!past.length) return null;
+    const L = cyEffectiveLength(c);
+    const P = Math.min(10, Math.max(2, Number(c.periodLength)||5));
+    const day = t - cyDayNum(past[past.length-1]) + 1;
+    if (day > L + 7) return { day, L, key:'sin-datos', label:'Sin datos recientes', icon:'❔', tip:'Registra el inicio de tu último periodo para actualizar la estimación.' };
+    const ov = L - 14;
+    if (day <= P) return { day, L, key:'menstrual', label:'Menstrual', icon:'🔴', tip:'Escucha a tu cuerpo: si la energía es baja, puedes bajar la intensidad.' };
+    if (day < ov-1) return { day, L, key:'folicular', label:'Folicular', icon:'🌱', tip:'Suele ser una fase de buena energía para trabajo de intensidad.' };
+    if (day <= ov+1) return { day, L, key:'ovulacion', label:'Ovulación (estimada)', icon:'🌕', tip:'Calienta bien y cuida la técnica y las articulaciones.' };
+    if (day <= L) return { day, L, key:'lutea', label:'Lútea', icon:'🌙', tip:'Puede haber más fatiga o calor; adapta descansos y volumen si lo necesitas.' };
+    return { day, L, key:'retraso', label:'Posible retraso', icon:'⏳', tip:'Tu ciclo va más largo que la media. Registra el inicio cuando llegue.' };
+  }
+
+  async function loadCoachCycle(){
+    const card=document.getElementById('cycleCard'), body=document.getElementById('cycleBody');
+    card.style.display='none';
+    try{
+      const snap=await athleteRef().collection('cycle').doc('main').get();
+      if(!snap.exists) return;
+      const c=snap.data();
+      if(!c.enabled || c.sharedWithCoach!==true) return;
+      const ph=cyPhase(c);
+      const starts=(c.starts||[]).slice().sort().reverse().slice(0,6).map(cyFmt).join(', ');
+      body.innerHTML=(ph?'<div style="font-size:18px;line-height:1.5;"><b>'+ph.icon+' '+ph.label+' · día '+ph.day+' de ~'+ph.L+'</b><br><span style="color:var(--muted);">'+ph.tip+'</span></div>':'<div class="empty">Sin datos recientes.</div>')+
+        '<p style="font-size:15px;margin:10px 0 0;">Últimos inicios: '+(starts||'—')+'</p>'+
+        '<p style="font-size:13px;color:var(--muted);">Estimación orientativa, no médica. Solo visible porque la atleta lo ha compartido; puede retirarlo cuando quiera.</p>';
+      card.style.display='';
+    }catch(e){ /* sin permiso o sin documento: no se muestra nada */ }
+  }
 
   async function loadPlans(){
     const listEl = document.getElementById('plansList');

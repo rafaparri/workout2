@@ -100,6 +100,26 @@
   .rt-time{ font-family:'IBM Plex Mono',monospace; font-weight:700; }
   .rt-btns{ display:flex; gap:8px; align-items:center; }
   .rt-btns button{ width:auto; background:rgba(255,255,255,.15); border:none; color:#fff; font-family:ArchivoBlack,sans-serif; font-weight:700; font-size:15px; padding:10px 12px; border-radius:8px; cursor:pointer; }
+
+  .cyBox{ padding:16px; }
+  .cyH{ font-family:ArchivoBlack,sans-serif; font-size:19px; margin:6px 0 10px; }
+  .cyP{ font-size:16px; line-height:1.5; margin:8px 0; }
+  .cyNote{ color:var(--muted); font-size:14px; }
+  .cyLbl{ display:block; font-size:15px; font-weight:700; margin:12px 0 4px; }
+  .cyCheck{ display:flex; gap:10px; align-items:flex-start; font-size:16px; line-height:1.4; margin:14px 0; }
+  .cyCheck input{ width:22px; height:22px; flex:none; }
+  .cyBox input[type=date], .cyBox input[type=number]{ width:100%; font-size:17px; padding:10px; border:2px solid var(--surface-3); border-radius:10px; background:var(--surface); color:var(--chalk); box-sizing:border-box; }
+  .cyRow{ display:flex; gap:10px; align-items:flex-end; margin-bottom:10px; }
+  .cyRow > div{ flex:1; }
+  .cyRow > input{ flex:1; }
+  .cySmall{ width:auto; padding:11px 16px; margin:0; font-size:14px; }
+  .cyHistRow{ align-items:center; justify-content:space-between; font-size:17px; border-bottom:1px solid var(--surface-3); padding:6px 0; }
+  .cyHr{ border:none; border-top:1px solid var(--surface-3); margin:18px 0; }
+  .cyDanger{ color:var(--red); border-color:var(--red); }
+  .cyChip{ display:flex; gap:12px; align-items:center; background:var(--surface-2); border:1px solid var(--surface-3); border-radius:12px; padding:12px 14px; margin-bottom:14px; font-size:15px; line-height:1.4; }
+  .cyChip b{ font-size:16px; }
+  .cyChip span{ color:var(--muted); }
+  .cyChip .cyIcon{ font-size:28px; color:inherit; }
 </style>
 <link rel="stylesheet" href="palette.css?v=3">
 <script src="palette.js?v=1"></script>
@@ -413,6 +433,12 @@
     const content = document.getElementById('appContent');
     content.innerHTML = '';
 
+    if (!cycleLoadStarted){ cycleLoadStarted = true; loadCycle().then(()=>renderApp()); }
+    if (showCycle){
+      bc.innerHTML = '<a onclick="showCycle=false;renderApp();">Semanas</a> › Ciclo';
+      renderCycle(content);
+      return;
+    }
     if (showAnalytics){
       bc.innerHTML = '<a onclick="showAnalytics=false;renderApp();">Semanas</a> › Análisis';
       renderAnalytics(content);
@@ -436,6 +462,11 @@
   }
 
   function renderWeeksList(container){
+    const cycleBtn = document.createElement('button');
+    cycleBtn.className = 'reportBtn';
+    cycleBtn.textContent = '🗓️ Ciclo';
+    cycleBtn.onclick = ()=>{ showCycle = true; renderApp(); };
+    container.appendChild(cycleBtn);
     if (athletePlans.length){
       const analyticsBtn = document.createElement('button');
       analyticsBtn.className = 'reportBtn';
@@ -503,6 +534,11 @@
     reportBtn.textContent = '📄 Informe del día';
     reportBtn.onclick = ()=> openDayReport(plan, day);
     container.appendChild(reportBtn);
+    if (cycleData && cycleData.enabled){
+      const chipWrap = document.createElement('div');
+      chipWrap.innerHTML = cyChipHTML(cycleData);
+      if (chipWrap.firstChild) container.appendChild(chipWrap.firstChild);
+    }
 
     exEntries.forEach((entry)=>{
       const exIdx = entries.indexOf(entry);
@@ -587,6 +623,137 @@
     box.appendChild(closeBtn);
     overlay.appendChild(box);
     document.body.appendChild(overlay);
+  }
+
+
+  /* ============== Ciclo menstrual (opcional, privado por defecto) ============== */
+  let showCycle = false, cycleData = null, cycleLoadStarted = false;
+  const CYCLE_DEFAULT = { enabled:false, starts:[], cycleLength:28, periodLength:5, sharedWithCoach:false };
+
+  function cycleRef(){
+    return db.collection('clubs').doc(currentClubId).collection('athletes').doc(signedInUser.uid).collection('cycle').doc('main');
+  }
+  async function loadCycle(){
+    try{
+      const snap = await cycleRef().get();
+      cycleData = snap.exists ? Object.assign({}, CYCLE_DEFAULT, snap.data()) : Object.assign({}, CYCLE_DEFAULT);
+    }catch(e){ cycleData = Object.assign({}, CYCLE_DEFAULT); }
+  }
+  async function saveCycle(patch){
+    cycleData = Object.assign({}, cycleData, patch, { updatedAt: Date.now() });
+    await cycleRef().set(cycleData);
+  }
+  function cyTodayStr(){
+    const d = new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function cyDayNum(str){ const a=str.split('-').map(Number); return Math.round(Date.UTC(a[0],a[1]-1,a[2])/86400000); }
+  function cyFmt(str){ const a=str.split('-'); return a[2]+'/'+a[1]+'/'+a[0]; }
+  function cyEffectiveLength(c){
+    const st = (c.starts||[]).slice().sort();
+    if (st.length >= 3){
+      const diffs = [];
+      for (let i=Math.max(1, st.length-6); i<st.length; i++) diffs.push(cyDayNum(st[i])-cyDayNum(st[i-1]));
+      const ok = diffs.filter(d=>d>=21 && d<=40);
+      if (ok.length) return Math.round(ok.reduce((a,b)=>a+b,0)/ok.length);
+    }
+    return Math.min(40, Math.max(21, Number(c.cycleLength)||28));
+  }
+  /* Estimación orientativa (no médica). Devuelve null si no hay datos. */
+  function cyPhase(c, todayStr){
+    if (!c || !c.enabled || !(c.starts||[]).length) return null;
+    const st = c.starts.slice().sort();
+    const t = cyDayNum(todayStr || cyTodayStr());
+    const past = st.filter(x=>cyDayNum(x)<=t);
+    if (!past.length) return null;
+    const L = cyEffectiveLength(c);
+    const P = Math.min(10, Math.max(2, Number(c.periodLength)||5));
+    const day = t - cyDayNum(past[past.length-1]) + 1;
+    if (day > L + 7) return { day, L, key:'sin-datos', label:'Sin datos recientes', icon:'❔', tip:'Registra el inicio de tu último periodo para actualizar la estimación.' };
+    const ov = L - 14;
+    if (day <= P) return { day, L, key:'menstrual', label:'Menstrual', icon:'🔴', tip:'Escucha a tu cuerpo: si la energía es baja, puedes bajar la intensidad.' };
+    if (day < ov-1) return { day, L, key:'folicular', label:'Folicular', icon:'🌱', tip:'Suele ser una fase de buena energía para trabajo de intensidad.' };
+    if (day <= ov+1) return { day, L, key:'ovulacion', label:'Ovulación (estimada)', icon:'🌕', tip:'Calienta bien y cuida la técnica y las articulaciones.' };
+    if (day <= L) return { day, L, key:'lutea', label:'Lútea', icon:'🌙', tip:'Puede haber más fatiga o calor; adapta descansos y volumen si lo necesitas.' };
+    return { day, L, key:'retraso', label:'Posible retraso', icon:'⏳', tip:'Tu ciclo va más largo que la media. Registra el inicio cuando llegue.' };
+  }
+  function cyChipHTML(c){
+    const ph = cyPhase(c);
+    if (!ph) return '';
+    return '<div class="cyChip"><span class="cyIcon">'+ph.icon+'</span><div><b>'+ph.label+' · día '+ph.day+'</b><br><span>'+ph.tip+'</span></div></div>';
+  }
+
+  function renderCycle(container){
+    const c = cycleData || Object.assign({}, CYCLE_DEFAULT);
+    const box = document.createElement('div');
+    box.className = 'listCard cyBox';
+    if (!c.enabled){
+      box.innerHTML =
+        '<h3 class="cyH">Seguimiento del ciclo</h3>'+
+        '<p class="cyP">Función <b>opcional</b> para relacionar tu ciclo con tu rendimiento. Los datos son de salud y por eso:</p>'+
+        '<ul class="cyP"><li>Solo los ves tú. Tu entrenador <b>no</b> los ve salvo que tú se lo permitas.</li>'+
+        '<li>El administrador de la plataforma nunca tiene acceso.</li>'+
+        '<li>Puedes desactivarlo y borrar todo cuando quieras.</li>'+
+        '<li>Las fases son una estimación orientativa, <b>no un dato médico</b>.</li></ul>'+
+        '<label class="cyCheck"><input type="checkbox" id="cyConsent"> Entiendo y consiento guardar estos datos de forma privada.</label>'+
+        '<button class="reportBtn" id="cyActivate">Activar</button>';
+      container.appendChild(box);
+      box.querySelector('#cyActivate').onclick = async ()=>{
+        if (!box.querySelector('#cyConsent').checked){ alert('Marca la casilla de consentimiento para activar.'); return; }
+        try{ await saveCycle({ enabled:true, consentAt:Date.now() }); renderApp(); }
+        catch(e){ alert('No se pudo guardar: '+(e.message||e)); }
+      };
+      return;
+    }
+    const ph = cyPhase(c);
+    const starts = (c.starts||[]).slice().sort().reverse();
+    box.innerHTML =
+      '<h3 class="cyH">Tu ciclo</h3>'+
+      (ph ? cyChipHTML(c) : '<p class="cyP">Aún no hay datos. Indica el primer día de tu último periodo.</p>')+
+      '<p class="cyP cyNote">Estimación orientativa. No sustituye consejo médico.</p>'+
+      '<button class="reportBtn" id="cyToday">Ha empezado hoy</button>'+
+      '<label class="cyLbl">Primer día de un periodo (otra fecha)</label>'+
+      '<div class="cyRow"><input type="date" id="cyDate" max="'+cyTodayStr()+'"><button class="reportBtn cySmall" id="cyAdd">Añadir</button></div>'+
+      '<div class="cyRow"><div><label class="cyLbl">Duración del ciclo (días)</label><input type="number" id="cyLen" min="21" max="40" value="'+(Number(c.cycleLength)||28)+'"></div>'+
+      '<div><label class="cyLbl">Duración del periodo (días)</label><input type="number" id="cyPer" min="2" max="10" value="'+(Number(c.periodLength)||5)+'"></div></div>'+
+      '<button class="reportBtn" id="cySaveLens">Guardar duraciones</button>'+
+      '<p class="cyP">Con 3 o más registros se usa la media de tus ciclos reales.</p>'+
+      '<h3 class="cyH">Historial</h3><div id="cyHist"></div>'+
+      '<hr class="cyHr">'+
+      '<label class="cyCheck"><input type="checkbox" id="cyShare"'+(c.sharedWithCoach?' checked':'')+'> Compartir con mi entrenador</label>'+
+      '<p class="cyP cyNote">Si lo activas, tu entrenador verá tu fase actual y tus fechas. Puedes quitarlo cuando quieras.</p>'+
+      '<button class="reportBtn cyDanger" id="cyDelete">Borrar todos mis datos del ciclo</button>';
+    container.appendChild(box);
+    const hist = box.querySelector('#cyHist');
+    if (!starts.length) hist.innerHTML = '<p class="cyP">Sin registros.</p>';
+    starts.forEach(d=>{
+      const r = document.createElement('div'); r.className='cyRow cyHistRow';
+      r.innerHTML = '<span>'+cyFmt(d)+'</span>';
+      const b = document.createElement('button'); b.className='reportBtn cySmall'; b.textContent='Quitar';
+      b.onclick = async ()=>{ try{ await saveCycle({ starts: c.starts.filter(x=>x!==d) }); renderApp(); }catch(e){ alert('Error: '+(e.message||e)); } };
+      r.appendChild(b); hist.appendChild(r);
+    });
+    const addStart = async (d)=>{
+      if (!d || d > cyTodayStr()){ alert('Elige una fecha válida (no futura).'); return; }
+      const set = Array.from(new Set((c.starts||[]).concat([d]))).sort();
+      try{ await saveCycle({ starts:set }); renderApp(); }catch(e){ alert('Error: '+(e.message||e)); }
+    };
+    box.querySelector('#cyToday').onclick = ()=> addStart(cyTodayStr());
+    box.querySelector('#cyAdd').onclick = ()=> addStart(box.querySelector('#cyDate').value);
+    box.querySelector('#cySaveLens').onclick = async ()=>{
+      const L = Math.round(Number(box.querySelector('#cyLen').value)), P = Math.round(Number(box.querySelector('#cyPer').value));
+      if (!(L>=21 && L<=40) || !(P>=2 && P<=10)){ alert('Ciclo entre 21 y 40 días; periodo entre 2 y 10.'); return; }
+      try{ await saveCycle({ cycleLength:L, periodLength:P }); renderApp(); }catch(e){ alert('Error: '+(e.message||e)); }
+    };
+    box.querySelector('#cyShare').onchange = async (ev)=>{
+      try{ await saveCycle({ sharedWithCoach: ev.target.checked }); }
+      catch(e){ alert('Error: '+(e.message||e)); ev.target.checked = !ev.target.checked; }
+    };
+    box.querySelector('#cyDelete').onclick = async ()=>{
+      if (!confirm('Se borrarán TODOS tus datos del ciclo y se desactivará la función. ¿Seguro?')) return;
+      try{ await cycleRef().delete(); cycleData = Object.assign({}, CYCLE_DEFAULT); renderApp(); }
+      catch(e){ alert('Error: '+(e.message||e)); }
+    };
   }
 
   /* ============== Análisis (evolución por movimiento) ============== */
