@@ -637,8 +637,12 @@ async function buildBackupObject(){""")
 # ---------- Recarga forzada con versión visible ----------
 # El código vive en entreno_recarga.js; aquí solo se engancha al menú y a la pantalla.
 RECARGA_JS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_nutricion.js'), encoding='utf-8').read() + open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_recarga.js'), encoding='utf-8').read()
-patch("/* ---- Menú (hoja inferior con el resto de acciones) ---- */\n", RECARGA_JS + "/* ---- Menú (hoja inferior con el resto de acciones) ---- */\n")
+CICLO_JS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entreno_ciclo.js'), encoding='utf-8').read()
+patch("/* ---- Menú (hoja inferior con el resto de acciones) ---- */\n", RECARGA_JS + CICLO_JS + "/* ---- Menú (hoja inferior con el resto de acciones) ---- */\n")
+patch("  wo2CompDayBlock(section, plan, state.activeDay);\n",
+      "  wo2CompDayBlock(section, plan, state.activeDay);\n  { const wo2Chip = wo2CicloChip(); if (wo2Chip) section.appendChild(wo2Chip); }\n")
 patch("  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', 'Salir', ()=>{ wo2SignOut(); }));\n",
+      "  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🗓️', 'Ciclo', ()=>{ state.showMenu = false; render(); wo2CicloAbrir(); }));\n"
       "  sheet.appendChild(menuItem('🔄', 'Recargar app (versión ' + wo2VersionTexto() + ')', ()=>{ wo2RecargarApp(); }));\n"
       "  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', 'Salir', ()=>{ wo2SignOut(); }));\n")
 
