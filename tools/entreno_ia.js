@@ -250,7 +250,8 @@ function wo2CLPrompt(items){
   t += '\nAnaliza solo lo que se ve en los fotogramas (no puedes ver la velocidad; si algo no se aprecia, dilo).' +
     ' Responde en español, en texto plano, separando cada vídeo EXACTAMENTE con una línea «### VÍDEO N» y con este formato:\n' +
     '### VÍDEO 1\nLo que está bien:\n- …\nA mejorar (por orden de importancia):\n- … (máximo 3; qué se ve, en qué fotograma y por qué importa)\nConsigna para la próxima serie: …\n' +
-    '\nMáximo 150 palabras por vídeo.';
+    '\nMáximo 150 palabras por vídeo.' +
+    '\n\nEntrégame la respuesta como un DOCUMENTO de texto descargable llamado «analisis-videos.txt» (si no puedes crear archivos, escríbela en texto plano). No añadas nada fuera de las secciones «### VÍDEO N».';
   return t;
 }
 async function wo2CLPrepare(plan, d){
@@ -268,7 +269,7 @@ async function wo2CLPrepare(plan, d){
       items.push(ctx);
     }
     WO2CL.pack = { files, text: wo2CLPrompt(items), ids: vids.map(v=> v.id) };
-    try{ localStorage.setItem('wo2_cl_order_' + WO2CL.key, JSON.stringify(WO2CL.pack.ids)); }catch(e){}
+    try{ localStorage.setItem('wo2_cl_order_' + WO2CL.key, JSON.stringify(WO2CL.pack.ids)); localStorage.setItem('wo2_cl_pending', JSON.stringify({ planId: plan.id, day: d, at: Date.now() })); }catch(e){}
     WO2CL.busy = '';
   }catch(e){
     WO2CL.busy = '';
@@ -337,6 +338,11 @@ function wo2IADayBox(plan, d){
     box.appendChild(mk(ready ? '1 · Preparado ✓ (volver a preparar)' : '1 · Preparar imágenes y pregunta', ()=> wo2CLPrepare(plan, d), !ready));
     if (ready) box.appendChild(mk('2 · Compartir con Claude', ()=> wo2CLShare(), true));
     box.appendChild(mk((ready ? '3' : '2') + ' · Pegar el análisis de Claude', ()=> wo2CLPaste(plan, d), false));
+    box.appendChild(mk('… o cargar el archivo de Claude (analisis-videos.txt)', ()=>{
+      const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.txt,.md,text/plain,text/markdown';
+      fi.onchange = async ()=>{ const f = fi.files && fi.files[0]; if (!f) return; try{ wo2CLPaste(plan, d, await f.text()); }catch(e){ WO2CL.err = 'No se ha podido leer el archivo.'; render(); } };
+      fi.click();
+    }, false));
   }
   if (WO2CL.showBox){
     const ta = document.createElement('textarea'); ta.placeholder = 'Pega aquí la respuesta de Claude';
@@ -355,3 +361,24 @@ function wo2IADayBox(plan, d){
   det.appendChild(sm); det.appendChild(wk); box.appendChild(det);
   return box;
 }
+
+// ===== Análisis que llega en la dirección: …entreno.html#ia=<texto> (atajo de iPhone) =====
+(function(){
+  let tries = 0;
+  const run = ()=>{
+    const h = location.hash || '';
+    if (h.indexOf('#ia=') !== 0) return;
+    if (typeof state === 'undefined' || !state.plans || !state.plans.length || !WO2 || !WO2.base || !Array.isArray(WO2.videos)){
+      if (++tries < 40) setTimeout(run, 500); return;
+    }
+    let txt = ''; try{ txt = decodeURIComponent(h.slice(4)); }catch(e){ txt = h.slice(4); }
+    history.replaceState(null, '', location.pathname + location.search);
+    let pend = null; try{ pend = JSON.parse(localStorage.getItem('wo2_cl_pending') || 'null'); }catch(e){}
+    const plan = pend && state.plans.find(p=> p.id === pend.planId);
+    if (!plan){ alert('Ha llegado un análisis, pero no sé de qué día es. Abre el día y pulsa «Pegar el análisis».'); return; }
+    state.activePlanId = plan.id; state.activeDay = pend.day; WO2CL.showBox = false;
+    wo2CLPaste(plan, pend.day, txt);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ()=> setTimeout(run, 800)); else setTimeout(run, 800);
+  window.addEventListener('hashchange', ()=>{ tries = 0; run(); });
+})();
