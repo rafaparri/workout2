@@ -646,6 +646,9 @@ patch("  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', '
       "  sheet.appendChild(menuItem('🔄', 'Recargar app (versión ' + wo2VersionTexto() + ')', ()=>{ wo2RecargarApp(); }));\n"
       "  if (WO2_ATHLETE && !WO2.coachView) sheet.appendChild(menuItem('🚪', 'Salir', ()=>{ wo2SignOut(); }));\n")
 
+# Análisis de los vídeos del día con la app de Claude (gratis)
+patch("    wo2DayTimer(section, plan, state.activeDay);\n",
+      "    wo2DayTimer(section, plan, state.activeDay);\n    if (typeof wo2IADayBox === 'function'){ const iab = wo2IADayBox(plan, state.activeDay); if (iab) section.appendChild(iab); }\n")
 patch('\ninitApp();\n</script>', '\n' + ADAPTER + '\n</script>')
 patch("      if (prof.metrics) u.metrics = prof.metrics;\n      users = [u];\n      activeUserId = u.id;\n",
       "      if (prof.metrics) u.metrics = prof.metrics;\n      users = [u];\n      activeUserId = u.id;\n      wo2MergeNutriWeights(u);\n")

@@ -102,7 +102,8 @@ function wo2IAFrames(blob){
 }
 // Se llama al subir un vídeo (todavía está entero en el móvil)
 async function wo2IAPrepare(driveId, blob){
-  if (!wo2IAReady() || !driveId || !blob) return;
+  // Siempre: sirven para el análisis con el servidor o con la app de Claude
+  if (!driveId || !blob) return;
   try{ const p = await wo2IAFrames(blob); await wo2IASave(driveId, p); }catch(e){}
 }
 
@@ -195,4 +196,162 @@ function wo2IABlock(v){
     }
   }
   return wrap.childNodes.length ? wrap : null;
+}
+
+
+// ===== Análisis gratis con la app de Claude (vídeos del día) =====
+// 1) «Preparar»: una imagen por vídeo (10 fotogramas + datos) y el texto de la
+//    pregunta. 2) «Compartir con Claude». 3) «Pegar análisis»: la respuesta se
+//    reparte sola a cada vídeo (### VÍDEO 1, ### VÍDEO 2…) y queda guardada.
+var WO2CL = { busy:'', err:'', pack:null, key:'' };
+function wo2CLKey(plan, d){ return plan.id + '|' + d; }
+function wo2CLVideos(plan, d){ return (WO2.videos || []).filter(v=> v.planId === plan.id && v.day === d).sort((a,b)=> (a.createdAt||0) - (b.createdAt||0)); }
+function wo2CLWeak(){ try{ return localStorage.getItem('wo2_cl_weak') || ''; }catch(e){ return ''; } }
+function wo2CLSetWeak(t){ try{ localStorage.setItem('wo2_cl_weak', t); }catch(e){} }
+async function wo2CLFramesFor(v){
+  let pack = await wo2IAGetSaved(v.id);
+  if (pack && pack.frames && pack.frames.length) return pack;
+  if (!wo2TokenValid()) throw new Error('NEED_DRIVE');
+  const r = await wo2Api('https://www.googleapis.com/drive/v3/files/' + v.id + '?alt=media');
+  pack = await wo2IAFrames(await r.blob());
+  await wo2IASave(v.id, pack);
+  return pack;
+}
+// Hoja de contactos: 5 columnas × 2 filas, con cabecera y el segundo de cada fotograma
+function wo2CLSheet(pack, title, n){
+  return new Promise((resolve)=>{
+    const imgs = pack.frames.map(f=>{ const im = new Image(); im.src = 'data:image/jpeg;base64,' + f.data; return im; });
+    let left = imgs.length;
+    const go = ()=>{
+      const W0 = imgs[0].naturalWidth || 768, H0 = imgs[0].naturalHeight || 432;
+      const cols = 5, rows = Math.ceil(imgs.length / cols), cw = 320, ch = Math.round(cw * H0 / W0), head = 70, lab = 26;
+      const c = document.createElement('canvas'); c.width = cols * cw; c.height = head + rows * (ch + lab);
+      const x = c.getContext('2d');
+      x.fillStyle = '#111'; x.fillRect(0, 0, c.width, c.height);
+      x.fillStyle = '#fff'; x.font = 'bold 30px Arial'; x.fillText('VÍDEO ' + n + ' · ' + title, 14, 44);
+      imgs.forEach((im, i)=>{
+        const cx = (i % cols) * cw, cy = head + Math.floor(i / cols) * (ch + lab);
+        try{ x.drawImage(im, cx, cy, cw, ch); }catch(e){}
+        x.fillStyle = '#ffd966'; x.font = 'bold 20px Arial';
+        x.fillText((i + 1) + ' · ' + String(pack.frames[i].t).replace('.', ',') + ' s', cx + 8, cy + ch + 20);
+      });
+      c.toBlob(b=> resolve(b), 'image/jpeg', 0.85);
+    };
+    imgs.forEach(im=>{ im.onload = im.onerror = ()=>{ if (--left === 0) go(); }; });
+  });
+}
+function wo2CLPrompt(items){
+  const weak = wo2CLWeak().trim();
+  let t = 'Eres un entrenador de halterofilia con mucha experiencia. Te paso ' + items.length + (items.length === 1 ? ' imagen' : ' imágenes') +
+    ': cada una tiene 10 fotogramas en orden de UNA serie (de izquierda a derecha y de arriba abajo, con el segundo del vídeo debajo de cada uno).\n';
+  if (weak) t += '\nMis puntos débiles conocidos: ' + weak + '\n';
+  t += '\n';
+  items.forEach((it, i)=>{ t += 'VÍDEO ' + (i + 1) + ': ' + it.exercise + (it.label ? ' — ' + it.label : '') + (it.sets ? ' (programado: ' + it.sets + ')' : '') + (it.note ? '. Nota mía: ' + it.note : '') + '\n'; });
+  t += '\nAnaliza solo lo que se ve en los fotogramas (no puedes ver la velocidad; si algo no se aprecia, dilo).' +
+    ' Responde en español, en texto plano, separando cada vídeo EXACTAMENTE con una línea «### VÍDEO N» y con este formato:\n' +
+    '### VÍDEO 1\nLo que está bien:\n- …\nA mejorar (por orden de importancia):\n- … (máximo 3; qué se ve, en qué fotograma y por qué importa)\nConsigna para la próxima serie: …\n' +
+    '\nMáximo 150 palabras por vídeo.';
+  return t;
+}
+async function wo2CLPrepare(plan, d){
+  const vids = wo2CLVideos(plan, d); if (!vids.length) return;
+  WO2CL.err = ''; WO2CL.pack = null; WO2CL.key = wo2CLKey(plan, d);
+  try{
+    const files = [], items = [];
+    for (let i = 0; i < vids.length; i++){
+      const v = vids[i];
+      WO2CL.busy = 'Preparando vídeo ' + (i + 1) + ' de ' + vids.length + '…'; render();
+      const pack = await wo2CLFramesFor(v);
+      const ctx = wo2IAContext(v);
+      const blob = await wo2CLSheet(pack, (v.label || ctx.exercise), i + 1);
+      files.push(new File([blob], 'video-' + (i + 1) + '.jpg', { type:'image/jpeg' }));
+      items.push(ctx);
+    }
+    WO2CL.pack = { files, text: wo2CLPrompt(items), ids: vids.map(v=> v.id) };
+    try{ localStorage.setItem('wo2_cl_order_' + WO2CL.key, JSON.stringify(WO2CL.pack.ids)); }catch(e){}
+    WO2CL.busy = '';
+  }catch(e){
+    WO2CL.busy = '';
+    if (e && e.message === 'NEED_DRIVE'){
+      if (confirm('Algún vídeo no tiene los fotogramas en este móvil y hay que leerlo de tu Google Drive.\n\nPulsa Aceptar, da permiso y, al volver, pulsa otra vez «Preparar».')) wo2DriveLogin();
+    } else WO2CL.err = 'No se ha podido preparar: ' + (e.message || e);
+  }
+  render();
+}
+async function wo2CLShare(){
+  const P = WO2CL.pack; if (!P) return;
+  try{ await navigator.clipboard.writeText(P.text); }catch(e){}
+  try{
+    if (navigator.canShare && navigator.canShare({ files: P.files, text: P.text })){ await navigator.share({ files: P.files, text: P.text }); return; }
+    if (navigator.canShare && navigator.canShare({ files: P.files })){
+      alert('El texto de la pregunta ya está copiado. Ahora elige Claude (o «Guardar imágenes») para mandar las fotos y, en Claude, pega el texto.');
+      await navigator.share({ files: P.files }); return;
+    }
+  }catch(e){ if (e && e.name === 'AbortError') return; }
+  // Sin menú de compartir (ordenador): descarga las imágenes; el texto ya está copiado
+  P.files.forEach(f=>{ const u = URL.createObjectURL(f), a = document.createElement('a'); a.href = u; a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=> URL.revokeObjectURL(u), 4000); });
+  alert('Imágenes descargadas y texto copiado. Abre Claude, adjunta las imágenes y pega el texto.');
+}
+async function wo2CLPaste(plan, d, typed){
+  let txt = typed;
+  if (txt == null){ try{ txt = await navigator.clipboard.readText(); }catch(e){ txt = ''; } }
+  txt = String(txt || '').trim();
+  if (!txt){ WO2CL.err = 'No hay nada copiado. Copia la respuesta de Claude o pégala en el recuadro.'; WO2CL.showBox = true; render(); return; }
+  const key = wo2CLKey(plan, d);
+  let ids = (WO2CL.pack && WO2CL.key === key) ? WO2CL.pack.ids : null;
+  if (!ids){ try{ ids = JSON.parse(localStorage.getItem('wo2_cl_order_' + key) || 'null'); }catch(e){} }
+  if (!ids) ids = wo2CLVideos(plan, d).map(v=> v.id);
+  const parts = {};
+  const re = /#{0,3}\s*V[IÍ]DEO\s*(\d+)\s*:?\s*\n/gi; let m, marks = [];
+  while ((m = re.exec(txt))) marks.push({ n: Number(m[1]), at: m.index, end: re.lastIndex });
+  if (marks.length){ marks.forEach((mk, i)=>{ parts[mk.n] = txt.slice(mk.end, i + 1 < marks.length ? marks[i+1].at : txt.length).trim(); }); }
+  else if (ids.length === 1) parts[1] = txt;
+  else { WO2CL.err = 'No encuentro las marcas «### VÍDEO 1», «### VÍDEO 2»… en el texto. Pide a Claude que respete ese formato.'; render(); return; }
+  let n = 0;
+  const list = (WO2.videos || []).map(v=>{
+    const i = ids.indexOf(v.id); const t = i >= 0 ? parts[i + 1] : null;
+    if (!t) return v; n++;
+    return Object.assign({}, v, { analysis:{ text: t, at: Date.now(), model: 'Claude (app)' } });
+  });
+  if (!n){ WO2CL.err = 'El texto no corresponde a los vídeos de este día.'; render(); return; }
+  WO2.videos = list;
+  try{ await WO2.base.collection('progress').doc('videos').set({ list, updatedAt: Date.now() }, { merge:true }); WO2CL.err = ''; WO2CL.ok = n + (n === 1 ? ' análisis guardado' : ' análisis guardados') + '. Lo verás en cada ejercicio y en los informes.'; WO2CL.showBox = false; }
+  catch(e){ WO2CL.err = 'No se ha podido guardar: ' + (e.message || e); }
+  render();
+}
+function wo2IADayBox(plan, d){
+  if (WO2.coachView) return null;
+  const vids = wo2CLVideos(plan, d); if (!vids.length) return null;
+  const done = vids.filter(v=> v.analysis && v.analysis.text).length;
+  const key = wo2CLKey(plan, d), ready = WO2CL.pack && WO2CL.key === key;
+  const box = document.createElement('div');
+  box.style.cssText = 'border:1.5px solid var(--surface-3);border-radius:14px;padding:12px 14px;margin:0 0 14px;background:var(--surface);color:var(--chalk);font-size:16px;';
+  const t = document.createElement('div'); t.style.cssText = 'font-weight:800;font-size:17px;margin-bottom:8px;';
+  t.textContent = '🔎 Analizar vídeos de hoy con Claude · ' + vids.length + (vids.length === 1 ? ' vídeo' : ' vídeos') + (done ? ' (' + done + ' analizado' + (done === 1 ? ')' : 's)') : '');
+  box.appendChild(t);
+  const mk = (txt, fn, main)=>{ const b = document.createElement('button'); b.type = 'button'; b.textContent = txt;
+    b.style.cssText = 'width:100%;min-height:52px;margin-top:8px;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;border:1.5px solid var(--gold,#c99a2e);' + (main ? 'background:var(--gold,#c99a2e);color:#111;' : 'background:transparent;color:var(--chalk);');
+    b.onclick = (e)=>{ e.stopPropagation(); fn(); }; return b; };
+  if (WO2CL.busy){ const w = document.createElement('div'); w.textContent = '⏳ ' + WO2CL.busy; w.style.margin = '6px 0'; box.appendChild(w); }
+  else {
+    box.appendChild(mk(ready ? '1 · Preparado ✓ (volver a preparar)' : '1 · Preparar imágenes y pregunta', ()=> wo2CLPrepare(plan, d), !ready));
+    if (ready) box.appendChild(mk('2 · Compartir con Claude', ()=> wo2CLShare(), true));
+    box.appendChild(mk((ready ? '3' : '2') + ' · Pegar el análisis de Claude', ()=> wo2CLPaste(plan, d), false));
+  }
+  if (WO2CL.showBox){
+    const ta = document.createElement('textarea'); ta.placeholder = 'Pega aquí la respuesta de Claude';
+    ta.style.cssText = 'width:100%;box-sizing:border-box;min-height:140px;margin-top:8px;font-size:16px;padding:10px;border-radius:10px;border:1.5px solid var(--surface-3);background:var(--surface-2);color:var(--chalk);';
+    box.appendChild(ta); box.appendChild(mk('Guardar el análisis', ()=> wo2CLPaste(plan, d, ta.value), true));
+  }
+  if (WO2CL.err){ const e = document.createElement('div'); e.textContent = WO2CL.err; e.style.cssText = 'color:var(--red,#e5484d);margin-top:8px;'; box.appendChild(e); }
+  if (WO2CL.ok){ const o = document.createElement('div'); o.textContent = '✓ ' + WO2CL.ok; o.style.cssText = 'color:var(--green,#3fb26f);margin-top:8px;font-weight:700;'; box.appendChild(o); setTimeout(()=>{ WO2CL.ok = ''; }, 8000); }
+  // Puntos débiles que se añaden a la pregunta
+  const det = document.createElement('details'); det.style.marginTop = '10px';
+  const sm = document.createElement('summary'); sm.textContent = 'Tus puntos débiles (se incluyen en la pregunta)'; sm.style.cssText = 'cursor:pointer;color:var(--muted);font-size:15px;';
+  const wk = document.createElement('textarea'); wk.value = wo2CLWeak();
+  wk.placeholder = 'Ej.: en la arrancada me levanto antes de estabilizar la barra; en el jerk tiro de hombros y el dip se va adelante.';
+  wk.style.cssText = 'width:100%;box-sizing:border-box;min-height:80px;margin-top:6px;font-size:16px;padding:10px;border-radius:10px;border:1.5px solid var(--surface-3);background:var(--surface-2);color:var(--chalk);';
+  wk.onchange = ()=> wo2CLSetWeak(wk.value);
+  det.appendChild(sm); det.appendChild(wk); box.appendChild(det);
+  return box;
 }
